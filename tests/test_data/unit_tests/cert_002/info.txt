@@ -1,0 +1,32 @@
+pkey generated: openssl 1.1.1g
+csr generated: openssl 1.1.1g
+csr domains:
+	-subject: example.com
+	-san:
+
+cert domains:
+	-all:
+	-subject:
+	-san:
+
+# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+ACME-v2 does not support this
+
+	Response: {u'status': 403, u'type': u'urn:ietf:params:acme:error:unauthorized', u'detail': u'Order includes different number of DNSnames identifiers than CSR specifies'}
+	
+	ALL DOMAINS MUST BE IN THE SAN
+
+# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+# ==============================================================================
+
+
+/usr/local/bin/openssl genrsa -out privkey.pem 1024
+/usr/local/bin/openssl req -new -sha256 -key privkey.pem -subj "/CN=example.com" > csr.pem
+
+acme-tiny --account-key ../_support/account.key --csr ./csr.pem --acme-dir ../_support/_challenges > ./cert.pem
+
+
+

@@ -1,0 +1,11 @@
+python-dateutil
+psutil>=4.4.0
+requests
+
+[testing]
+certbot
+cryptography
+josepy
+pycrypto
+mypy
+pytest

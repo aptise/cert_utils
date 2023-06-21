@@ -1,0 +1,18 @@
+pkey generated: openssl 1.1.1g
+csr generated: openssl 1.1.1g
+csr domains:
+	-all: example.com
+	-subject: /
+	-san: example.com
+
+cert domains:
+	-all: example.com
+	-subject: example.com
+	-san: example.com
+
+# ==============================================================================
+
+/usr/local/bin/openssl genrsa -out privkey.pem 1024
+/usr/local/bin/openssl req -new -sha256 -key privkey.pem -subj "/" -addext "subjectAltName = DNS:example.com" > csr.pem
+
+acme-tiny --account-key ../_support/account.key --csr ./csr.pem --acme-dir ../_support/_challenges > ./cert.pem
