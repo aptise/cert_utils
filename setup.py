@@ -26,7 +26,7 @@ tests_require = [
     "cryptography",
     "josepy",
     "mypy",
-    "pycryptodome",  # not pycrypto! but uses the same namespace
+    "pyOpenSSL",
     "pytest",
     "types-psutil",
     "types-pyOpenSSL",
