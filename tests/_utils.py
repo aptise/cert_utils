@@ -158,8 +158,8 @@ TEST_FILES = {
 
 # ------------------------------------------------------------------------------
 
-class _Mixin_filedata(object):
 
+class _Mixin_filedata(object):
     _data_root = os.path.join(os.path.dirname(os.path.realpath(__file__)), "test_data")
     _data_root_letsencrypt = os.path.join(
         os.path.dirname(os.path.realpath(cert_utils.__file__)),
@@ -172,7 +172,9 @@ class _Mixin_filedata(object):
             return os.path.join(self._data_root_letsencrypt, filename)
         return os.path.join(self._data_root, filename)
 
-    def _filedata_testfile(self, filename:str, is_binary:bool=False) -> Union[str, bytes]:
+    def _filedata_testfile(
+        self, filename: str, is_binary: bool = False
+    ) -> Union[str, bytes]:
         _data_root = self._data_root
         if filename.startswith("letsencrypt-certs/"):
             filename = filename[18:]

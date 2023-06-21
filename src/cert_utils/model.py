@@ -1,8 +1,14 @@
+from typing import Dict
+from typing import List
+
+# ==============================================================================
+
+
 class _mixin_mapping(object):
     """handles a mapping of db codes/constants"""
 
-    _mapping = None
-    _mapping_reverse = None
+    _mapping: Dict
+    _mapping_reverse: Dict
 
     @classmethod
     def as_string(cls, mapping_id: int) -> str:
@@ -12,7 +18,7 @@ class _mixin_mapping(object):
 
     @classmethod
     def from_string(cls, mapping_text: str) -> int:
-        if cls._mapping_reverse is None:
+        if not hasattr(cls, "_mapping_reverse"):
             cls._mapping_reverse = {v: k for k, v in cls._mapping.items()}
         return cls._mapping_reverse[mapping_text]
 
@@ -36,9 +42,14 @@ class KeyTechnology(_mixin_mapping):
         1,
         2,
     )
-    _DEFAULT_AcmeAccount = "RSA"
-    _DEFAULT_GlobalKey = "RSA"
+    _DEFAULT_AcmeAccount: str = "RSA"
+    _DEFAULT_GlobalKey: str = "RSA"
+    _DEFAULT_AcmeAccount_id: int
+    _DEFAULT_GlobalKey_id: int
+    _options_AcmeAccount_private_key_technology: List
 
+
+# Assign
 
 KeyTechnology._options_AcmeAccount_private_key_technology = [
     KeyTechnology._mapping[_id]

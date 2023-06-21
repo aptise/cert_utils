@@ -426,7 +426,7 @@ for _cert_id, _payload in CERT_CAS_DATA.items():
 _dir_here = os.path.abspath(os.path.dirname(__file__))
 _dir_certs = os.path.join(_dir_here, "letsencrypt-certs")
 for cert_id, cert_data in CERT_CAS_DATA.items():
-    _filename = cert_data["url_pem"].split("/")[-1]
+    _filename = cert_data["url_pem"].split("/")[-1]  # type: ignore[attr-defined]
     _filepath = os.path.join(_dir_certs, _filename)
     with open(_filepath, "r") as _fp:
         cert_pem_text = _fp.read()

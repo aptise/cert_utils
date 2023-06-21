@@ -83,8 +83,8 @@ def convert_binary_to_hex(input: bytes) -> str:
     # _as_hex = "79b459e67bb6e5e40173800888c81a58f6e99b6e"
     _as_hex = _as_hex.upper()
     # _as_hex = "79B459E67BB6E5E40173800888C81A58F6E99B6E"
-    _as_hex = _as_hex.decode("utf8")
-    return _as_hex
+    _as_hex_str = _as_hex.decode("utf8")
+    return _as_hex_str
 
 
 def hex_with_colons(as_hex: str) -> str:

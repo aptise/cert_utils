@@ -32,6 +32,7 @@ log.setLevel(logging.INFO)
 
 # ------------------------------------------------------------------------------
 
+
 class _MixinNoCrypto(object):
     def setUp(self):
         # print("_MixinNoCrypto.setUp")
@@ -560,7 +561,6 @@ class UnitTest_CertUtils(unittest.TestCase, _Mixin_filedata):
 
         # ca certs
         for cert_filename in sorted(CERT_CA_SETS.keys()):
-
             cert_pem_filepath = self._filepath_testfile(cert_filename)
             cert_pem = self._filedata_testfile(cert_filename)
 
@@ -604,6 +604,7 @@ class UnitTest_CertUtils(unittest.TestCase, _Mixin_filedata):
     def test__parse_csr(self):
         """
         python -m unittest tests.test_unit.UnitTest_CertUtils.test__parse_csr
+        python -m unittest tests.test_unit.UnitTest_CertUtils_fallback.test__parse_csr
 
         This UnitTest tests the following functions:
 
@@ -1078,7 +1079,9 @@ class UnitTest_OpenSSL(unittest.TestCase, _Mixin_filedata):
             )
             _expected_modulus_md5 = set_data["key_pem_modulus_md5"]
             assert _computed_modulus_md5 == _expected_modulus_md5
-            _computed_md5 = cert_utils.utils.md5_text(self._filedata_testfile(key_pem_filepath))
+            _computed_md5 = cert_utils.utils.md5_text(
+                self._filedata_testfile(key_pem_filepath)
+            )
             _expected_md5 = set_data["key_pem_md5"]
             assert _computed_md5 == _expected_md5
 

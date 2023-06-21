@@ -25,9 +25,13 @@ tests_require = [
     "certbot",
     "cryptography",
     "josepy",
-    "pycrypto",
     "mypy",
+    "pycrypto",
     "pytest",
+    "types-psutil",
+    "types-pyOpenSSL",
+    "types-python-dateutil",
+    "types-requests",
 ]
 
 testing_extras = tests_require + []
