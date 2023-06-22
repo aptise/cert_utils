@@ -29,7 +29,6 @@ tests_require = [
     "mypy",
     "pytest",
     "types-psutil",
-    "types-pyOpenSSL",
     "types-python-dateutil",
     "types-requests",
 ]
@@ -43,8 +42,10 @@ if (sys.version_info.major == 3) and (sys.version_info.minor == 6):
     # The `acme` package (via Certbot) ends support for py3.6 on version `v1.23.0`
     #   v1.23.0 calls make_csr with a bad version, and does not pin PyOpenSSL
     tests_require.append("PyOpenSSL>=17.5.0,!=23.1.0,<23.2.0")
+    tests_require.append("types-PyOpenSSL>=17.5.0,!=23.1.0,<23.2.0")
 else:
     tests_require.append("PyOpenSSL>=17.5.0,!=23.1.0")
+    tests_require.append("types-PyOpenSSL>=17.5.0,!=23.1.0")
 
 testing_extras = tests_require + []
 

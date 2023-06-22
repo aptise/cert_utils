@@ -7,8 +7,8 @@ from typing import List
 class _mixin_mapping(object):
     """handles a mapping of db codes/constants"""
 
-    _mapping: Dict
-    _mapping_reverse: Dict
+    _mapping: Dict[int, str]
+    _mapping_reverse: Dict[str, int]
 
     @classmethod
     def as_string(cls, mapping_id: int) -> str:
@@ -46,7 +46,7 @@ class KeyTechnology(_mixin_mapping):
     _DEFAULT_GlobalKey: str = "RSA"
     _DEFAULT_AcmeAccount_id: int
     _DEFAULT_GlobalKey_id: int
-    _options_AcmeAccount_private_key_technology: List
+    _options_AcmeAccount_private_key_technology: List[str]
 
 
 # Assign
