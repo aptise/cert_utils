@@ -2799,7 +2799,8 @@ def parse_key(key_pem: str, key_pem_filepath: Optional[str] = None) -> Dict:
 
 
 def new_account_key(
-    key_technology_id: int = KeyTechnology.RSA, rsa_bits: int = 2048
+    key_technology_id: int = KeyTechnology.RSA,
+    rsa_bits: int = 2048,
 ) -> str:
     """
     :param int key_technology_id: Key Technology type. Default: KeyTechnology.RSA
@@ -2954,7 +2955,10 @@ def new_key_rsa(bits: int = 4096) -> str:
 def convert_jwk_to_ans1(pkey_jsons: str) -> str:
     """
     input is a json string
-    much work from https://gist.github.com/JonLundy/f25c99ee0770e19dc595
+
+    adapted from https://github.com/JonLundy
+    who shared this gist under the MIT license:
+        https://gist.github.com/JonLundy/f25c99ee0770e19dc595
 
     :param pkey_jsons: JWK Key
     :type pkey_jsons: str
@@ -2997,7 +3001,10 @@ def convert_lejson_to_pem(pkey_jsons: str) -> str:
     If not, openssl is used via subprocesses
 
     input is a json string
-    much work from https://gist.github.com/JonLundy/f25c99ee0770e19dc595
+
+    adapted from https://github.com/JonLundy
+    who shared this gist under the MIT license:
+        https://gist.github.com/JonLundy/f25c99ee0770e19dc595
 
     openssl asn1parse -noout -out private_key.der -genconf <(python conv.py private_key.json)
     openssl rsa -in private_key.der -inform der > private_key.pem
