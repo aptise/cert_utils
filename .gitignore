@@ -1,1 +1,4 @@
-src/cert_utils.egg_info
+.eggs
+/build/
+/dist/
+/src/cert_utils.egg-info/
