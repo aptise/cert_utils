@@ -9,6 +9,7 @@ import re
 import subprocess
 import tempfile
 import textwrap
+from typing import Any
 from typing import Dict
 from typing import List
 from typing import Optional
@@ -64,41 +65,44 @@ if TYPE_CHECKING:
 # Conditional Imports
 try:
     from acme import crypto_util as acme_crypto_util
-    from certbot import crypto_util as certbot_crypto_util
+except ImportError:
+    acme_crypto_util = None  # type: ignore[assignment]
 
-    # from Crypto.Util import crypto_util_asn1
+try:
+    from certbot import crypto_util as certbot_crypto_util
+except ImportError:
+    certbot_crypto_util = None  # type: ignore[assignment]
+
+try:
     import cryptography
-    from cryptography.hazmat.backends import default_backend
-    from cryptography.hazmat.primitives import (
-        serialization as cryptography_serialization,
-    )
+    from cryptography.hazmat.backends import default_backend as crypto_default_backend
+    from cryptography.hazmat.primitives import serialization as crypto_serialization
     from cryptography.hazmat.primitives.asymmetric import ec as crypto_ec
     from cryptography.hazmat.primitives.asymmetric import rsa as crypto_rsa
-
-    try:
-        from cryptography.hazmat.primitives.serialization import pkcs7 as crypto_pkcs7
-    except ImportError as exc:  # noqa: F841
-        crypto_pkcs7 = None  # type: ignore[assignment]
-    import josepy
-    from OpenSSL import crypto as openssl_crypto
-
-except ImportError as exc:  # noqa: F841
-    acme_crypto_util = None  # type: ignore[assignment]
-    certbot_crypto_util = None  # type: ignore[assignment]
-    # crypto_util_asn1 = None  # type: ignore[assignment]
+    from cryptography.hazmat.primitives.serialization import pkcs7 as crypto_pkcs7
+except ImportError:
+    raise
     cryptography = None  # type: ignore[assignment]
-    default_backend = None  # type: ignore[assignment]
-    cryptography_serialization = None  # type: ignore[assignment]
+    crypto_default_backend = None  # type: ignore[assignment]
+    crypto_serialization = None  # type: ignore[assignment]
     crypto_ec = None  # type: ignore[assignment]
     crypto_rsa = None  # type: ignore[assignment]
     crypto_pkcs7 = None  # type: ignore[assignment]
+
+try:
+    import josepy
+except ImportError:
     josepy = None  # type: ignore[assignment]
+
+try:
+    from OpenSSL import crypto as openssl_crypto
+except ImportError:
     openssl_crypto = None  # type: ignore[assignment]
 
 NEEDS_TEMPFILES = True
 if (
     acme_crypto_util
-    and cryptography_serialization
+    and crypto_serialization
     and certbot_crypto_util
     and josepy
     and openssl_crypto
@@ -106,7 +110,7 @@ if (
     """
     acme_crypto_util
         make_csr
-    cryptography_serialization
+    crypto_serialization
         convert_pkcs7_to_pems
         convert_lejson_to_pem
     certbot_crypto_util
@@ -177,7 +181,7 @@ TESTING_ENVIRONMENT = False
 MAX_DOMAINS_PER_CERTIFICATE = 100
 
 
-def update_from_appsettings(appsettings: Dict) -> None:
+def update_from_appsettings(appsettings: Dict[str, Any]) -> None:
     """
     update the module data based on settings
 
@@ -461,10 +465,10 @@ def convert_pkcs7_to_pems(pkcs7_data: bytes) -> List[str]:
         openssl pkcs7 -inform DER -in {FILEPATH} -print_certs -outform PEM
     """
     log.info("convert_pkcs7_to_pems >")
-    if cryptography_serialization:
+    if crypto_pkcs7 and crypto_serialization:
         certs_loaded = crypto_pkcs7.load_der_pkcs7_certificates(pkcs7_data)
         certs_bytes = [
-            cert.public_bytes(cryptography_serialization.Encoding.PEM)
+            cert.public_bytes(crypto_serialization.Encoding.PEM)
             for cert in certs_loaded
         ]
         certs_string = [cert.decode("utf8") for cert in certs_bytes]
@@ -983,7 +987,9 @@ def _openssl_spki_hash_pkey(
 # ==============================================================================
 
 
-def _openssl_crypto__key_technology(key: Union[Type, "PKey"]) -> Optional[str]:
+def _openssl_crypto__key_technology(
+    key: Union[Type, "PKey"],
+) -> Optional[str]:
     """
     :param key: key object, with a `type()` method
     :type key: instance of
@@ -1018,8 +1024,8 @@ def _cryptography__public_key_spki_sha256(
     :rtype: str
     """
     _public_bytes = cryptography_publickey.public_bytes(  # type: ignore[union-attr]
-        cryptography_serialization.Encoding.DER,
-        cryptography_serialization.PublicFormat.SubjectPublicKeyInfo,
+        crypto_serialization.Encoding.DER,
+        crypto_serialization.PublicFormat.SubjectPublicKeyInfo,
     )
     spki_sha256 = hashlib.sha256(_public_bytes).digest()
     if as_b64:
@@ -1293,7 +1299,7 @@ def parse_csr_domains(
         openssl req -in {FILEPATH} -noout -text
     """
     log.info("parse_csr_domains >")
-    if openssl_crypto and certbot_crypto_util:
+    if certbot_crypto_util and openssl_crypto:
         load_func = openssl_crypto.load_certificate_request
         # !!!: `_get_names_from_cert_or_req` is typed for `bytes`, but doctring is `string`
         #    :  both work, but lets go with the typing
@@ -1361,7 +1367,7 @@ def validate_key(
         openssl RSA -in {FILEPATH}
     """
     log.info("validate_key >")
-    if certbot_crypto_util:
+    if crypto_serialization and crypto_rsa and crypto_ec:
         log.debug(".validate_key > crypto")
         try:
             # rsa
@@ -1369,8 +1375,8 @@ def validate_key(
             #   data = certbot_crypto_util.valid_privkey(key_pem)
             # except OpenSslError_InvalidKey as exc:
             #   return None
-            data = cryptography_serialization.load_pem_private_key(
-                key_pem.encode(), None, default_backend()
+            data = crypto_serialization.load_pem_private_key(
+                key_pem.encode(), None, crypto_default_backend()
             )
             if isinstance(data, crypto_rsa.RSAPrivateKey):
                 return "RSA"
@@ -1381,7 +1387,7 @@ def validate_key(
     else:
         log.debug(".validate_key > openssl fallback")
 
-        def _check_fallback(_technology):
+        def _check_fallback(_technology: str):
             log.debug(".validate_key > openssl fallback", _technology)
             # openssl rsa -in {KEY} -check
             try:
@@ -2148,7 +2154,7 @@ def parse_cert__spki_sha256(
     cryptography_cert: Optional["Certificate"] = None,
     key_technology: Optional[str] = None,
     as_b64: Optional[bool] = None,
-):
+) -> str:
     """
     :param str cert_pem: PEM encoded Certificate
     :param str cert_pem_filepath: Filepath to PEM encoded Certificate
@@ -2164,7 +2170,7 @@ def parse_cert__spki_sha256(
         :function :_openssl_spki_hash_cert
     """
     log.info("parse_cert__spki_sha256 >")
-    if openssl_crypto and certbot_crypto_util:
+    if openssl_crypto:
         if not cryptography_cert:
             cert = openssl_crypto.load_certificate(
                 openssl_crypto.FILETYPE_PEM, cert_pem.encode()
@@ -2474,7 +2480,7 @@ def parse_csr__spki_sha256(
         :_see:_openssl_spki_hash_csr
     """
     log.info("parse_csr__spki_sha256 >")
-    if openssl_crypto and certbot_crypto_util:
+    if openssl_crypto:
         if not crypto_csr:
             crypto_csr = openssl_crypto.load_certificate_request(
                 openssl_crypto.FILETYPE_PEM, csr_pem.encode()
@@ -2592,7 +2598,7 @@ def parse_key__spki_sha256(
     cryptography_publickey: Optional["_TYPES_CRYPTOGRAPHY_KEYS"] = None,
     key_technology: Optional[str] = None,
     as_b64: Optional[bool] = None,
-):
+) -> str:
     """
     :param str key_pem: Key in PEM form
     :param str key_pem_filepath: Filepath to PEM
@@ -2609,7 +2615,7 @@ def parse_key__spki_sha256(
         :_see:_openssl_spki_hash_pkey
     """
     log.info("parse_key__spki_sha256 >")
-    if openssl_crypto and certbot_crypto_util:
+    if openssl_crypto:
         if not cryptography_publickey:
             _crypto_privkey = openssl_crypto.load_privatekey(
                 openssl_crypto.FILETYPE_PEM, key_pem
@@ -2653,7 +2659,7 @@ def parse_key__technology(
     :rtype: str
     """
     log.info("parse_key__technology >")
-    if openssl_crypto and certbot_crypto_util:
+    if openssl_crypto:
         if not crypto_privatekey:
             crypto_privatekey = openssl_crypto.load_privatekey(
                 openssl_crypto.FILETYPE_PEM, key_pem
@@ -2712,7 +2718,7 @@ def parse_key(key_pem: str, key_pem_filepath: Optional[str] = None) -> Dict:
         "key_technology": None,
         "spki_sha256": None,
     }
-    if openssl_crypto and certbot_crypto_util:
+    if openssl_crypto:
         # TODO: crypto version of `--text`
 
         # this part ONLY works on RSA keys
@@ -2856,20 +2862,20 @@ def new_key_ec(bits: int = 384) -> str:
             % (ALLOWED_BITS_ECDSA, bits)
         )
 
-    if openssl_crypto:
+    if crypto_ec and crypto_serialization and (crypto_default_backend is not None):
         # see https://github.com/pyca/pyopenssl/issues/291
         if 256 == bits:
             key = crypto_ec.generate_private_key(
-                crypto_ec.SECP256R1(), default_backend()
+                crypto_ec.SECP256R1(), crypto_default_backend()
             )
         elif 384 == bits:
             key = crypto_ec.generate_private_key(
-                crypto_ec.SECP384R1(), default_backend()
+                crypto_ec.SECP384R1(), crypto_default_backend()
             )
         key_pem = key.private_bytes(
-            encoding=cryptography_serialization.Encoding.PEM,
-            format=cryptography_serialization.PrivateFormat.TraditionalOpenSSL,
-            encryption_algorithm=cryptography_serialization.NoEncryption(),
+            encoding=crypto_serialization.Encoding.PEM,
+            format=crypto_serialization.PrivateFormat.TraditionalOpenSSL,
+            encryption_algorithm=crypto_serialization.NoEncryption(),
         )
         # load it: openssl_crypto.load_privatekey(openssl_crypto.FILETYPE_PEM, key_pem)
         key_pem_str = key_pem.decode("utf8")
@@ -2967,13 +2973,13 @@ def convert_jwk_to_ans1(pkey_jsons: str) -> str:
     """
     pkey = json.loads(pkey_jsons)
 
-    def enc(data):
-        missing_padding = 4 - len(data) % 4
+    def enc(data_bytes: bytes) -> str:
+        missing_padding = 4 - len(data_bytes) % 4
         if missing_padding:
-            data += b"=" * missing_padding
-        data = binascii.hexlify(base64.b64decode(data, b"-_")).upper()
-        data = data.decode("utf8")
-        return "0x" + data
+            data_bytes += b"=" * missing_padding
+        data_bytes = binascii.hexlify(base64.b64decode(data_bytes, b"-_")).upper()
+        data_str = data_bytes.decode("utf8")
+        return "0x" + data_str
 
     for k, v in list(pkey.items()):
         if k == "kty":
@@ -3017,12 +3023,12 @@ def convert_lejson_to_pem(pkey_jsons: str) -> str:
     """
     log.info("convert_lejson_to_pem >")
 
-    if cryptography_serialization:
+    if crypto_serialization and josepy:
         pkey = josepy.JWKRSA.json_loads(pkey_jsons)
         as_pem = pkey.key.private_bytes(
-            encoding=cryptography_serialization.Encoding.PEM,
-            format=cryptography_serialization.PrivateFormat.TraditionalOpenSSL,
-            encryption_algorithm=cryptography_serialization.NoEncryption(),
+            encoding=crypto_serialization.Encoding.PEM,
+            format=crypto_serialization.PrivateFormat.TraditionalOpenSSL,
+            encryption_algorithm=crypto_serialization.NoEncryption(),
         )
         as_pem = as_pem.decode("utf8")
         as_pem = cleanup_pem_text(as_pem)
@@ -3526,9 +3532,9 @@ def account_key__parse(
 
 def account_key__sign(
     data,
-    key_pem=None,
-    key_pem_filepath=None,
-):
+    key_pem: str,
+    key_pem_filepath: Optional[str] = None,
+) -> str:
     """
     This routine will use crypto/certbot if available.
     If not, openssl is used via subprocesses
@@ -3541,14 +3547,20 @@ def account_key__sign(
     log.info("account_key__sign >")
     if not isinstance(data, bytes):
         data = data.encode()
-    if openssl_crypto:
-        pkey = openssl_crypto.load_privatekey(openssl_crypto.FILETYPE_PEM, key_pem)
-        signature = pkey.to_cryptography_key().sign(
+    if openssl_crypto and crypto_rsa:
+        pkey: "PKey" = openssl_crypto.load_privatekey(
+            openssl_crypto.FILETYPE_PEM, key_pem
+        )
+        # possible loads are "Union[DSAPrivateKey, DSAPublicKey, RSAPrivateKey, RSAPublicKey]"
+        # but only RSAPublicKey is used or will work
+        # TODO: check to ensure key type is RSAPublicKey
+        pkey_crypto = pkey.to_cryptography_key()
+        signature = pkey_crypto.sign(  # type: ignore[union-attr, call-arg]
             data,
-            cryptography.hazmat.primitives.asymmetric.padding.PKCS1v15(),
+            cryptography.hazmat.primitives.asymmetric.padding.PKCS1v15(),  # type: ignore[arg-type]
             cryptography.hazmat.primitives.hashes.SHA256(),
         )
-        return signature
+        return signature.decode()
     log.debug(".account_key__sign > openssl fallback")
     _tmpfile = None
     try:

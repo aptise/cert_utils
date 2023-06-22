@@ -12,6 +12,8 @@ generally not be imported.
 # stdlib
 import copy
 import os
+from typing import Any
+from typing import Dict
 
 # pypi
 import requests
@@ -28,7 +30,7 @@ from .utils import md5_text
 # https://letsencrypt.org/docs/rate-limits/
 # last checked: 2020.07.06
 
-LIMITS = {
+LIMITS: Dict[str, Dict[str, Any]] = {
     "names/certificate": {"limit": 100},  # "Names per Certificate"
     "certificates/domain": {
         "limit": 50,
@@ -132,7 +134,7 @@ Compatibility Info
     Last updated: Jan 21, 2021
 
 """
-CERT_CAS_DATA = {
+CERT_CAS_DATA: Dict[str, Any] = {
     "trustid_root_x3": {
         "display_name": "DST Root CA X3",
         "url_pem": "https://letsencrypt.org/certs/trustid-x3-root.pem",
@@ -430,12 +432,11 @@ for cert_id, cert_data in CERT_CAS_DATA.items():
     _filepath = os.path.join(_dir_certs, _filename)
     with open(_filepath, "r") as _fp:
         cert_pem_text = _fp.read()
-        # cert_pem_text = cert_pem_text.decode("utf8")
         cert_pem_text = cleanup_pem_text(cert_pem_text)
         cert_data["cert_pem"] = cert_pem_text
 
 
-def download_letsencrypt_certificates():
+def download_letsencrypt_certificates() -> Dict[str, Any]:
     """
     DEPRECATED
 
@@ -455,8 +456,7 @@ def download_letsencrypt_certificates():
         resp = requests.get(certs[c]["url_pem"])
         if resp.status_code != 200:
             raise ValueError("Could not load certificate")
-        cert_pem_text = resp.content
-        cert_pem_text = cert_pem_text.decode("utf8")
+        cert_pem_text = resp.text
         cert_pem_text = cleanup_pem_text(cert_pem_text)
         certs[c]["cert_pem"] = cert_pem_text
         certs[c]["cert_pem_md5"] = md5_text(cert_pem_text)
