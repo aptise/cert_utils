@@ -2,6 +2,7 @@
 """
 import os
 import re
+import sys
 
 from setuptools import find_packages
 from setuptools import setup
@@ -26,13 +27,17 @@ tests_require = [
     "cryptography",
     "josepy",
     "mypy",
-    "pyOpenSSL",
     "pytest",
     "types-psutil",
     "types-pyOpenSSL",
     "types-python-dateutil",
     "types-requests",
 ]
+
+if (sys.version_info.major == 3) and (sys.version_info.minor == 6):
+    tests_require.append("pyopenssl<=23.1.0")
+else:
+    tests_require.append("pyopenssl")
 
 testing_extras = tests_require + []
 
