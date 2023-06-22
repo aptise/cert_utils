@@ -1,21 +1,16 @@
-Conditional Imports
-    imports should be "one at a time", not "all or nothing".
-    functions that use imports should test for all necessary options
-    write new tests for lacking specific libraries
-
-A handful of functions require `key_pem` but list it as optional.
-    This is a legacy behavior from an either/or invocation.
-    pem should never be optional; only filepaths should be optional
-
 Audit `# type: ignore` to handle updated type hints
 
 Test with bad payloads:
     validate_cert
     validate_csr
 
-
 Typing
     parse_cert should use a unified type for the rval and return
-
     MyPy type hints have trouble with:
         foo = [i.decode("utf8") if isinstance(i, bytes) else i for i in bar]
+
+Tests needed for:
+    update_from_appsettings
+    check_openssl_version
+        install weird openssl versions and test against them
+
