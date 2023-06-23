@@ -33,31 +33,6 @@ certificate.  This can make writing a script to analyze large directories of
 certificates fairly simple.
 
 
-Parse a Trusted Root
-~~~~~~~~~~~~~~~~~~~~
-
-```!python
-import cert_utils
-import pprint
-
-cert_path = "./src/cert_utils/letsencrypt-certs/isrgrootx1.pem"
-cert_pem = open(cert_path, 'r').read()
-data = cert_utils.parse_cert(cert_pem)
-pprint.pprint(data)
-```
-
-    {'SubjectAlternativeName': None,
-     'authority_key_identifier': None,
-     'enddate': datetime.datetime(2035, 6, 4, 11, 4, 38),
-     'fingerprint_sha1': 'CABD2A79A1076A31F21D253635CB039D4329A5E8',
-     'issuer': 'C=US\nO=Internet Security Research Group\nCN=ISRG Root X1',
-     'issuer_uri': None,
-     'key_technology': 'RSA',
-     'spki_sha256': '0B9FA5A59EED715C26C1020C711B4F6EC42D58B0015E14337A39DAD301C5AFC3',
-     'startdate': datetime.datetime(2015, 6, 4, 11, 4, 38),
-     'subject': 'C=US\nO=Internet Security Research Group\nCN=ISRG Root X1'}
-
-
 Parse a Leaf/End-Entity
 ~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -84,6 +59,35 @@ pprint.pprint(data)
      'spki_sha256': '34E67CC615761CBADAF430B2E02E0EC39C99EEFC73CCE469B18AE54A37EF6942',
      'startdate': datetime.datetime(2020, 6, 16, 20, 19, 30),
      'subject': 'CN=a.example.com'}
+
+The payload contains `SubjectAlternativeName` listing all the domains, along
+with `enddate` and `startdate` in Python datetime objects for easy comparison.
+
+Parse a Trusted Root
+~~~~~~~~~~~~~~~~~~~~
+
+```!python
+import cert_utils
+import pprint
+
+cert_path = "./src/cert_utils/letsencrypt-certs/isrgrootx1.pem"
+cert_pem = open(cert_path, 'r').read()
+data = cert_utils.parse_cert(cert_pem)
+pprint.pprint(data)
+```
+
+    {'SubjectAlternativeName': None,
+     'authority_key_identifier': None,
+     'enddate': datetime.datetime(2035, 6, 4, 11, 4, 38),
+     'fingerprint_sha1': 'CABD2A79A1076A31F21D253635CB039D4329A5E8',
+     'issuer': 'C=US\nO=Internet Security Research Group\nCN=ISRG Root X1',
+     'issuer_uri': None,
+     'key_technology': 'RSA',
+     'spki_sha256': '0B9FA5A59EED715C26C1020C711B4F6EC42D58B0015E14337A39DAD301C5AFC3',
+     'startdate': datetime.datetime(2015, 6, 4, 11, 4, 38),
+     'subject': 'C=US\nO=Internet Security Research Group\nCN=ISRG Root X1'}
+
+The payload on Trusted Roots is identical.
 
 
 Why does this exist?
