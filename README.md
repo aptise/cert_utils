@@ -36,6 +36,8 @@ certificates fairly simple.
 Parse a Leaf/End-Entity
 ~~~~~~~~~~~~~~~~~~~~~~~
 
+Example Script:
+
 ```!python
 import cert_utils
 import pprint
@@ -45,6 +47,8 @@ cert_pem = open(cert_path, 'r').read()
 data = cert_utils.parse_cert(cert_pem)
 pprint.pprint(data)
 ```
+
+Result:
 
     {'SubjectAlternativeName': ['a.example.com',
                                 'b.example.com',
@@ -66,6 +70,8 @@ with `enddate` and `startdate` in Python datetime objects for easy comparison.
 Parse a Trusted Root
 ~~~~~~~~~~~~~~~~~~~~
 
+Example Script:
+
 ```!python
 import cert_utils
 import pprint
@@ -75,6 +81,8 @@ cert_pem = open(cert_path, 'r').read()
 data = cert_utils.parse_cert(cert_pem)
 pprint.pprint(data)
 ```
+
+Result:
 
     {'SubjectAlternativeName': None,
      'authority_key_identifier': None,
