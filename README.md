@@ -33,8 +33,7 @@ certificate.  This can make writing a script to analyze large directories of
 certificates fairly simple.
 
 
-Parse a Leaf/End-Entity
-______________________
+### Parse a Leaf/End-Entity
 
 Example Script:
 
@@ -67,8 +66,7 @@ Result:
 The payload contains `SubjectAlternativeName` listing all the domains, along
 with `enddate` and `startdate` in Python datetime objects for easy comparison.
 
-Parse a Trusted Root
-____________________
+### Parse a Trusted Root
 
 Example Script:
 
