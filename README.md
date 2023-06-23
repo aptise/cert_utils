@@ -25,6 +25,66 @@ from Certificates.  It was designed for developers and system administrators to
 more easily use the various libraries to accomplish specific tasks on the
 commandline or as part of other projects.
 
+Examples:
+---------
+
+For example, `cert_utils.parse_cert` returns a Python dict of key fields in a
+certificate.  This can make writing a script to analyze large directories of
+certificates fairly simple.
+
+
+```!python
+import cert_utils
+import pprint
+
+# parse a Trusted Root
+cert_path = "./src/cert_utils/letsencrypt-certs/isrgrootx1.pem"
+cert_pem = open(cert_path, 'r').read()
+data = cert_utils.parse_cert(cert_pem)
+pprint.pprint(data)
+```
+
+    {'SubjectAlternativeName': None,
+     'authority_key_identifier': None,
+     'enddate': datetime.datetime(2035, 6, 4, 11, 4, 38),
+     'fingerprint_sha1': 'CABD2A79A1076A31F21D253635CB039D4329A5E8',
+     'issuer': 'C=US\nO=Internet Security Research Group\nCN=ISRG Root X1',
+     'issuer_uri': None,
+     'key_technology': 'RSA',
+     'spki_sha256': '0B9FA5A59EED715C26C1020C711B4F6EC42D58B0015E14337A39DAD301C5AFC3',
+     'startdate': datetime.datetime(2015, 6, 4, 11, 4, 38),
+     'subject': 'C=US\nO=Internet Security Research Group\nCN=ISRG Root X1'}
+
+```!python
+import cert_utils
+import pprint
+
+# parse a leaf/end-entity
+cert_path = "./tests/test_data/unit_tests/cert_001/cert.pem"
+cert_pem = open(cert_path, 'r').read()
+data = cert_utils.parse_cert(cert_pem)
+pprint.pprint(data)
+```
+
+    {'SubjectAlternativeName': ['a.example.com',
+                                'b.example.com',
+                                'c.example.com',
+                                'd.example.com'],
+     'authority_key_identifier': 'D159010094B0A62ADBABE54B2321CA1B6EBA93E7',
+     'enddate': datetime.datetime(2025, 6, 16, 20, 19, 30),
+     'fingerprint_sha1': 'F63C5C66B52551EEDADF7CE44301D646680B8F5D',
+     'issuer': 'CN=Pebble Intermediate CA 601ea1',
+     'issuer_uri': None,
+     'key_technology': 'RSA',
+     'spki_sha256': '34E67CC615761CBADAF430B2E02E0EC39C99EEFC73CCE469B18AE54A37EF6942',
+     'startdate': datetime.datetime(2020, 6, 16, 20, 19, 30),
+     'subject': 'CN=a.example.com'}
+
+
+
+
+
+
 Why does this exist?
 --------------------
 
