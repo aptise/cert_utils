@@ -32,12 +32,13 @@ For example, `cert_utils.parse_cert` returns a Python dict of key fields in a
 certificate.  This can make writing a script to analyze large directories of
 certificates fairly simple.
 
+Parse a Trusted Root
+~~~~~~~~~~~~~~~~~~~~
 
 ```!python
 import cert_utils
 import pprint
 
-# parse a Trusted Root
 cert_path = "./src/cert_utils/letsencrypt-certs/isrgrootx1.pem"
 cert_pem = open(cert_path, 'r').read()
 data = cert_utils.parse_cert(cert_pem)
@@ -55,11 +56,13 @@ pprint.pprint(data)
      'startdate': datetime.datetime(2015, 6, 4, 11, 4, 38),
      'subject': 'C=US\nO=Internet Security Research Group\nCN=ISRG Root X1'}
 
+Parse a Leaf/End-Entity
+~~~~~~~~~~~~~~~~~~~~~~~
+
 ```!python
 import cert_utils
 import pprint
 
-# parse a leaf/end-entity
 cert_path = "./tests/test_data/unit_tests/cert_001/cert.pem"
 cert_pem = open(cert_path, 'r').read()
 data = cert_utils.parse_cert(cert_pem)
