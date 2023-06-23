@@ -20,3 +20,11 @@ class OpenSslError_InvalidCertificate(OpenSslError):
 
 class OpenSslError_VersionTooLow(OpenSslError):
     pass
+
+
+class FallbackError(Exception):
+    pass
+
+
+class FallbackError_FilepathRequired(FallbackError):
+    pass
