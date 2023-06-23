@@ -32,6 +32,7 @@ For example, `cert_utils.parse_cert` returns a Python dict of key fields in a
 certificate.  This can make writing a script to analyze large directories of
 certificates fairly simple.
 
+
 Parse a Trusted Root
 ~~~~~~~~~~~~~~~~~~~~
 
@@ -55,6 +56,7 @@ pprint.pprint(data)
      'spki_sha256': '0B9FA5A59EED715C26C1020C711B4F6EC42D58B0015E14337A39DAD301C5AFC3',
      'startdate': datetime.datetime(2015, 6, 4, 11, 4, 38),
      'subject': 'C=US\nO=Internet Security Research Group\nCN=ISRG Root X1'}
+
 
 Parse a Leaf/End-Entity
 ~~~~~~~~~~~~~~~~~~~~~~~
@@ -82,10 +84,6 @@ pprint.pprint(data)
      'spki_sha256': '34E67CC615761CBADAF430B2E02E0EC39C99EEFC73CCE469B18AE54A37EF6942',
      'startdate': datetime.datetime(2020, 6, 16, 20, 19, 30),
      'subject': 'CN=a.example.com'}
-
-
-
-
 
 
 Why does this exist?
