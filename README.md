@@ -34,7 +34,7 @@ certificates fairly simple.
 
 
 Parse a Leaf/End-Entity
-~~~~~~~~~~~~~~~~~~~~~~~
+______________________
 
 Example Script:
 
@@ -68,7 +68,7 @@ The payload contains `SubjectAlternativeName` listing all the domains, along
 with `enddate` and `startdate` in Python datetime objects for easy comparison.
 
 Parse a Trusted Root
-~~~~~~~~~~~~~~~~~~~~
+____________________
 
 Example Script:
 
