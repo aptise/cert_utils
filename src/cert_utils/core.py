@@ -483,6 +483,8 @@ def convert_pkcs7_to_pems(pkcs7_data: bytes) -> List[str]:
     if openssl_version is None:
         check_openssl_version()
     _tmpfile_der = new_der_tempfile(pkcs7_data)
+    if openssl_version is None:
+        check_openssl_version()
     try:
         cert_der_filepath = _tmpfile_der.name
         with psutil.Popen(
@@ -659,6 +661,8 @@ def _openssl_cert__normalize_pem(cert_pem: str) -> str:
     if openssl_version is None:
         check_openssl_version()
     _tmpfile_pem = new_pem_tempfile(cert_pem)
+    if openssl_version is None:
+        check_openssl_version()
     try:
         cert_pem_filepath = _tmpfile_pem.name
         with psutil.Popen(
@@ -709,6 +713,8 @@ def _openssl_spki_hash_cert(
     if openssl_version is None:
         check_openssl_version()
     spki_hash = None
+    if openssl_version is None:
+        check_openssl_version()
     # convert to DER
     p1 = p2 = p3 = proc4 = None
     try:
@@ -933,6 +939,8 @@ def _openssl_spki_hash_pkey(
     """
     if key_technology not in ("EC", "RSA"):
         raise ValueError("must submit `key_technology`")
+    if openssl_version is None:
+        check_openssl_version()
     key_technology = key_technology.lower()
     if not key_pem_filepath:
         raise FallbackError_FilepathRequired("Must submit `key_pem_filepath`.")
@@ -1546,7 +1554,6 @@ def validate_cert(
     log.debug(".validate_cert > openssl fallback")
     if openssl_version is None:
         check_openssl_version()
-
     # generate `cert_pem_filepath` if needed.
     _tmpfile_cert = None
     if not cert_pem_filepath:
