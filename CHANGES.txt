@@ -1,3 +1,8 @@
+0.1.2
+    docs improvements
+    raise a new `FallbackError_FilepathRequired` exception when missing a
+        required fallback filepath
+
 0.1.1
     minor formatting
     Conditional Imports

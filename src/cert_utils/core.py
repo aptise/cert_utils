@@ -23,6 +23,7 @@ from dateutil import parser as dateutil_parser
 import psutil
 
 # localapp
+from .errors import FallbackError_FilepathRequired
 from .errors import OpenSslError
 from .errors import OpenSslError_CsrGeneration
 from .errors import OpenSslError_InvalidCertificate
@@ -467,6 +468,7 @@ def convert_pkcs7_to_pems(pkcs7_data: bytes) -> List[str]:
 
         openssl pkcs7 -inform DER -in {FILEPATH} -print_certs -outform PEM
     """
+    # TODO: accept a pkcs7 filepath; FallbackError_FilepathRequired
     log.info("convert_pkcs7_to_pems >")
     if crypto_pkcs7 and crypto_serialization:
         certs_loaded = crypto_pkcs7.load_der_pkcs7_certificates(pkcs7_data)
@@ -478,9 +480,9 @@ def convert_pkcs7_to_pems(pkcs7_data: bytes) -> List[str]:
         certs_string = [cleanup_pem_text(cert) for cert in certs_string]
         return certs_string
     log.debug(".convert_pkcs7_to_pems > openssl fallback")
-    _tmpfile_der = new_der_tempfile(pkcs7_data)
     if openssl_version is None:
         check_openssl_version()
+    _tmpfile_der = new_der_tempfile(pkcs7_data)
     try:
         cert_der_filepath = _tmpfile_der.name
         with psutil.Popen(
@@ -654,9 +656,9 @@ def _openssl_cert__normalize_pem(cert_pem: str) -> str:
 
         openssl x509 -in {FILEPATH}
     """
-    _tmpfile_pem = new_pem_tempfile(cert_pem)
     if openssl_version is None:
         check_openssl_version()
+    _tmpfile_pem = new_pem_tempfile(cert_pem)
     try:
         cert_pem_filepath = _tmpfile_pem.name
         with psutil.Popen(
@@ -677,14 +679,15 @@ def _openssl_cert__normalize_pem(cert_pem: str) -> str:
 
 
 def _openssl_spki_hash_cert(
-    key_technology: Optional[str] = None,
-    cert_pem_filepath: Optional[str] = None,
+    key_technology: str = "",
+    cert_pem_filepath: str = "",
     as_b64: Optional[bool] = None,
 ) -> str:
     """
     :param key_technology: Is the key an "EC" or "RSA" key?
     :type key_technology: str
-    :param cert_pem_filepath: filepath to PEM Certificate
+    :param cert_pem_filepath: REQUIRED filepath to PEM Certificate.
+                              Used for commandline OpenSSL fallback operations.
     :type cert_pem_filepath: str
     :param as_b64: Should the result be returned in Base64 encoding? default None
     :type as_b64: boolean
@@ -701,9 +704,11 @@ def _openssl_spki_hash_cert(
     if key_technology not in ("EC", "RSA"):
         raise ValueError("must submit `key_technology`")
     key_technology = key_technology.lower()
-    spki_hash = None
+    if not cert_pem_filepath:
+        raise FallbackError_FilepathRequired("Must submit `cert_pem_filepath`.")
     if openssl_version is None:
         check_openssl_version()
+    spki_hash = None
     # convert to DER
     p1 = p2 = p3 = proc4 = None
     try:
@@ -790,14 +795,15 @@ def _openssl_spki_hash_cert(
 
 
 def _openssl_spki_hash_csr(
-    key_technology: Optional[str] = None,
-    csr_pem_filepath: Optional[str] = None,
+    key_technology: str = "",
+    csr_pem_filepath: str = "",
     as_b64: Optional[bool] = None,
 ) -> str:
     """
     :param key_technology: Is the key an "EC" or "RSA" key?
     :type key_technology: str
-    :param csr_pem_filepath: filepath to PEM CSR
+    :param csr_pem_filepath: REQUIRED filepath to PEM CSR.
+                             Used for commandline OpenSSL fallback operations.
     :type csr_pem_filepath: str
     :param as_b64: Should the result be returned in Base64 encoding? default None
     :type as_b64: boolean
@@ -814,6 +820,8 @@ def _openssl_spki_hash_csr(
     if key_technology not in ("EC", "RSA"):
         raise ValueError("must submit `key_technology`")
     key_technology = key_technology.lower()
+    if not csr_pem_filepath:
+        raise FallbackError_FilepathRequired("Must submit `csr_pem_filepath`.")
     if openssl_version is None:
         check_openssl_version()
     spki_hash = None
@@ -902,14 +910,15 @@ def _openssl_spki_hash_csr(
 
 
 def _openssl_spki_hash_pkey(
-    key_technology: Optional[str] = None,
-    key_pem_filepath: Optional[str] = None,
+    key_technology: str = "",
+    key_pem_filepath: str = "",
     as_b64: Optional[bool] = None,
 ) -> str:
     """
     :param key_technology: Is the key an "EC" or "RSA" key?
     :type key_technology: str
-    :param key_pem_filepath: filepath to PEM encoded PrivateKey
+    :param key_pem_filepath: REQUIRED filepath to PEM encoded PrivateKey.
+                             Used for commandline OpenSSL fallback operations.
     :type key_pem_filepath: str
     :param as_b64: Should the result be returned in Base64 encoding? default None
     :type as_b64: boolean
@@ -924,9 +933,11 @@ def _openssl_spki_hash_pkey(
     """
     if key_technology not in ("EC", "RSA"):
         raise ValueError("must submit `key_technology`")
+    key_technology = key_technology.lower()
+    if not key_pem_filepath:
+        raise FallbackError_FilepathRequired("Must submit `key_pem_filepath`.")
     if openssl_version is None:
         check_openssl_version()
-    key_technology = key_technology.lower()
     spki_hash = None
     # convert to DER
     p1 = p2 = proc3 = None
@@ -1066,7 +1077,8 @@ def make_csr(
     :type domain_names: list of strings
     :param key_pem: a PEM encoded PrivateKey
     :type key_pem: str
-    :param key_pem_filepath: filepath to the PEM encoded PrivateKey
+    :param key_pem_filepath: Optional filepath to the PEM encoded PrivateKey.
+                             Only used for commandline OpenSSL fallback operations.
     :type key_pem_filepath: str
     :returns: CSR, likely PEM encoded
     :rtype: str
@@ -1106,6 +1118,10 @@ def make_csr(
 
     if openssl_version is None:
         check_openssl_version()
+
+    if key_pem_filepath is None:
+        # TODO: generate a tempfile?
+        raise FallbackError_FilepathRequired("Must submit `key_pem_filepath`.")
 
     _acme_generator_strategy = None
     if ACME_VERSION == "v1":
@@ -1240,7 +1256,8 @@ def parse_cert__domains(
 
     :param cert_pem: a PEM encoded Certificate
     :type cert_pem: str
-    :param cert_pem_filepath: filepath to the PEM encoded Certificate [optional]
+    :param cert_pem_filepath: Optional filepath to the PEM encoded Certificate.
+                              Only used for commandline OpenSSL fallback operations.
     :type cert_pem_filepath: str
     :returns: List of Fully Qualified Domain Names (str) in the Certificate
     :rtype: list
@@ -1261,6 +1278,9 @@ def parse_cert__domains(
     # `openssl x509 -in MYCERT -noout -text`
     if openssl_version is None:
         check_openssl_version()
+    if cert_pem_filepath is None:
+        # TODO: generate a tempfile?
+        raise FallbackError_FilepathRequired("Must submit `cert_pem_filepath`.")
     with psutil.Popen(
         [openssl_path, "x509", "-in", cert_pem_filepath, "-noout", "-text"],
         stdout=subprocess.PIPE,
@@ -1299,7 +1319,8 @@ def parse_csr_domains(
 
     :param csr_pem: a PEM encoded CSR, required
     :type csr_pem: str
-    :param csr_pem_filepath: filepath to the PEM encoded CSR [Optional]
+    :param csr_pem_filepath: Optional filepath to the PEM encoded CSR.
+                             Only used for commandline OpenSSL fallback operations.
     :type csr_pem_filepath: str
     :param submitted_domain_names: Optional. Default `None``. A list of fully
       qualified domain names, all lowercase. If provided, parity between the
@@ -1327,6 +1348,9 @@ def parse_csr_domains(
         # openssl req -in MYCSR -noout -text
         if openssl_version is None:
             check_openssl_version()
+        if not csr_pem_filepath:
+            # TODO: generate csr_pem_filepath if needed?
+            raise FallbackError_FilepathRequired("Must submit `csr_pem_filepath`.")
         with psutil.Popen(
             [openssl_path, "req", "-in", csr_pem_filepath, "-noout", "-text"],
             stdout=subprocess.PIPE,
@@ -1372,7 +1396,8 @@ def validate_key(
 
     :param key_pem: a PEM encoded PrivateKey
     :type key_pem: str
-    :param key_pem_filepath: filepath to the PEM encoded PrivateKey [Optional]
+    :param key_pem_filepath: Optional filepath to the PEM encoded PrivateKey.
+                             Only used for commandline OpenSSL fallback operations.
     :type key_pem_filepath: str
     :returns: If the key is valid, it will return the Key's technology (EC, RSA).
       If the key is not valid, an exception will be raised.
@@ -1404,6 +1429,9 @@ def validate_key(
     log.debug(".validate_key > openssl fallback")
     if openssl_version is None:
         check_openssl_version()
+    if not key_pem_filepath:
+        # TODO: generate a tempfile if needed?
+        raise FallbackError_FilepathRequired("Must submit `key_pem_filepath`.")
 
     def _check_fallback(_technology: str):
         log.debug(".validate_key > openssl fallback: _check_fallback[%s]", _technology)
@@ -1442,7 +1470,8 @@ def validate_csr(
 
     :param csr_pem: a PEM encoded CSR, required
     :type csr_pem: str
-    :param csr_pem_filepath: filepath to the PEM encoded CSR [Optional]
+    :param csr_pem_filepath: Optional filepath to the PEM encoded CSR.
+                             Only used for commandline OpenSSL fallback operations.
     :type csr_pem_filepath: str
     :returns: True
     :rtype: bool
@@ -1464,6 +1493,9 @@ def validate_csr(
     # openssl req -text -noout -verify -in {CSR}
     if openssl_version is None:
         check_openssl_version()
+    if not csr_pem_filepath:
+        # TODO: generate tempfile if needed?
+        raise FallbackError_FilepathRequired("Must submit `csr_pem_filepath`.")
     with psutil.Popen(
         [openssl_path, "req", "-text", "-noout", "-verify", "-in", csr_pem_filepath],
         stdout=subprocess.PIPE,
@@ -1489,7 +1521,8 @@ def validate_cert(
 
     :param cert_pem: a PEM encoded Certificate
     :type cert_pem: str
-    :param cert_pem_filepath: filepath to the PEM encoded Certificate [Optional]
+    :param cert_pem_filepath: Optional filepath to the PEM encoded Certificate.
+                              Only used for commandline OpenSSL fallback operations.
     :type cert_pem_filepath: str
     :returns: True
     :rtype: bool
@@ -1513,6 +1546,8 @@ def validate_cert(
     log.debug(".validate_cert > openssl fallback")
     if openssl_version is None:
         check_openssl_version()
+
+    # generate `cert_pem_filepath` if needed.
     _tmpfile_cert = None
     if not cert_pem_filepath:
         _tmpfile_cert = new_pem_tempfile(cert_pem)
@@ -1573,7 +1608,8 @@ def fingerprint_cert(
 
     :param cert_pem: a PEM encoded Certificate
     :type cert_pem: str
-    :param cert_pem_filepath: filepath to the PEM encoded Certificate [Optional]
+    :param cert_pem_filepath: Optional filepath to the PEM encoded Certificate.
+                              Only used for commandline OpenSSL fallback operations.
     :type cert_pem_filepath: str
     :param algorithm: default "sha1"
     :type algorithm: str
@@ -1607,6 +1643,7 @@ def fingerprint_cert(
     log.debug(".fingerprint_cert > openssl fallback")
     if openssl_version is None:
         check_openssl_version()
+    # generate tempfile if needed
     _tmpfile_cert = None
     if not cert_pem_filepath:
         _tmpfile_cert = new_pem_tempfile(cert_pem)
@@ -1755,7 +1792,8 @@ def modulus_md5_key(
 
     :param key_pem: a PEM encoded PrivateKey
     :type key_pem: str
-    :param key_pem_filepath: filepath to the PEM encoded PrivateKey [Optional]
+    :param key_pem_filepath: Optional filepath to the PEM encoded PrivateKey.
+                             Only used for commandline OpenSSL fallback operations.
     :type key_pem_filepath: str
     :returns: md5 digest of key's modulus
     :rtype: str or None
@@ -1780,6 +1818,9 @@ def modulus_md5_key(
         log.debug(".modulus_md5_key > openssl fallback")
         if openssl_version is None:
             check_openssl_version()
+        if not key_pem_filepath:
+            # TODO: generate if needed?
+            raise FallbackError_FilepathRequired("Must submit `key_pem_filepath`.")
         # original code was:
         # openssl rsa -noout -modulus -in {KEY} | openssl md5
         # BUT
@@ -1809,7 +1850,8 @@ def modulus_md5_csr(
 
     :param csr_pem: a PEM encoded CSR
     :type csr_pem: str
-    :param csr_pem_filepath: filepath to the PEM encoded CSR [Optional]
+    :param csr_pem_filepath: Optional filepath to the PEM encoded CSR.
+                             Only used for commandline OpenSSL fallback operations.
     :type csr_pem_filepath: str
     :returns: md5 digest of CSR's modulus
     :rtype: str or None
@@ -1839,6 +1881,9 @@ def modulus_md5_csr(
         # that pipes into md5: "Modulus={MOD}\n"
         if openssl_version is None:
             check_openssl_version()
+        if not csr_pem_filepath:
+            # TODO: generate if needed?
+            raise FallbackError_FilepathRequired("Must submit `csr_pem_filepath`.")
         with psutil.Popen(
             [openssl_path, "req", "-noout", "-modulus", "-in", csr_pem_filepath],
             stdout=subprocess.PIPE,
@@ -1855,7 +1900,8 @@ def modulus_md5_csr(
 
 
 def modulus_md5_cert(
-    cert_pem: str, cert_pem_filepath: Optional[str] = None
+    cert_pem: str,
+    cert_pem_filepath: Optional[str] = None,
 ) -> Optional[str]:
     """
     This routine will use crypto/certbot if available.
@@ -1863,7 +1909,8 @@ def modulus_md5_cert(
 
     :param cert_pem: a PEM encoded Certificate
     :type cert_pem: str
-    :param cert_pem_filepath: filepath to the PEM encoded Certificate [Optional]
+    :param cert_pem_filepath: Optional filepath to the PEM encoded Certificate.
+                              Only used for commandline OpenSSL fallback operations.
     :type cert_pem_filepath: str
     :returns: md5 digest of Certificate's modulus
     :rtype: str or None
@@ -1892,6 +1939,9 @@ def modulus_md5_cert(
         # that pipes into md5: "Modulus={MOD}\n"
         if openssl_version is None:
             check_openssl_version()
+        if not cert_pem_filepath:
+            # TODO: generate if needed?
+            raise FallbackError_FilepathRequired("Must submit `cert_pem_filepath`.")
         with psutil.Popen(
             [openssl_path, "x509", "-noout", "-modulus", "-in", cert_pem_filepath],
             stdout=subprocess.PIPE,
@@ -1915,6 +1965,9 @@ def _openssl_cert_single_op__pem(
     cert_pem: str,
     single_op: str,
 ) -> str:
+    """
+    this just invokes `_openssl_cert_single_op__pem_filepath` with a tempfile
+    """
     _tmpfile_pem = new_pem_tempfile(cert_pem)
     try:
         cert_pem_filepath = _tmpfile_pem.name
@@ -1929,7 +1982,15 @@ def _openssl_cert_single_op__pem_filepath(
     pem_filepath: str,
     single_op: str,
 ) -> str:
-    """handles a single pem operation to `openssl x509`
+    """
+    handles a single pem operation to `openssl x509`
+
+    :param pem_filepath: filepath to pem encoded cert
+    :type pem_filepath: str
+    :param single_op: operation
+    :type single_op: str
+    :returns: openssl output
+    :rtype: str
 
     openssl x509 -noout -issuer -in cert.pem
     openssl x509 -noout -issuer_hash -in cert.pem
@@ -1959,6 +2020,8 @@ def _openssl_cert_single_op__pem_filepath(
         "-enddate",
     ):
         raise ValueError("invalid `single_op`")
+    if not pem_filepath:
+        raise FallbackError_FilepathRequired("Must submit `pem_filepath`.")
     if openssl_version is None:
         check_openssl_version()
     with psutil.Popen(
@@ -1974,7 +2037,10 @@ def _openssl_cert_single_op__pem_filepath(
     return data_str
 
 
-def cert_ext__pem_filepath(pem_filepath: str, ext: str) -> str:
+def cert_ext__pem_filepath(
+    pem_filepath: str,
+    ext: str,
+) -> str:
     """
     handles a single pem operation to `openssl x509` with EXTENSION
     /usr/local/bin/openssl x509  -noout -ext subjectAltName -in cert.pem
@@ -1994,6 +2060,8 @@ def cert_ext__pem_filepath(pem_filepath: str, ext: str) -> str:
     """
     if ext not in ("subjectAltName", "authorityKeyIdentifier", "authorityInfoAccess"):
         raise ValueError("invalid `ext`")
+    if not pem_filepath:
+        raise FallbackError_FilepathRequired("Must submit `pem_filepath`.")
     if openssl_version is None:
         check_openssl_version()
     with psutil.Popen(
@@ -2018,7 +2086,7 @@ def csr_single_op__pem_filepath(
 
     openssl req -noout -subject -in csr.pem
 
-    :param pem_filepath: filepath to the PEM encoded CSR
+    :param pem_filepath: filepath to the PEM encoded CSR.
     :type pem_filepath: str
     :param single_op: a supported `openssl req` operation
     :type single_op: str
@@ -2031,6 +2099,8 @@ def csr_single_op__pem_filepath(
     """
     if single_op not in ("-subject",):
         raise ValueError("invalid `single_op`")
+    if not pem_filepath:
+        raise FallbackError_FilepathRequired("Must submit `pem_filepath`.")
     if openssl_version is None:
         check_openssl_version()
     with psutil.Popen(
@@ -2091,6 +2161,8 @@ def key_single_op__pem_filepath(
         raise ValueError("keytype must be `RSA or EC`")
     if single_op not in ("-check", "-modulus", "-text"):
         raise ValueError("invalid `single_op`")
+    if not pem_filepath:
+        raise FallbackError_FilepathRequired("Must submit `pem_filepath`.")
     if openssl_version is None:
         check_openssl_version()
     with psutil.Popen(
@@ -2120,7 +2192,8 @@ def parse_cert__enddate(
 
     :param cert_pem: PEM encoded Certificate
     :type cert_pem: str
-    :param cert_pem_filepath: filepath to the PEM encoded Certificate
+    :param cert_pem_filepath: Optional filepath to the PEM encoded Certificate.
+                              Only used for commandline OpenSSL fallback operations.
     :type cert_pem_filepath: str
     :returns: end date
     :rtype: datetime.datetime
@@ -2140,7 +2213,7 @@ def parse_cert__enddate(
         log.debug(".parse_cert__enddate > openssl fallback")
         # openssl x509 -enddate -noout -in {CERT}
         if not cert_pem_filepath:
-            raise ValueError("`cert_pem_filepath` is required")
+            raise FallbackError_FilepathRequired("Must submit `cert_pem_filepath`.")
         data = _openssl_cert_single_op__pem_filepath(cert_pem_filepath, "-enddate")
         if data[:9] != "notAfter=":
             raise OpenSslError_InvalidCertificate("unexpected format")
@@ -2160,7 +2233,8 @@ def parse_cert__startdate(
 
     :param cert_pem: PEM encoded Certificate
     :type cert_pem: str
-    :param cert_pem_filepath: filepath to the PEM encoded Certificate
+    :param cert_pem_filepath: Optional filepath to the PEM encoded Certificate.
+                              Only used for commandline OpenSSL fallback operations.
     :type cert_pem_filepath: str
     :returns: start date
     :rtype: datetime.datetime
@@ -2180,7 +2254,7 @@ def parse_cert__startdate(
         log.debug(".parse_cert__startdate > openssl fallback")
         # openssl x509 -startdate -noout -in {CERT}
         if not cert_pem_filepath:
-            raise ValueError("`cert_pem_filepath` is required")
+            raise FallbackError_FilepathRequired("Must submit `cert_pem_filepath`.")
         data = _openssl_cert_single_op__pem_filepath(cert_pem_filepath, "-startdate")
         if data[:10] != "notBefore=":
             raise OpenSslError_InvalidCertificate("unexpected format")
@@ -2199,7 +2273,8 @@ def parse_cert__spki_sha256(
 ) -> str:
     """
     :param str cert_pem: PEM encoded Certificate
-    :param str cert_pem_filepath: Filepath to PEM encoded Certificate
+    :param str cert_pem_filepath: Optional filepath to PEM encoded Certificate.
+                                  Only used for commandline OpenSSL fallback operations.
     :param cryptography_cert: optional hint to aid in crypto commands
     :type cryptography_cert: `OpenSSL.crypto.load_certificate(...).to_cryptography()``
     :param str key_technology: optional hint to aid in openssl fallback
@@ -2225,6 +2300,9 @@ def parse_cert__spki_sha256(
             as_b64=as_b64,
         )
     log.debug(".parse_cert__spki_sha256 > openssl fallback")
+    if not cert_pem_filepath:
+        # TODO: generate tempfile?
+        raise FallbackError_FilepathRequired("Must submit `cert_pem_filepath`.")
     tmpfile_pem = None
     try:
         if key_technology is None:
@@ -2251,7 +2329,8 @@ def parse_cert__key_technology(
     """
     :param cert_pem: PEM encoded Certificate
     :type cert_pem: str
-    :param cert_pem_filepath: Filepath to PEM encoded Certificate
+    :param cert_pem_filepath: Optional filepath to PEM encoded Certificate.
+                              Only used for commandline OpenSSL fallback operations.
     :type cert_pem_filepath: str
     :returns: key technology type
     :rtype: str
@@ -2271,6 +2350,9 @@ def parse_cert__key_technology(
     # `openssl x509 -in MYCERT -noout -text`
     if openssl_version is None:
         check_openssl_version()
+    if not cert_pem_filepath:
+        # TODO: generate tempfile?
+        raise FallbackError_FilepathRequired("Must submit `cert_pem_filepath`.")
     with psutil.Popen(
         [openssl_path, "x509", "-in", cert_pem_filepath, "-noout", "-text"],
         stdout=subprocess.PIPE,
@@ -2293,7 +2375,8 @@ def parse_cert(
 
     :param cert_pem: PEM encoded Certificate
     :type cert_pem: str
-    :param cert_pem_filepath: Filepath to PEM encoded Certificate
+    :param cert_pem_filepath: Optional filepath to PEM encoded Certificate
+                              Only used for commandline OpenSSL fallback operations.
     :type cert_pem_filepath: str
     :returns: dict representation of select Certificate information
     :rtype: dict
@@ -2474,7 +2557,8 @@ def parse_csr__key_technology(
     """
     :param csr_pem: PEM encoded CSR
     :type csr_pem: str
-    :param csr_pem_filepath: Filepath to PEM encoded CSR
+    :param csr_pem_filepath: Optional filepath to PEM encoded CSR.
+                             Only used for commandline OpenSSL fallback operations.
     :type csr_pem_filepath: str
     :param crypto_csr: openssl cryptography object
     :type crypto_csr: `OpenSSL.crypto.X509Req`
@@ -2497,6 +2581,8 @@ def parse_csr__key_technology(
     # `openssl req -in MYCERT -noout -text`
     if openssl_version is None:
         check_openssl_version()
+    if not csr_pem_filepath:
+        raise FallbackError_FilepathRequired("Must submit `csr_pem_filepath`.")
     with psutil.Popen(
         [openssl_path, "req", "-in", csr_pem_filepath, "-noout", "-text"],
         stdout=subprocess.PIPE,
@@ -2518,7 +2604,8 @@ def parse_csr__spki_sha256(
 ) -> str:
     """
     :param str csr_pem: CSR in PEM encoding
-    :param str csr_pem_filepath: Filepath to PEM encoded CSR [Optional]
+    :param str csr_pem_filepath: Optional filepath to PEM encoded CSR.
+                                 Only used for commandline OpenSSL fallback operations.
     :param object crypto_csr: optional hint to aid in crypto commands
     :param str key_technology: optional hint to aid in openssl fallback
     :param bool as_b64: encode with b64?
@@ -2542,6 +2629,8 @@ def parse_csr__spki_sha256(
         )
         return spki_sha256
     log.debug(".parse_csr__spki_sha256 > openssl fallback")
+    if not csr_pem_filepath:
+        raise FallbackError_FilepathRequired("Must submit `csr_pem_filepath`.")
     tmpfile_pem = None
     try:
         if key_technology is None:
@@ -2561,13 +2650,17 @@ def parse_csr__spki_sha256(
             tmpfile_pem.close()
 
 
-def parse_csr(csr_pem: str, csr_pem_filepath: Optional[str] = None) -> Dict:
+def parse_csr(
+    csr_pem: str,
+    csr_pem_filepath: Optional[str] = None,
+) -> Dict:
     """
     This routine will use crypto/certbot if available.
     If not, openssl is used via subprocesses
 
     :param str csr_pem: CSR in PEM encoding
-    :param str csr_pem_filepath: Filepath to PEM encoded CSR
+    :param str csr_pem_filepath: Optional filepath to PEM encoded CSR.
+                                 Only used for commandline OpenSSL fallback operations.
     :returns: dict of select CSR data
     :rtype: dict
     """
@@ -2652,7 +2745,8 @@ def parse_key__spki_sha256(
 ) -> str:
     """
     :param str key_pem: Key in PEM form
-    :param str key_pem_filepath: Filepath to PEM
+    :param str key_pem_filepath: Optional filepath to PEM.
+                                 Only used for commandline OpenSSL fallback operations.
     :param cryptography_publickey: optional hint to aid in crypto commands
     :type cryptography_publickey: cryptography.hazmat.backends.openssl.rsa._RSAPublicKey
         openssl_crypto.load_privatekey(...).to_cryptography_key().public_key()
@@ -2679,6 +2773,8 @@ def parse_key__spki_sha256(
         )
         return spki_sha256
     log.debug(".parse_key__spki_sha256 > openssl fallback")
+    if not key_pem_filepath:
+        raise FallbackError_FilepathRequired("Must submit `key_pem_filepath`.")
     tmpfile_pem = None
     try:
         if key_technology is None:
@@ -2705,7 +2801,8 @@ def parse_key__technology(
 ) -> str:
     """
     :param str key_pem: Key in PEM form
-    :param str key_pem_filepath: Filepath to PEM
+    :param str key_pem_filepath: Optional filepath to PEM.
+                                 Only used for commandline OpenSSL fallback operations.
     :param object crypto_privatekey: optional hint to aid in crypto commands
     :returns: key technology
     :rtype: str
@@ -2761,7 +2858,8 @@ def parse_key(
     If not, openssl is used via subprocesses
 
     :param str key_pem: Key in PEM encoding
-    :param str key_pem_filepath: Filepath to PEM encoded Key
+    :param str key_pem_filepath: Optional filepath to PEM encoded Key.
+                                 Only used for commandline OpenSSL fallback operations.
     :returns: dict of select CSR data
     :rtype: dict
     """
@@ -3146,7 +3244,9 @@ def convert_lejson_to_pem(pkey_jsons: str) -> str:
             t.close()
 
 
-def cert_and_chain_from_fullchain(fullchain_pem: str) -> Tuple[str, str]:
+def cert_and_chain_from_fullchain(
+    fullchain_pem: str,
+) -> Tuple[str, str]:
     """
     Split `fullchain_pem` into `cert_pem` and `chain_pem`
 
@@ -3535,7 +3635,8 @@ def account_key__parse(
 ) -> Tuple[Dict, str, str]:
     """
     :param key_pem: (required) the RSA Key in PEM format
-    :param key_pem_filepath: (optional) the filepath to a PEM encoded RSA account key file.
+    :param key_pem_filepath: Optional filepath to a PEM encoded RSA account key file.
+                             Only used for commandline OpenSSL fallback operations.
     :returns: jwk, thumbprint, alg
     :rtype: list
 
@@ -3608,7 +3709,8 @@ def account_key__sign(
     If not, openssl is used via subprocesses
 
     :param key_pem: (required) the RSA Key in PEM format
-    :param key_pem_filepath: (optional) the filepath to a PEM encoded RSA account key file.
+    :param key_pem_filepath: Optional filepath to a PEM encoded RSA account key file.
+                             Only used for commandline OpenSSL fallback operations.
     :returns: signature
     :rtype: bytes
     """
