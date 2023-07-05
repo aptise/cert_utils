@@ -2324,6 +2324,8 @@ def parse_cert__spki_sha256(
             key_technology = parse_cert__key_technology(
                 cert_pem=cert_pem, cert_pem_filepath=cert_pem_filepath
             )
+            if not key_technology:
+                raise ValueError("Could not parse key_technology for backup")
         spki_sha256 = _openssl_spki_hash_cert(
             key_technology=key_technology,
             cert_pem_filepath=cert_pem_filepath,
@@ -2655,6 +2657,8 @@ def parse_csr__spki_sha256(
             key_technology = parse_csr__key_technology(
                 csr_pem=csr_pem, csr_pem_filepath=csr_pem_filepath
             )
+            if not key_technology:
+                raise ValueError("Could not parse key_technology for backup")
         spki_sha256 = _openssl_spki_hash_csr(
             key_technology=key_technology,
             csr_pem_filepath=csr_pem_filepath,
