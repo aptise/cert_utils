@@ -2,7 +2,7 @@
 import binascii
 import hashlib
 import re
-from typing import List
+from typing import Iterable
 from typing import Union
 
 # ==============================================================================
@@ -17,7 +17,7 @@ RE_domain = re.compile(
 # ------------------------------------------------------------------------------
 
 
-def validate_domains(domain_names: List[str]) -> bool:
+def validate_domains(domain_names: Iterable[str]) -> bool:
     """
     Ensures each items of the iterable `domain_names` matches a regular expression.
 
@@ -29,7 +29,7 @@ def validate_domains(domain_names: List[str]) -> bool:
     return True
 
 
-def domains_from_list(domain_names: List[str]) -> List[str]:
+def domains_from_list(domain_names: Iterable[str]) -> Iterable[str]:
     """
     Turns a list of strings into a standardized list of domain names.
 
@@ -47,7 +47,7 @@ def domains_from_list(domain_names: List[str]) -> List[str]:
     return domain_names
 
 
-def domains_from_string(text: str) -> List[str]:
+def domains_from_string(text: str) -> Iterable[str]:
     """
     :param text: (required) Turns a comma-separated-list of domain names into a list
 
