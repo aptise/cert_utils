@@ -16,3 +16,17 @@ tempfiles and minimize disk i/o.
 The library tries to create and use these files as needed from PEM data.
 Unfortunately, not all functions will generate these files as needed and will
 raise a `FallbackError_FilepathRequired` exception if the data is needed.
+
+
+#### Compatability with earlier Python versions
+
+Python 3.6 has the following issue:
+
+* the last compatibile version of acme is 1.23.0 
+* acme 1.23.0 does not pin the pyopenssl version
+* pip/etc may attempt to install an incompatible pyopenssl version
+ * 23.2.0 will fail due to an invalid call by certbot
+ * 23.1.0 has a bug that potentially affects this package
+
+This package will attempt to install compatible versions for tests, but does not
+do anything for regular installs, as it will fallback on OpenSSL commandline.

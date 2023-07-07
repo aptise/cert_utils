@@ -3630,11 +3630,11 @@ class AccountKeyData(object):
     An object encapsulating Account Key data
     """
 
-    key_pem = None
-    key_pem_filepath = None  # if used
-    jwk = None
-    thumbprint = None
-    alg = None
+    key_pem: str
+    key_pem_filepath: Optional[str]
+    jwk: Dict
+    thumbprint: str
+    alg: str
 
     def __init__(
         self,
