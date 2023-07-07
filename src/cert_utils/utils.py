@@ -2,6 +2,7 @@
 import binascii
 import hashlib
 import re
+from typing import List
 from typing import Iterable
 from typing import Union
 
@@ -29,7 +30,7 @@ def validate_domains(domain_names: Iterable[str]) -> bool:
     return True
 
 
-def domains_from_list(domain_names: Iterable[str]) -> Iterable[str]:
+def domains_from_list(domain_names: Iterable[str]) -> List[str]:
     """
     Turns a list of strings into a standardized list of domain names.
 
@@ -47,7 +48,7 @@ def domains_from_list(domain_names: Iterable[str]) -> Iterable[str]:
     return domain_names
 
 
-def domains_from_string(text: str) -> Iterable[str]:
+def domains_from_string(text: str) -> List[str]:
     """
     :param text: (required) Turns a comma-separated-list of domain names into a list
 
