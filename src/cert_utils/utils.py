@@ -2,8 +2,8 @@
 import binascii
 import hashlib
 import re
-from typing import List
 from typing import Iterable
+from typing import List
 from typing import Union
 
 # ==============================================================================

@@ -1,9 +1,7 @@
 # stdlib
 import json
-import logging
 import os
-import test
-import test.test_httplib
+from typing import Dict
 import unittest
 
 # pypi
@@ -16,7 +14,6 @@ from OpenSSL import crypto as openssl_crypto
 
 # local
 import cert_utils
-from cert_utils import core
 from cert_utils import model
 from cert_utils import utils
 from cert_utils.errors import OpenSslError
@@ -131,7 +128,7 @@ class _Mixin_Missing_openssl_crypto(_Mixin_fallback_possible):
 class UnitTest_CertUtils(unittest.TestCase, _Mixin_fallback_possible, _Mixin_filedata):
     """python -m unittest tests.test_unit.UnitTest_CertUtils"""
 
-    _account_sets = {
+    _account_sets: Dict = {
         "001": {
             "letsencrypt": True,
             "pem": True,
@@ -139,7 +136,7 @@ class UnitTest_CertUtils(unittest.TestCase, _Mixin_fallback_possible, _Mixin_fil
             "signature.output": "hN3bre1YpxSGbvKmx8zK9_o0yaxtDblDfS3Q3CsjAas9wUVIHk7NqxXH0HeEeZG_7T0AHH6HTfxMbucXK_dLog_g9AxQYFsRBc8587C8Z5rWF2YDCoo0W7JB7VOoLEHGfe7JRXeqgA9QSnci0wMFlKXC_6MbKxql8QtswOdvtFM85qcJsMCOSu2Xf6HLIAYFhdBJH-DvQGzE4ctOKAYCmDyXs42DBUU4CU0cNXj8TsN0cFRXvInvSqDsiPNSjyV32WC4clPHX69KEbs5Wr0WV2diHR-Q6w0QUljWZEDpcl8mb86LZwBqoUTHX2xstQI77sLcg7YhDfaIPrCjYJcNZw",
         },
     }
-    _cert_sets = {
+    _cert_sets: Dict = {
         "001": {
             "csr": True,
             "csr.subject": "",
@@ -1218,8 +1215,8 @@ class UnitTest_CertUtils(unittest.TestCase, _Mixin_fallback_possible, _Mixin_fil
             _test_dir = "long_chains/%s" % _test_id
             _test_data_filename = "%s/_data.json" % _test_dir
             _test_data_filepath = self._filepath_testfile(_test_data_filename)
-            _test_data = self._filedata_testfile(_test_data_filepath)
-            _test_data = json.loads(_test_data)
+            _test_data_string = self._filedata_testfile(_test_data_filepath)
+            _test_data = json.loads(_test_data_string)
             count_roots = _test_data["roots"]
             count_intermediates = _test_data["intermediates"]
 
@@ -1348,9 +1345,9 @@ class UnitTest_CertUtils(unittest.TestCase, _Mixin_fallback_possible, _Mixin_fil
                         )
                 # reverse: nay :(
                 _all_certs_reversed = _all_certs[::-1]
-                with self.assertRaises(OpenSslError) as cm:
+                with self.assertRaises(OpenSslError) as cm2:
                     cert_utils.ensure_chain_order(_all_certs_reversed)
-                self.assertTrue(cm.exception.args[0].startswith("could not verify:"))
+                self.assertTrue(cm2.exception.args[0].startswith("could not verify:"))
 
     def test__convert_lejson_to_pem(self):
         """
@@ -1438,10 +1435,10 @@ class UnitTest_CertUtils(unittest.TestCase, _Mixin_fallback_possible, _Mixin_fil
             expected = self._account_sets[account_set]["signature.output"]
 
             with self.assertLogs("cert_utils.core", level="DEBUG") as logged:
-                signature = cert_utils.account_key__sign(
+                _signature = cert_utils.account_key__sign(
                     input, key_pem=key_pem, key_pem_filepath=key_pem_filepath
                 )
-                signature = cert_utils.jose_b64(signature)
+                signature = cert_utils.jose_b64(_signature)
                 self.assertEqual(signature, expected)
 
                 if (
@@ -1575,7 +1572,7 @@ class UnitTest_CertUtils(unittest.TestCase, _Mixin_fallback_possible, _Mixin_fil
         """
         fname_pkcs7 = "letsencrypt-certs/trustid-x3-root.p7c"
         fpath_pkcs7 = self._filepath_testfile(fname_pkcs7)
-        fdata_pkcs7 = self._filedata_testfile(fname_pkcs7, is_binary=True)
+        fdata_pkcs7 = self._filedata_testfile_binary(fname_pkcs7)
         with self.assertLogs("cert_utils.core", level="DEBUG") as logged:
             pkcs7_pems = cert_utils.convert_pkcs7_to_pems(fdata_pkcs7)
             if (
@@ -1607,7 +1604,7 @@ class UnitTest_CertUtils(unittest.TestCase, _Mixin_fallback_possible, _Mixin_fil
         """
         fname_pkix = "letsencrypt-certs/isrgrootx1.pkix"
         fpath_pkix = self._filepath_testfile(fname_pkix)
-        fdata_pkix = self._filedata_testfile(fname_pkix, is_binary=True)
+        fdata_pkix = self._filedata_testfile_binary(fname_pkix)
         pkix_pem = cert_utils.convert_der_to_pem(fdata_pkix)
 
         fname_pem = "letsencrypt-certs/isrgrootx1.pem"
