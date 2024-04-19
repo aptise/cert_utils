@@ -1726,8 +1726,15 @@ class UnitTest_api(unittest.TestCase):
         self.assertEqual(active, cert_utils.core.openssl_version)
 
         # let's try to replace it
-        cert_utils.core.openssl_version = "x"
-        self.assertEqual("x", cert_utils.core.openssl_version)
+        cert_utils.core.openssl_version = [
+            0,
+        ]
+        self.assertEqual(
+            [
+                0,
+            ],
+            cert_utils.core.openssl_version,
+        )
         new = cert_utils.check_openssl_version(replace=True)
         self.assertEqual(active, new)
         self.assertEqual(new, cert_utils.core.openssl_version)
