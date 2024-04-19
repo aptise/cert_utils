@@ -1,6 +1,6 @@
 # stdlib
 import os
-from typing import Union
+from typing import Dict
 
 # local
 import cert_utils
@@ -8,7 +8,7 @@ import cert_utils
 # ==============================================================================
 
 
-CERT_CA_SETS = {
+CERT_CA_SETS: Dict = {
     "letsencrypt-certs/trustid-x3-root.pem": {
         "key_technology": "RSA",
         "modulus_md5": "35f72cb35ea691144ffc2798db20ccfd",
@@ -109,7 +109,7 @@ CSR_SETS = {
     },
 }
 
-KEY_SETS = {
+KEY_SETS: Dict = {
     "key_technology-rsa/acme_account_1.key": {
         "key_technology": "RSA",
         "modulus_md5": "ceec56ad4caba2cd70ee90c7d80fbb74",
@@ -125,7 +125,7 @@ KEY_SETS = {
 }
 
 
-TEST_FILES = {
+TEST_FILES: Dict = {
     "PrivateKey": {
         "1": {
             "file": "key_technology-rsa/private_1.key",
@@ -166,23 +166,35 @@ class _Mixin_filedata(object):
         "letsencrypt-certs",
     )
 
-    def _filepath_testfile(self, filename: str) -> str:
+    def _filepath_testfile(
+        self,
+        filename: str,
+    ) -> str:
         if filename.startswith("letsencrypt-certs/"):
             filename = filename[18:]
             return os.path.join(self._data_root_letsencrypt, filename)
         return os.path.join(self._data_root, filename)
 
     def _filedata_testfile(
-        self, filename: str, is_binary: bool = False
-    ) -> Union[str, bytes]:
+        self,
+        filename: str,
+    ) -> str:
         _data_root = self._data_root
         if filename.startswith("letsencrypt-certs/"):
             filename = filename[18:]
             _data_root = self._data_root_letsencrypt
-        if is_binary:
-            with open(os.path.join(_data_root, filename), "rb") as f:
-                data = f.read()
-        else:
-            with open(os.path.join(_data_root, filename), "rt", encoding="utf-8") as f:
-                data = f.read()
-        return data
+        with open(os.path.join(_data_root, filename), "rt", encoding="utf-8") as f:
+            data_s = f.read()
+        return data_s
+
+    def _filedata_testfile_binary(
+        self,
+        filename: str,
+    ) -> bytes:
+        _data_root = self._data_root
+        if filename.startswith("letsencrypt-certs/"):
+            filename = filename[18:]
+            _data_root = self._data_root_letsencrypt
+        with open(os.path.join(_data_root, filename), "rb") as f:
+            data_b = f.read()
+        return data_b

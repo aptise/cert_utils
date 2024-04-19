@@ -9,6 +9,7 @@ import re
 import subprocess
 import tempfile
 import textwrap
+from types import ModuleType
 from typing import Any
 from typing import Dict
 from typing import List
@@ -65,15 +66,23 @@ if TYPE_CHECKING:
 
 # ------------------------------------------------------------------------------
 # Conditional Imports
-try:
-    from acme import crypto_util as acme_crypto_util
-except ImportError:
-    acme_crypto_util = None  # type: ignore[assignment]
+
+acme_crypto_util: Optional[ModuleType]
+certbot_crypto_util: Optional[ModuleType]
+cryptography: Optional[ModuleType]
+crypto_serialization: Optional[ModuleType]
+josepy: Optional[ModuleType]
+openssl_crypto: Optional[ModuleType]
 
 try:
-    from certbot import crypto_util as certbot_crypto_util
+    from acme import crypto_util as acme_crypto_util  # type: ignore[no-redef]
 except ImportError:
-    certbot_crypto_util = None  # type: ignore[assignment]
+    acme_crypto_util = None
+
+try:
+    from certbot import crypto_util as certbot_crypto_util  # type: ignore[no-redef]
+except ImportError:
+    certbot_crypto_util = None
 
 try:
     import cryptography
@@ -84,22 +93,22 @@ try:
     from cryptography.hazmat.primitives.serialization import pkcs7 as crypto_pkcs7
 except ImportError:
     raise
-    cryptography = None  # type: ignore[assignment]
-    crypto_default_backend = None  # type: ignore[assignment]
-    crypto_serialization = None  # type: ignore[assignment]
-    crypto_ec = None  # type: ignore[assignment]
-    crypto_rsa = None  # type: ignore[assignment]
-    crypto_pkcs7 = None  # type: ignore[assignment]
+    cryptography = None
+    crypto_default_backend = None
+    crypto_serialization = None
+    crypto_ec = None
+    crypto_rsa = None
+    crypto_pkcs7 = None
 
 try:
     import josepy
 except ImportError:
-    josepy = None  # type: ignore[assignment]
+    josepy = None
 
 try:
     from OpenSSL import crypto as openssl_crypto
 except ImportError:
-    openssl_crypto = None  # type: ignore[assignment]
+    openssl_crypto = None
 
 # ------------------------------------------------------------------------------
 
@@ -170,10 +179,10 @@ openssl_path_conf = (
 )
 
 ACME_VERSION = "v2"
-openssl_version = None
+openssl_version: Optional[List[int]] = None
 _RE_openssl_version = re.compile(r"OpenSSL ((\d+\.\d+\.\d+)\w*) ", re.I)
 _RE_rn = re.compile(r"\r\n")
-_openssl_behavior = None  # 'a' or 'b'
+_openssl_behavior: Optional[str] = None  # 'a' or 'b'
 
 
 # If True, will:
@@ -1029,6 +1038,7 @@ def _openssl_crypto__key_technology(
     :returns: type of key: RSA, EC, DSA
     :rtype: str
     """
+    assert openssl_crypto is not None  # nest under `if TYPE_CHECKING` not needed
     cert_type = key.type()
     if cert_type == openssl_crypto.TYPE_RSA:
         return "RSA"
@@ -1053,6 +1063,7 @@ def _cryptography__public_key_spki_sha256(
     :returns: spki_sha256
     :rtype: str
     """
+    assert crypto_serialization is not None  # nest under `if TYPE_CHECKING` not needed
     _public_bytes = cryptography_publickey.public_bytes(  # type: ignore[union-attr]
         crypto_serialization.Encoding.DER,
         crypto_serialization.PublicFormat.SubjectPublicKeyInfo,
@@ -2309,6 +2320,7 @@ def parse_cert__spki_sha256(
                 openssl_crypto.FILETYPE_PEM, cert_pem.encode()
             )
             cryptography_cert = cert.to_cryptography()
+        assert cryptography_cert is not None  # nest under `if TYPE_CHECKING` not needed
         cryptography_publickey = cryptography_cert.public_key()
         return _cryptography__public_key_spki_sha256(
             cryptography_publickey,
@@ -2595,6 +2607,7 @@ def parse_csr__key_technology(
             crypto_csr = openssl_crypto.load_certificate_request(
                 openssl_crypto.FILETYPE_PEM, csr_pem.encode()
             )
+        assert crypto_csr is not None  # nest under `if TYPE_CHECKING` not needed
         return _openssl_crypto__key_technology(crypto_csr.get_pubkey())
     log.debug(".parse_csr__key_technology > openssl fallback")
     # `openssl req -in MYCERT -noout -text`
@@ -2643,6 +2656,7 @@ def parse_csr__spki_sha256(
             crypto_csr = openssl_crypto.load_certificate_request(
                 openssl_crypto.FILETYPE_PEM, csr_pem.encode()
             )
+        assert crypto_csr is not None  # nest under `if TYPE_CHECKING` not needed
         cryptography_publickey = crypto_csr.get_pubkey().to_cryptography_key()
         spki_sha256 = _cryptography__public_key_spki_sha256(
             cryptography_publickey, as_b64=as_b64
@@ -2791,6 +2805,9 @@ def parse_key__spki_sha256(
             )
             _cryptography_privkey = _crypto_privkey.to_cryptography_key()
             cryptography_publickey = _cryptography_privkey.public_key()  # type: ignore[union-attr]
+        assert (
+            cryptography_publickey is not None
+        )  # nest under `if TYPE_CHECKING` not needed
         spki_sha256 = _cryptography__public_key_spki_sha256(
             cryptography_publickey, as_b64=as_b64
         )
@@ -2836,6 +2853,7 @@ def parse_key__technology(
             crypto_privatekey = openssl_crypto.load_privatekey(
                 openssl_crypto.FILETYPE_PEM, key_pem
             )
+        assert crypto_privatekey is not None  # nest under `if TYPE_CHECKING` not needed
         _cert_type = crypto_privatekey.type()
         if _cert_type == openssl_crypto.TYPE_RSA:
             return "RSA"
