@@ -14,9 +14,14 @@ import copy
 import os
 from typing import Any
 from typing import Dict
+from typing import List
+from typing import Optional
+from typing import Tuple
 
 # pypi
 import requests
+from typing_extensions import TypedDict
+from typing_extensions import Required
 
 # localapp
 from .core import cleanup_pem_text
@@ -28,7 +33,7 @@ from .utils import md5_text
 
 # updated ratelimits are published at:
 # https://letsencrypt.org/docs/rate-limits/
-# last checked: 2020.07.06
+# last checked: 2024.06.26
 
 LIMITS: Dict[str, Dict[str, Any]] = {
     "names/certificate": {"limit": 100},  # "Names per Certificate"
@@ -37,7 +42,10 @@ LIMITS: Dict[str, Dict[str, Any]] = {
         "timeframe": "1 week",
         "includes_renewals": False,
     },  # "Certificates per Registered Domain"
-    "certificates/fqdn": {"limit": 5, "timeframe": "1 week"},  # "Duplicate Certificate"
+    "certificates/fqdn": {
+        "limit": 5,
+        "timeframe": "1 week",
+    },  # "Duplicate Certificate"
     "registrations/ip_address": {
         "limit": 10,
         "timeframe": "3 hours",
@@ -116,7 +124,7 @@ LIMITS: Dict[str, Dict[str, Any]] = {
 # * tests.test_unit.UnitTest_LetsEncrypt_Data
 
 
-CERT_CAS_VERSION = 3  # update when the information below changes
+CERT_CAS_VERSION = 4  # update when the information below changes
 """
 format details:
 
@@ -134,7 +142,33 @@ Compatibility Info
     Last updated: Jan 21, 2021
 
 """
-CERT_CAS_DATA: Dict[str, Any] = {
+CERT_CA_PAYLOAD = TypedDict(
+    "CERT_CA_PAYLOAD",
+    {
+        "display_name": Required[str],
+        "url_pem": Required[str],
+        "is_trusted_root": Optional[bool],
+        "is_self_signed": Optional[bool],
+        "signed_by": Required[str],
+        "is_active": Required[bool],
+        "is_retired": Optional[bool],
+        "key_technology": Required[str],
+        "cert.fingerprints": Optional[Dict[str, str]],
+        ".enddate": Optional[Tuple[int, ...]],
+        "compatibility": Optional[Dict[str, str]],
+        "alternates": Optional[List[str]],
+        "alternate_of": Optional[str],
+        "letsencrypt_serial": Optional[str],
+        
+        # loaded via deprecated processors
+        "cert_pem": Optional[str],
+        "cert_pem_md5": Optional[str],
+    },
+    total=False,
+)
+
+
+CERT_CAS_DATA: Dict[str, CERT_CA_PAYLOAD] = {
     "trustid_root_x3": {
         "display_name": "DST Root CA X3",
         "url_pem": "https://letsencrypt.org/certs/trustid-x3-root.pem",
@@ -542,21 +576,21 @@ _CERT_CAS_ORDER = [
     "letsencrypt_intermediate_r4_cross",
     "letsencrypt_intermediate_e1",
     "letsencrypt_intermediate_e2",
-    "e5.pem",
-    "e5-cross.pem",
-    "e6.pem",
-    "e6-cross.pem",
-    "e7.pem",
-    "e7-cross.pem",
-    "e8.pem",
-    "e8-cross.pem",
-    "e9.pem",
-    "e9-cross.pem",
-    "r10.pem",
-    "r11.pem",
-    "r12.pem",
-    "r13.pem",
-    "r14.pem",
+    "e5",
+    "e5_cross",
+    "e6",
+    "e6_cross",
+    "e7",
+    "e7_cross",
+    "e8",
+    "e8_cross",
+    "e9",
+    "e9_cross",
+    "r10",
+    "r11",
+    "r12",
+    "r13",
+    "r14",
     "staging_letsencrypt_root_x1",
     "staging_letsencrypt_intermediate_x1",
 ]

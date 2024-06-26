@@ -21,6 +21,7 @@ requires = [
     "python-dateutil",
     "psutil>=4.4.0",  # for Python2/3 compat
     "requests",
+    "typing_extensions",
 ]
 tests_require = [
     "certbot",
