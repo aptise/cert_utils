@@ -1,4 +1,7 @@
-0.1.5
+0.1.6
+    updated LetsEncrypt data
+
+0.1.5 [deleted from PyPi]
     updated typing and tests
     updated LetsEncrypt data
     
