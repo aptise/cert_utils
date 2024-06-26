@@ -1,5 +1,6 @@
-0.1.5 (unreleased)
+0.1.5
     updated typing and tests
+    updated LetsEncrypt data
     
 0.1.4
     updated typing for dependencies
