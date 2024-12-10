@@ -1,3 +1,6 @@
+0.1.8
+    added cert_info cli tool
+
 0.1.7
     ARI support
         * ari_construct_identifier()
