@@ -1,5 +1,3 @@
-# -*- coding: future_annotations -*-
-
 # stdlib
 import base64
 import binascii
