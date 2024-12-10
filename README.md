@@ -25,8 +25,80 @@ from Certificates.  It was designed for developers and system administrators to
 more easily use the various libraries to accomplish specific tasks on the
 commandline or as part of other projects.
 
-Examples:
----------
+This library now includes a utility, `cert_info`:
+
+Examples CLI:
+-------------
+
+The CLI tool `cert_info` can parse a cert and pull the active ARI info.
+
+The tool accepts a filepath to a local file OR a https URL to be inspected live:
+
+> cert_info https://letsencrypt.org
+
+This will gnerate the output:
+
+    ********************************************************************************
+    ********************************************************************************
+    Process URL:
+    url:  https://letsencrypt.org
+    =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    Connection Data:
+    {'cert_dict': {'OCSP': ('http://e6.o.lencr.org',),
+                   'caIssuers': ('http://e6.i.lencr.org/',),
+                   'issuer': ((('countryName', 'US'),),
+                              (('organizationName', "Let's Encrypt"),),
+                              (('commonName', 'E6'),)),
+                   'notAfter': 'Mar  7 14:44:04 2025 GMT',
+                   'notBefore': 'Dec  7 14:44:05 2024 GMT',
+                   'serialNumber': '04C7A73A361AC02B67BDBD6AF210285B1CC7',
+                   'subject': ((('commonName', 'letsencrypt.org'),),),
+                   'subjectAltName': (('DNS', 'lencr.org'),
+                                      ('DNS', 'letsencrypt.com'),
+                                      ('DNS', 'letsencrypt.org'),
+                                      ('DNS', 'www.lencr.org'),
+                                      ('DNS', 'www.letsencrypt.com'),
+                                      ('DNS', 'www.letsencrypt.org')),
+                   'version': 3},
+     'cert_pem': '-----BEGIN CERTIFICATE-----\n'
+                 'MIID1DCCA1qgAwIBAgISBMenOjYawCtnvb1q8hAoWxzHMAoGCCqGSM49BAMDMDIx\n'
+                 'CzAJBgNVBAYTAlVTMRYwFAYDVQQKEw1MZXQncyBFbmNyeXB0MQswCQYDVQQDEwJF\n'
+                 'NjAeFw0yNDEyMDcxNDQ0MDVaFw0yNTAzMDcxNDQ0MDRaMBoxGDAWBgNVBAMTD2xl\n'
+                 'dHNlbmNyeXB0Lm9yZzBZMBMGByqGSM49AgEGCCqGSM49AwEHA0IABDgHHaIeMwYz\n'
+                 'APO9ZgfeGansUeFRN0sW4K23nrVppRXfjHvN+83vtH170hshCrIAZRJCL+CPcA2N\n'
+                 'UqmLiSdM/M+jggJmMIICYjAOBgNVHQ8BAf8EBAMCB4AwHQYDVR0lBBYwFAYIKwYB\n'
+                 'BQUHAwEGCCsGAQUFBwMCMAwGA1UdEwEB/wQCMAAwHQYDVR0OBBYEFD2MLtcnwBWM\n'
+                 'FukcX4wMfYCQUCMAMB8GA1UdIwQYMBaAFJMnRpgDqVFojpjWxEJI2yO/WJTSMFUG\n'
+                 'CCsGAQUFBwEBBEkwRzAhBggrBgEFBQcwAYYVaHR0cDovL2U2Lm8ubGVuY3Iub3Jn\n'
+                 'MCIGCCsGAQUFBzAChhZodHRwOi8vZTYuaS5sZW5jci5vcmcvMG8GA1UdEQRoMGaC\n'
+                 'CWxlbmNyLm9yZ4IPbGV0c2VuY3J5cHQuY29tgg9sZXRzZW5jcnlwdC5vcmeCDXd3\n'
+                 'dy5sZW5jci5vcmeCE3d3dy5sZXRzZW5jcnlwdC5jb22CE3d3dy5sZXRzZW5jcnlw\n'
+                 'dC5vcmcwEwYDVR0gBAwwCjAIBgZngQwBAgEwggEEBgorBgEEAdZ5AgQCBIH1BIHy\n'
+                 'APAAdgB9WR4S4XgqexxhZ3xe/fjQh1wUoE6VnrkDL9kOjC55uAAAAZOhyXh9AAAE\n'
+                 'AwBHMEUCIAXoVc0BRK6ELL0Q1lHv+QbrobnBiPthcr2E7g0IulkHAiEAlVkiVkF9\n'
+                 '7KeR/At3XdJNRYbJda0iKaKtqKy0KH7igZgAdgATSt8atZhCCXgMb+9MepGkFrcj\n'
+                 'Sc5YV2rfrtqnwqvgIgAAAZOhyXk0AAAEAwBHMEUCIQD+yhm/6lwMMWyxBaB15Mkh\n'
+                 'g3tsQCtr0DOD4uvAzc63FAIgHgjXduGCbB/3VTtRCGWfmkWSS9z+CjfO1O6hkzGW\n'
+                 'XBowCgYIKoZIzj0EAwMDaAAwZQIxAKVLzxW03Kk8qJMBtWQCw5dgSHNWOGG9Oq03\n'
+                 'XOGr8092sx9Ezz3XsXWeq8JvokFjhAIwCZOX/UjxdHfgV/O6gkiNARQ1FokDyfS0\n'
+                 'ClynPk9psMTPVl5QWgYJzjVrJagAjtJm\n'
+                 '-----END CERTIFICATE-----\n',
+     'peername': ('100.28.201.155', 443)}
+    =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    Cert Data:
+    ARI ID: kydGmAOpUWiOmNbEQkjbI79YlNI.BMenOjYawCtnvb1q8hAoWxzH
+    =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    Requesting ARI
+    ari_url: https://acme-v02.api.letsencrypt.org/draft-ietf-acme-ari-03/renewalInfo/kydGmAOpUWiOmNbEQkjbI79YlNI.BMenOjYawCtnvb1q8hAoWxzH
+    {'Server': 'nginx', 'Date': 'Tue, 10 Dec 2024 18:29:04 GMT', 'Content-Type': 'application/json', 'Content-Length': '101', 'Connection': 'keep-alive', 'Cache-Control': 'public, max-age=0, no-cache', 'Link': '<https://acme-v02.api.letsencrypt.org/directory>;rel="index"', 'Retry-After': '21600', 'X-Frame-Options': 'DENY', 'Strict-Transport-Security': 'max-age=604800'}
+    - - - - - - - - - - 
+    {'suggestedWindow': {'end': '2025-02-06T15:03:34Z',
+                         'start': '2025-02-04T15:03:34Z'}}
+
+
+Examples API:
+-------------
 
 For example, `cert_utils.parse_cert` returns a Python dict of key fields in a
 certificate.  This can make writing a script to analyze large directories of
