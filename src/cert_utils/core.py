@@ -1,4 +1,4 @@
-from __future__ import annotations
+# -*- coding: future_annotations -*-
 
 # stdlib
 import base64
