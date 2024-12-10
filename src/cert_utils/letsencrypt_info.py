@@ -20,8 +20,8 @@ from typing import Tuple
 
 # pypi
 import requests
-from typing_extensions import TypedDict
 from typing_extensions import Required
+from typing_extensions import TypedDict
 
 # localapp
 from .core import cleanup_pem_text
@@ -159,7 +159,6 @@ CERT_CA_PAYLOAD = TypedDict(
         "alternates": Optional[List[str]],
         "alternate_of": Optional[str],
         "letsencrypt_serial": Optional[str],
-        
         # loaded via deprecated processors
         "cert_pem": Optional[str],
         "cert_pem_md5": Optional[str],

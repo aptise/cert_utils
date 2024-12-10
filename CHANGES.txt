@@ -1,3 +1,9 @@
+0.1.7
+    ARI support
+        * ari_construct_identifier()
+    added `serial` to parse_cert dicts
+    testing on py13
+
 0.1.6
     updated LetsEncrypt data
 
