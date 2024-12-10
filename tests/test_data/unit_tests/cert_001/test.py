@@ -52,7 +52,7 @@ pubs["cert"] = cert_pub_cryptography.public_numbers()
 ext = cert_cryptography.extensions.get_extension_for_oid(
     cryptography.x509.oid.ExtensionOID.SUBJECT_ALTERNATIVE_NAME
 )
-ext.value.get_values_for_type(cryptography.x509.DNSName)
+ext.value.get_values_for_type(cryptography.x509.DNSName)  # type: ignore[attr-defined]
 
 pdb.set_trace()
 
@@ -61,7 +61,7 @@ pdb.set_trace()
 ext = cert_cryptography.extensions.get_extension_for_oid(
     ExtensionOID.SUBJECT_ALTERNATIVE_NAME
 )
-ext.value.get_values_for_type(DNSName)
+ext.value.get_values_for_type(DNSName)  # type: ignore[attr-defined]
 
 
 csr = crypto.load_certificate_request(crypto.FILETYPE_PEM, pems["csr"])

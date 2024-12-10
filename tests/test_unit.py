@@ -1614,6 +1614,20 @@ class UnitTest_CertUtils(unittest.TestCase, _Mixin_fallback_possible, _Mixin_fil
 
         self.assertEqual(pkix_pem, pem_pem)
 
+    def test_ari_construct_identifier(self):
+        """
+        python -m unittest tests.test_unit.UnitTest_CertUtils.test_ari_construct_identifier
+        python -m unittest tests.test_unit.UnitTest_CertUtils_fallback.test_ari_construct_identifier
+        """
+        fname_pem = "draft-acme-ari/appendix_a-cert.pem"
+        expected_identifier = "aYhba4dGQEHhs3uEe6CuLN4ByNQ.AIdlQyE"
+
+        fpath_pem = self._filedata_testfile(fname_pem)
+        fdata_pem = self._filedata_testfile(fname_pem)
+        ari_identifier = cert_utils.ari_construct_identifier(fdata_pem)
+
+        self.assertEqual(ari_identifier, expected_identifier)
+
 
 class UnitTest_OpenSSL(unittest.TestCase, _Mixin_fallback_possible, _Mixin_filedata):
     """python -m unittest tests.test_unit.UnitTest_OpenSSL"""

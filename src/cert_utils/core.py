@@ -248,6 +248,7 @@ RE_openssl_x509_issuer_uri = re.compile(
     re.MULTILINE | re.DOTALL,
 )
 
+RE_openssl_x509_serial = re.compile(r"Serial Number: ?(\d+)")
 
 #
 # https://github.com/certbot/certbot/blob/master/certbot/certbot/crypto_util.py#L482
@@ -558,6 +559,20 @@ def authority_key_identifier_from_text(text: str) -> Optional[str]:
     if results:
         authority_key_identifier = results[0]
         return authority_key_identifier.replace(":", "")
+    return None
+
+
+def serial_from_text(text: str) -> Optional[int]:
+    """
+    :param text: string extracted from a x509 document
+    :type text: str
+    :returns: serial
+    :rtype: int
+    """
+    results = RE_openssl_x509_serial.findall(text)
+    if results:
+        serial = results[0]
+        return int(serial)
     return None
 
 
@@ -2412,7 +2427,7 @@ def parse_cert(
     :rtype: dict
     """
     log.info("parse_cert >")
-    rval: Dict[str, Union[None, str, "datetime.datetime", List[str]]] = {
+    rval: Dict[str, Union[None, str, int, "datetime.datetime", List[str]]] = {
         "issuer": None,
         "subject": None,
         "enddate": None,
@@ -2423,6 +2438,7 @@ def parse_cert(
         "spki_sha256": None,
         "issuer_uri": None,
         "authority_key_identifier": None,
+        "serial": None,
     }
 
     # cryptography *should* be installed as a dependency of openssl, but who knows!
@@ -2447,6 +2463,7 @@ def parse_cert(
             cryptography_cert=cert_cryptography,
             as_b64=False,
         )
+        rval["serial"] = cert.get_serial_number()
         try:
             ext = cert_cryptography.extensions.get_extension_for_oid(
                 cryptography.x509.oid.ExtensionOID.SUBJECT_ALTERNATIVE_NAME
@@ -2454,6 +2471,17 @@ def parse_cert(
             if ext:
                 _names: List[str] = ext.value.get_values_for_type(cryptography.x509.DNSName)  # type: ignore[attr-defined]
                 rval["SubjectAlternativeName"] = sorted(_names)
+        except Exception as exc:  # noqa: F841
+            pass
+        try:
+            ext = cert_cryptography.extensions.get_extension_for_oid(
+                cryptography.x509.oid.ExtensionOID.AUTHORITY_KEY_IDENTIFIER
+            )
+            if ext:
+                # this comes out as binary, so we need to convert it to the
+                # openssl version, which is an list of uppercase hex pairs
+                _as_binary = ext.value.key_identifier  # type: ignore[attr-defined]
+                rval["authority_key_identifier"] = convert_binary_to_hex(_as_binary)
         except Exception as exc:  # noqa: F841
             pass
         try:
@@ -2527,6 +2555,13 @@ def parse_cert(
             key_technology=_key_technology,
             as_b64=False,
         )
+
+        try:
+            _text = cert_ext__pem_filepath(cert_pem_filepath, "serial")
+            serial_no = serial_from_text(_text)
+            rval["serial"] = serial_no
+        except Exception as exc:  # noqa: F841
+            pass
 
         if openssl_version is None:
             check_openssl_version()
@@ -3800,6 +3835,108 @@ def account_key__sign(
     finally:
         if _tmpfile:
             _tmpfile.close()
+
+
+def ari_construct_identifier(
+    cert_pem: str,
+    cert_pem_filepath: Optional[str] = None,
+) -> str:
+    """
+    construct an ARI key identifier
+    """
+    log.info("ari_construct_identifier >")
+
+    if openssl_crypto:
+        try:
+            cert = openssl_crypto.load_certificate(
+                openssl_crypto.FILETYPE_PEM, cert_pem.encode()
+            )
+        except Exception as exc:
+            raise OpenSslError_InvalidCertificate(exc)
+        if not cert:
+            raise OpenSslError_InvalidCertificate()
+
+        akid = None
+        for i in range(0, cert.get_extension_count()):
+            _ext = cert.get_extension(i)
+            if _ext.get_short_name() == b"authorityKeyIdentifier":
+                # strip the first 4 bytes BECAUSE (certbot pr info below)
+                #   by nature of asn1 encoding single member sequence
+                #   we can strip first 4 bytes to get akid
+                #   seq/len/octetstring/len
+                akid = _ext.get_data()[4:]
+                break
+        if not akid:
+            raise ValueError("akid: not found")
+
+        akid_url = base64.urlsafe_b64encode(akid).decode("ascii").replace("=", "")
+
+        serial_no = cert.get_serial_number()
+        if not isinstance(serial_no, int):
+            raise ValueError("serial: expected integer")
+
+        # we need one more byte when aligend due to sign padding
+        _serial_url = serial_no.to_bytes((serial_no.bit_length() + 8) // 8, "big")
+        serial_url = (
+            base64.urlsafe_b64encode(_serial_url).decode("ascii").replace("=", "")
+        )
+
+        return f"{akid_url}.{serial_url}"
+
+    log.debug(".ari_construct_identifier > openssl fallback")
+
+    # generate `cert_pem_filepath` if needed.
+    _tmpfile_cert = None
+    if not cert_pem_filepath:
+        _tmpfile_cert = new_pem_tempfile(cert_pem)
+        cert_pem_filepath = _tmpfile_cert.name
+    try:
+        # openssl x509 -in {CERTIFICATE} -inform pem -noout -text
+        with psutil.Popen(
+            [
+                openssl_path,
+                "x509",
+                "-in",
+                cert_pem_filepath,
+                "-inform",
+                "PEM",
+                "-noout",
+                "-text",
+            ],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        ) as proc:
+            data_bytes, err = proc.communicate()
+            if not data_bytes:
+                raise OpenSslError_InvalidCertificate(err)
+            # this may be True or bytes, depending on the version
+            # in any event, being here means we passed
+
+            data_str = data_bytes.decode()
+            akid = authority_key_identifier_from_text(data_str)
+            if not akid:
+                raise ValueError("akid: not found")
+            serial_no = serial_from_text(data_str)
+            if not serial_no:
+                raise ValueError("serial: not found")
+
+            akid_url = (
+                base64.urlsafe_b64encode(bytes.fromhex(akid))
+                .decode("ascii")
+                .replace("=", "")
+            )
+
+            # we need one more byte when aligend due to sign padding
+            _serial_url = serial_no.to_bytes((serial_no.bit_length() + 8) // 8, "big")
+            serial_url = (
+                base64.urlsafe_b64encode(_serial_url).decode("ascii").replace("=", "")
+            )
+
+            return f"{akid_url}.{serial_url}"
+
+    finally:
+        if _tmpfile_cert:
+            _tmpfile_cert.close()
 
 
 # ------------------------------------------------------------------------------

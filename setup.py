@@ -18,6 +18,7 @@ with open(os.path.join(HERE, "src", "cert_utils", "__init__.py")) as v_file:
     VERSION = re.compile(r'.*__VERSION__ = "(.*?)"', re.S).match(v_file.read()).group(1)
 
 requires = [
+    # "asn1",  # https://github.com/andrivet/python-asn1 == pypi/ansi
     "python-dateutil",
     "psutil>=4.4.0",  # for Python2/3 compat
     "requests",
@@ -85,6 +86,7 @@ setup(
         "Programming Language :: Python :: 3.10",
         "Programming Language :: Python :: 3.11",
         "Programming Language :: Python :: 3.12",
+        "Programming Language :: Python :: 3.13",
         "License :: OSI Approved :: MIT License",
     ],
     license="MIT",
