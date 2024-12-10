@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 # stdlib
 import base64
 import binascii

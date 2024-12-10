@@ -90,4 +90,8 @@ setup(
         "License :: OSI Approved :: MIT License",
     ],
     license="MIT",
+    entry_points="""\
+      [console_scripts]
+      cert_info = cert_utils.scripts.cert_info:main
+      """,
 )
