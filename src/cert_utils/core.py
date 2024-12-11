@@ -68,6 +68,7 @@ if TYPE_CHECKING:
 # Conditional Imports
 
 acme_crypto_util: Optional[ModuleType]
+asn1: Optional[ModuleType]
 certbot_crypto_util: Optional[ModuleType]
 cryptography: Optional[ModuleType]
 crypto_serialization: Optional[ModuleType]
@@ -78,6 +79,11 @@ try:
     from acme import crypto_util as acme_crypto_util  # type: ignore[no-redef]
 except ImportError:
     acme_crypto_util = None
+
+try:
+    import asn1
+except ImportError:
+    asn1 = None
 
 try:
     from certbot import crypto_util as certbot_crypto_util  # type: ignore[no-redef]
@@ -3837,12 +3843,76 @@ def account_key__sign(
             _tmpfile.close()
 
 
+
+def ari__encode_serial_no(serial_no:int)->str:
+    # we need one more byte when aligend due to sign padding
+    _serial_url = serial_no.to_bytes((serial_no.bit_length() + 8) // 8, "big")
+    serial_url = (
+        base64.urlsafe_b64encode(_serial_url).decode("ascii").replace("=", "")
+    )
+    return serial_url
+
+
 def ari_construct_identifier(
     cert_pem: str,
     cert_pem_filepath: Optional[str] = None,
 ) -> str:
     """
     construct an ARI key identifier
+    
+    This is quite a PAIN.
+    
+    All the relevant info is in the Certificate itself, but requires extended
+    parsing as Python libraries overparse or underparse the relevant data
+    structures.
+    
+    In a first ARI client draft to Certbot, a LetsEncrypt engineer constructs
+    an OSCP request to make this data more acessible:
+    https://github.com/certbot/certbot/pull/9102/files
+
+    - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    from cryptography.hazmat.primitives import hashes
+    from cryptography.x509 import ocsp
+    import josepy as jose
+
+     def get_renewal_info(self, cert: jose.ComparableX509, issuer: jose.ComparableX509) -> messages.RenewalInfoResource:
+            '''Fetch ACME Renewal Information for certificate.
+            :param .ComparableX509 cert: The cert whose renewal info should be fetched.
+            :param .ComparableX509 issuer: The intermediate which issued the above cert,
+                which will be used to uniquely identify the cert in the ARI request.
+            '''
+            # Rather than compute the serial, issuer key hash, and issuer name hash
+            # ourselves, we instead build an OCSP Request and extract those fields.
+            builder = ocsp.OCSPRequestBuilder()
+            builder = builder.add_certificate(cert, issuer, hashes.SHA1())
+            ocspRequest = builder.build()
+
+            # Construct the ARI path from the OCSP CertID sequence.
+            key_hash = ocspRequest.issuer_key_hash.hex()
+            name_hash = ocspRequest.issuer_name_hash.hex()
+            serial = hex(ocspRequest.serial_number)[2:]
+            path = f"{key_hash}/{name_hash}/{serial}"
+
+            return self.net.get(self.directory['renewalInfo'].rstrip('/') + '/' + path)    
+    - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+    I want to avoid the OCSP generation in this routine, because that requires
+    having the Intermediate - and that is really out-of-scope for the purposes
+    of this function.
+    
+    I came up with the same approach as @orangepizza in this Certbot PR:
+        https://github.com/certbot/certbot/pull/9945
+    
+    Originally I had parsed the data out using `asn1`, but I didn't want to have
+    that dependency, so I implemented @orangepizza's idea of discarding the first
+    4 bytes, as they are guaranteed to be the tag.
+    
+    LetsEncrypt engineer @aarongable doesn't think that is safe enough, and
+    believes the data should be fully parsed.
+
+    As a temporary compromise until I weigh options better, I am implementing
+    this as PREFERNCE to utilize asn1 decoding if the package is installed,
+    with a FALLBACK to just discarding the first 4 bits if it is not available.
     """
     log.info("ari_construct_identifier >")
 
@@ -3864,7 +3934,24 @@ def ari_construct_identifier(
                 #   by nature of asn1 encoding single member sequence
                 #   we can strip first 4 bytes to get akid
                 #   seq/len/octetstring/len
-                akid = _ext.get_data()[4:]
+                if asn1:
+                    log.debug("asn1 available")
+                    _akid = _ext.get_data()
+                    
+                    # build a decoder
+                    decoder = asn1.Decoder()
+
+                    # decode the payload
+                    decoder.start(_akid)
+                    _decoded_a = decoder.read()  # tag + payload
+
+                    # decode the inner payload
+                    decoder.start(_decoded_a[1])
+                    _decoded_b = decoder.read()  # tag + payload
+                    akid = _decoded_b[1]
+                else:
+                    log.debug("asn1 unavailable; using hack")
+                    akid = _ext.get_data()[4:]
                 break
         if not akid:
             raise ValueError("akid: not found")
@@ -3874,12 +3961,7 @@ def ari_construct_identifier(
         serial_no = cert.get_serial_number()
         if not isinstance(serial_no, int):
             raise ValueError("serial: expected integer")
-
-        # we need one more byte when aligend due to sign padding
-        _serial_url = serial_no.to_bytes((serial_no.bit_length() + 8) // 8, "big")
-        serial_url = (
-            base64.urlsafe_b64encode(_serial_url).decode("ascii").replace("=", "")
-        )
+        serial_url = ari__encode_serial_no(serial_no)
 
         return f"{akid_url}.{serial_url}"
 
@@ -3926,11 +4008,7 @@ def ari_construct_identifier(
                 .replace("=", "")
             )
 
-            # we need one more byte when aligend due to sign padding
-            _serial_url = serial_no.to_bytes((serial_no.bit_length() + 8) // 8, "big")
-            serial_url = (
-                base64.urlsafe_b64encode(_serial_url).decode("ascii").replace("=", "")
-            )
+            serial_url = ari__encode_serial_no(serial_no)
 
             return f"{akid_url}.{serial_url}"
 

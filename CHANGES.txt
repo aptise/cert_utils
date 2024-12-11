@@ -1,3 +1,9 @@
+0.1.9
+    pulled ari serial_no decoder into a separate unction
+
+    attempt to parse AKID with asn1 module if available
+        if not, fallback to omitting the first 4 bytes
+
 0.1.8
     added cert_info cli tool
 
