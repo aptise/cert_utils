@@ -244,6 +244,8 @@ RE_openssl_x509_san = re.compile(
 
 
 # openssl 3 does not have "keyid:" as a prefix
+# a keyid prefix is okay!
+# we do not want the alternates, which are uri+serial; but take that out in results
 RE_openssl_x509_authority_key_identifier = re.compile(
     r"X509v3 Authority Key Identifier: ?\n +(?:keyid:)?([^\n]+)\n?",
     re.MULTILINE | re.DOTALL,
@@ -564,7 +566,9 @@ def authority_key_identifier_from_text(text: str) -> Optional[str]:
     results = RE_openssl_x509_authority_key_identifier.findall(text)
     if results:
         authority_key_identifier = results[0]
-        return authority_key_identifier.replace(":", "")
+        # ensure we have a key_id and not "URI:" or other convention
+        if authority_key_identifier[2] == ":":
+            return authority_key_identifier.replace(":", "")
     return None
 
 
@@ -1399,7 +1403,7 @@ def parse_csr_domains(
                 raise IOError("Error loading {0}: {1}".format(csr_pem_filepath, err))
             data_str = data_bytes.decode("utf8")
 
-        # parse the sans first, then add the commonname
+        # parse the sa first, then add the commonname
         found_domains = san_domains_from_text(data_str)
 
         # note the conditional whitespace before/after CN
@@ -3916,62 +3920,35 @@ def ari_construct_identifier(
     """
     log.info("ari_construct_identifier >")
 
-    if openssl_crypto:
-        print("openssl_crypto")
+    if cryptography:
+        log.debug(".ari_construct_identifier > cryptography")
         try:
-            cert = openssl_crypto.load_certificate(
-                openssl_crypto.FILETYPE_PEM, cert_pem.encode()
-            )
+            cert = cryptography.x509.load_pem_x509_certificate(cert_pem.encode())
         except Exception as exc:
             raise OpenSslError_InvalidCertificate(exc)
         if not cert:
             raise OpenSslError_InvalidCertificate()
 
         akid = None
-        for i in range(0, cert.get_extension_count()):
-            _ext = cert.get_extension(i)
-            if _ext.get_short_name() == b"authorityKeyIdentifier":
-                if asn1:
-                    log.debug("asn1 available")
-                    _akid = _ext.get_data()
-                    
-                    # build a decoder
-                    decoder = asn1.Decoder()
-
-                    # decode the payload
-                    decoder.start(_akid)
-                    _decoded_a = decoder.read()  # tag + payload
-                    
-                    # decode the inner payload
-                    decoder.start(_decoded_a[1])
-                    _decoded_b = decoder.read()  # tag + payload
-                    if _decoded_b[0].nr != 0:
-                        raise ValueError("Unexpected Tag on ASN1 decoding")
-                    akid = _decoded_b[1]
-
-                else:
-                    log.debug("asn1 unavailable; using hack")
-                    # strip the first 4 bytes BECAUSE (certbot pr info below)
-                    #   by nature of asn1 encoding single member sequence
-                    #   we can strip first 4 bytes to get akid
-                    #   seq/len/octetstring/len
-                    
-                    akid = _ext.get_data()[4:]
-
-                    break
+        try:
+            ext = cert.extensions.get_extension_for_oid(
+                cryptography.x509.oid.ExtensionOID.AUTHORITY_KEY_IDENTIFIER
+            )
+            akid = ext.value.key_identifier
+        except Exception as exc:
+            log.debug("Exception", exc)
         if not akid:
             raise ValueError("akid: not found")
 
         akid_url = base64.urlsafe_b64encode(akid).decode("ascii").replace("=", "")
 
-        serial_no = cert.get_serial_number()
+        serial_no = cert.serial_number
         if not isinstance(serial_no, int):
             raise ValueError("serial: expected integer")
         serial_url = ari__encode_serial_no(serial_no)
 
         return f"{akid_url}.{serial_url}"
 
-    print("openssl fallback")
     log.debug(".ari_construct_identifier > openssl fallback")
 
     # generate `cert_pem_filepath` if needed.
