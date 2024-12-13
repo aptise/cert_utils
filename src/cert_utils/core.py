@@ -3917,6 +3917,7 @@ def ari_construct_identifier(
     log.info("ari_construct_identifier >")
 
     if openssl_crypto:
+        print("openssl_crypto")
         try:
             cert = openssl_crypto.load_certificate(
                 openssl_crypto.FILETYPE_PEM, cert_pem.encode()
@@ -3930,10 +3931,6 @@ def ari_construct_identifier(
         for i in range(0, cert.get_extension_count()):
             _ext = cert.get_extension(i)
             if _ext.get_short_name() == b"authorityKeyIdentifier":
-                # strip the first 4 bytes BECAUSE (certbot pr info below)
-                #   by nature of asn1 encoding single member sequence
-                #   we can strip first 4 bytes to get akid
-                #   seq/len/octetstring/len
                 if asn1:
                     log.debug("asn1 available")
                     _akid = _ext.get_data()
@@ -3944,15 +3941,24 @@ def ari_construct_identifier(
                     # decode the payload
                     decoder.start(_akid)
                     _decoded_a = decoder.read()  # tag + payload
-
+                    
                     # decode the inner payload
                     decoder.start(_decoded_a[1])
                     _decoded_b = decoder.read()  # tag + payload
+                    if _decoded_b[0].nr != 0:
+                        raise ValueError("Unexpected Tag on ASN1 decoding")
                     akid = _decoded_b[1]
+
                 else:
                     log.debug("asn1 unavailable; using hack")
+                    # strip the first 4 bytes BECAUSE (certbot pr info below)
+                    #   by nature of asn1 encoding single member sequence
+                    #   we can strip first 4 bytes to get akid
+                    #   seq/len/octetstring/len
+                    
                     akid = _ext.get_data()[4:]
-                break
+
+                    break
         if not akid:
             raise ValueError("akid: not found")
 
@@ -3965,6 +3971,7 @@ def ari_construct_identifier(
 
         return f"{akid_url}.{serial_url}"
 
+    print("openssl fallback")
     log.debug(".ari_construct_identifier > openssl fallback")
 
     # generate `cert_pem_filepath` if needed.

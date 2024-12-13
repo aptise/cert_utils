@@ -5,6 +5,7 @@ from typing import Dict
 import unittest
 
 # pypi
+import asn1
 from acme import crypto_util as acme_crypto_util
 from certbot import crypto_util as certbot_crypto_util
 import cryptography
@@ -1619,14 +1620,49 @@ class UnitTest_CertUtils(unittest.TestCase, _Mixin_fallback_possible, _Mixin_fil
         python -m unittest tests.test_unit.UnitTest_CertUtils.test_ari_construct_identifier
         python -m unittest tests.test_unit.UnitTest_CertUtils_fallback.test_ari_construct_identifier
         """
-        fname_pem = "draft-acme-ari/appendix_a-cert.pem"
-        expected_identifier = "aYhba4dGQEHhs3uEe6CuLN4ByNQ.AIdlQyE"
 
-        fpath_pem = self._filedata_testfile(fname_pem)
-        fdata_pem = self._filedata_testfile(fname_pem)
-        ari_identifier = cert_utils.ari_construct_identifier(fdata_pem)
+        def _actual_test():        
+        
+            fname_pem = "draft-acme-ari/appendix_a-cert.pem"
+            expected_identifier = "aYhba4dGQEHhs3uEe6CuLN4ByNQ.AIdlQyE"
 
-        self.assertEqual(ari_identifier, expected_identifier)
+            fpath_pem = self._filedata_testfile(fname_pem)
+            fdata_pem = self._filedata_testfile(fname_pem)
+            ari_identifier = cert_utils.ari_construct_identifier(fdata_pem)
+
+            self.assertEqual(ari_identifier, expected_identifier)
+
+            fname_pem = "draft-acme-ari/edge_case.pem"
+            expected_identifier = "aYhba4dGQEHhs3uEe6CuLN4ByNQ.AIdlQyE"
+
+            fpath_pem = self._filedata_testfile(fname_pem)
+            fdata_pem = self._filedata_testfile(fname_pem)
+            ari_identifier = cert_utils.ari_construct_identifier(fdata_pem)
+
+            self.assertEqual(ari_identifier, expected_identifier)
+
+        fails = []
+        for check in ['asn1', 'no_asn1']:
+            if check == 'no_asn1':
+                try:
+                    global cert_utils
+                    cert_utils.core.asn1 = None
+                    _actual_test()
+                except Exception as exc:
+                    fails.append(("no_asn1", exc))
+                    pass
+                finally:
+                    cert_utils.core.asn1 = asn1
+            else:
+                try:
+                    _actual_test()
+                except Exception as exc:
+                    fails.append(("asn1", exc))
+                    pass
+        self.assertEqual(fails, [])
+
+
+
 
 
 class UnitTest_OpenSSL(unittest.TestCase, _Mixin_fallback_possible, _Mixin_filedata):

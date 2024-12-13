@@ -25,6 +25,7 @@ requires = [
     "typing_extensions",
 ]
 tests_require = [
+    "asn1",
     "certbot",
     "cryptography",
     "josepy",
