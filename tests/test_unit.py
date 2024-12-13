@@ -1626,7 +1626,7 @@ class UnitTest_CertUtils(unittest.TestCase, _Mixin_fallback_possible, _Mixin_fil
         fdata_pem = self._filedata_testfile(fname_pem)
         ari_identifier = cert_utils.ari_construct_identifier(fdata_pem)
         self.assertEqual(ari_identifier, expected_identifier)
-        
+
         # custom edge cases
 
         fname_pem = "draft-acme-ari/cert--key_id.pem"
@@ -1651,7 +1651,6 @@ class UnitTest_CertUtils(unittest.TestCase, _Mixin_fallback_possible, _Mixin_fil
             ari_identifier = cert_utils.ari_construct_identifier(fdata_pem)
         the_exception = cm.exception
         self.assertEqual(the_exception.args[0], "akid: not found")
-
 
 
 class UnitTest_OpenSSL(unittest.TestCase, _Mixin_fallback_possible, _Mixin_filedata):

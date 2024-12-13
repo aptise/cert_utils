@@ -24,6 +24,7 @@ from dateutil import parser as dateutil_parser
 import psutil
 
 # localapp
+from .errors import CryptographyError
 from .errors import FallbackError_FilepathRequired
 from .errors import OpenSslError
 from .errors import OpenSslError_CsrGeneration
@@ -3847,13 +3848,10 @@ def account_key__sign(
             _tmpfile.close()
 
 
-
-def ari__encode_serial_no(serial_no:int)->str:
+def ari__encode_serial_no(serial_no: int) -> str:
     # we need one more byte when aligend due to sign padding
     _serial_url = serial_no.to_bytes((serial_no.bit_length() + 8) // 8, "big")
-    serial_url = (
-        base64.urlsafe_b64encode(_serial_url).decode("ascii").replace("=", "")
-    )
+    serial_url = base64.urlsafe_b64encode(_serial_url).decode("ascii").replace("=", "")
     return serial_url
 
 
@@ -3863,13 +3861,13 @@ def ari_construct_identifier(
 ) -> str:
     """
     construct an ARI key identifier
-    
+
     This is quite a PAIN.
-    
+
     All the relevant info is in the Certificate itself, but requires extended
     parsing as Python libraries overparse or underparse the relevant data
     structures.
-    
+
     In a first ARI client draft to Certbot, a LetsEncrypt engineer constructs
     an OSCP request to make this data more acessible:
     https://github.com/certbot/certbot/pull/9102/files
@@ -3897,20 +3895,20 @@ def ari_construct_identifier(
             serial = hex(ocspRequest.serial_number)[2:]
             path = f"{key_hash}/{name_hash}/{serial}"
 
-            return self.net.get(self.directory['renewalInfo'].rstrip('/') + '/' + path)    
+            return self.net.get(self.directory['renewalInfo'].rstrip('/') + '/' + path)
     - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
     I want to avoid the OCSP generation in this routine, because that requires
     having the Intermediate - and that is really out-of-scope for the purposes
     of this function.
-    
+
     I came up with the same approach as @orangepizza in this Certbot PR:
         https://github.com/certbot/certbot/pull/9945
-    
+
     Originally I had parsed the data out using `asn1`, but I didn't want to have
     that dependency, so I implemented @orangepizza's idea of discarding the first
     4 bytes, as they are guaranteed to be the tag.
-    
+
     LetsEncrypt engineer @aarongable doesn't think that is safe enough, and
     believes the data should be fully parsed.
 
@@ -3925,9 +3923,7 @@ def ari_construct_identifier(
         try:
             cert = cryptography.x509.load_pem_x509_certificate(cert_pem.encode())
         except Exception as exc:
-            raise OpenSslError_InvalidCertificate(exc)
-        if not cert:
-            raise OpenSslError_InvalidCertificate()
+            raise CryptographyError(exc)
 
         akid = None
         try:
@@ -3947,6 +3943,7 @@ def ari_construct_identifier(
             raise ValueError("serial: expected integer")
         serial_url = ari__encode_serial_no(serial_no)
 
+        print(f"{akid_url}.{serial_url}")
         return f"{akid_url}.{serial_url}"
 
     log.debug(".ari_construct_identifier > openssl fallback")

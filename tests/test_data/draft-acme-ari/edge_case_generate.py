@@ -1,14 +1,17 @@
 """
-The edge cases generate an AuthorityKeyIdentifer with extraneous params
+The edge cases generate an AuthorityKeyIdentifer with extraneous params.
 
-X509v3 Authority Key Identifier: 
+The values and contents are designed to mimic the Appendix A cert from the 
+draft-ari-spec RFC
+
+X509v3 Authority Key Identifier:
     keyid:69:88:5B:6B:87:46:40:41:E1:B3:7B:84:7B:A0:AE:2C:DE:01:C8:D4
     URI:EXAMPLE.COM
     serial:01
 
 vs
 
-X509v3 Authority Key Identifier: 
+X509v3 Authority Key Identifier:
     69:88:5B:6B:87:46:40:41:E1:B3:7B:84:7B:A0:AE:2C:DE:01:C8:D4
 """
 # stdlib
@@ -17,7 +20,6 @@ from typing import Literal
 from typing import Union
 
 # pypi
-import asn1
 from cryptography import x509
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives import serialization
