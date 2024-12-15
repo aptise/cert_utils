@@ -1,3 +1,10 @@
+0.2.0
+    replacing pyopenssl with cryptography as much as possible
+    pyopenssl was originally used because certbot required it and this package
+    was originally developed to troubleshoot certbot installations;
+    however certbot uses cryptography, so we can consider that to be available
+    and it is the officially preferred interface by both projects and the psf 
+
 0.1.9
     pulled ari serial_no decoder into a separate unction
     parsing akid defensively against edge case variants:
