@@ -1619,14 +1619,38 @@ class UnitTest_CertUtils(unittest.TestCase, _Mixin_fallback_possible, _Mixin_fil
         python -m unittest tests.test_unit.UnitTest_CertUtils.test_ari_construct_identifier
         python -m unittest tests.test_unit.UnitTest_CertUtils_fallback.test_ari_construct_identifier
         """
+
         fname_pem = "draft-acme-ari/appendix_a-cert.pem"
         expected_identifier = "aYhba4dGQEHhs3uEe6CuLN4ByNQ.AIdlQyE"
-
         fpath_pem = self._filedata_testfile(fname_pem)
         fdata_pem = self._filedata_testfile(fname_pem)
         ari_identifier = cert_utils.ari_construct_identifier(fdata_pem)
-
         self.assertEqual(ari_identifier, expected_identifier)
+
+        # custom edge cases
+
+        fname_pem = "draft-acme-ari/cert--key_id.pem"
+        expected_identifier = "aYhba4dGQEHhs3uEe6CuLN4ByNQ.AIdlQyE"
+        fpath_pem = self._filedata_testfile(fname_pem)
+        fdata_pem = self._filedata_testfile(fname_pem)
+        ari_identifier = cert_utils.ari_construct_identifier(fdata_pem)
+        self.assertEqual(ari_identifier, expected_identifier)
+
+        fname_pem = "draft-acme-ari/cert--all.pem"
+        expected_identifier = "aYhba4dGQEHhs3uEe6CuLN4ByNQ.AIdlQyE"
+        fpath_pem = self._filedata_testfile(fname_pem)
+        fdata_pem = self._filedata_testfile(fname_pem)
+        ari_identifier = cert_utils.ari_construct_identifier(fdata_pem)
+        self.assertEqual(ari_identifier, expected_identifier)
+
+        fname_pem = "draft-acme-ari/cert--issuer+serial.pem"
+        expected_identifier = "aYhba4dGQEHhs3uEe6CuLN4ByNQ.AIdlQyE"
+        fpath_pem = self._filedata_testfile(fname_pem)
+        fdata_pem = self._filedata_testfile(fname_pem)
+        with self.assertRaises(ValueError) as cm:
+            ari_identifier = cert_utils.ari_construct_identifier(fdata_pem)
+        the_exception = cm.exception
+        self.assertEqual(the_exception.args[0], "akid: not found")
 
 
 class UnitTest_OpenSSL(unittest.TestCase, _Mixin_fallback_possible, _Mixin_filedata):

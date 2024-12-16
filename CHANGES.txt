@@ -1,3 +1,12 @@
+0.1.9
+    pulled ari serial_no decoder into a separate unction
+    parsing akid defensively against edge case variants:
+        in web pki it is almost always "keyid:"
+        however the rfc allows for "uri:"+"serial:", 
+           either in addition to keyid or replacing it
+    this should be the final release in the 0.1.x branch;
+    work has been started for 0.2.0, which will migrate away from openssl
+
 0.1.8
     added cert_info cli tool
 

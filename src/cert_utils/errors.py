@@ -1,4 +1,17 @@
-class OpenSslError(Exception):
+class CertUtilsError(Exception):
+    """
+    base class for Exceptions
+    introduced for migration to Cryptography from OpenSSL backends
+    """
+
+    pass
+
+
+class CryptographyError(CertUtilsError):
+    pass
+
+
+class OpenSslError(CertUtilsError):
     pass
 
 

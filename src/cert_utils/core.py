@@ -24,6 +24,7 @@ from dateutil import parser as dateutil_parser
 import psutil
 
 # localapp
+from .errors import CryptographyError
 from .errors import FallbackError_FilepathRequired
 from .errors import OpenSslError
 from .errors import OpenSslError_CsrGeneration
@@ -68,6 +69,7 @@ if TYPE_CHECKING:
 # Conditional Imports
 
 acme_crypto_util: Optional[ModuleType]
+asn1: Optional[ModuleType]
 certbot_crypto_util: Optional[ModuleType]
 cryptography: Optional[ModuleType]
 crypto_serialization: Optional[ModuleType]
@@ -238,6 +240,8 @@ RE_openssl_x509_san = re.compile(
 
 
 # openssl 3 does not have "keyid:" as a prefix
+# a keyid prefix is okay!
+# we do not want the alternates, which are uri+serial; but take that out in results
 RE_openssl_x509_authority_key_identifier = re.compile(
     r"X509v3 Authority Key Identifier: ?\n +(?:keyid:)?([^\n]+)\n?",
     re.MULTILINE | re.DOTALL,
@@ -558,7 +562,9 @@ def authority_key_identifier_from_text(text: str) -> Optional[str]:
     results = RE_openssl_x509_authority_key_identifier.findall(text)
     if results:
         authority_key_identifier = results[0]
-        return authority_key_identifier.replace(":", "")
+        # ensure we have a key_id and not "URI:" or other convention
+        if authority_key_identifier[2] == ":":
+            return authority_key_identifier.replace(":", "")
     return None
 
 
@@ -3837,49 +3843,105 @@ def account_key__sign(
             _tmpfile.close()
 
 
+def ari__encode_serial_no(serial_no: int) -> str:
+    # we need one more byte when aligend due to sign padding
+    _serial_url = serial_no.to_bytes((serial_no.bit_length() + 8) // 8, "big")
+    serial_url = base64.urlsafe_b64encode(_serial_url).decode("ascii").replace("=", "")
+    return serial_url
+
+
 def ari_construct_identifier(
     cert_pem: str,
     cert_pem_filepath: Optional[str] = None,
 ) -> str:
     """
     construct an ARI key identifier
+
+    This is quite a PAIN.
+
+    All the relevant info is in the Certificate itself, but requires extended
+    parsing as Python libraries overparse or underparse the relevant data
+    structures.
+
+    In a first ARI client draft to Certbot, a LetsEncrypt engineer constructs
+    an OSCP request to make this data more acessible:
+    https://github.com/certbot/certbot/pull/9102/files
+
+    - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    from cryptography.hazmat.primitives import hashes
+    from cryptography.x509 import ocsp
+    import josepy as jose
+
+     def get_renewal_info(self, cert: jose.ComparableX509, issuer: jose.ComparableX509) -> messages.RenewalInfoResource:
+            '''Fetch ACME Renewal Information for certificate.
+            :param .ComparableX509 cert: The cert whose renewal info should be fetched.
+            :param .ComparableX509 issuer: The intermediate which issued the above cert,
+                which will be used to uniquely identify the cert in the ARI request.
+            '''
+            # Rather than compute the serial, issuer key hash, and issuer name hash
+            # ourselves, we instead build an OCSP Request and extract those fields.
+            builder = ocsp.OCSPRequestBuilder()
+            builder = builder.add_certificate(cert, issuer, hashes.SHA1())
+            ocspRequest = builder.build()
+
+            # Construct the ARI path from the OCSP CertID sequence.
+            key_hash = ocspRequest.issuer_key_hash.hex()
+            name_hash = ocspRequest.issuer_name_hash.hex()
+            serial = hex(ocspRequest.serial_number)[2:]
+            path = f"{key_hash}/{name_hash}/{serial}"
+
+            return self.net.get(self.directory['renewalInfo'].rstrip('/') + '/' + path)
+    - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+    I want to avoid the OCSP generation in this routine, because that requires
+    having the Intermediate - and that is really out-of-scope for the purposes
+    of this function.
+
+    I came up with the same approach as @orangepizza in this Certbot PR:
+        https://github.com/certbot/certbot/pull/9945
+
+    Originally I had parsed the data out using `asn1`, but I didn't want to have
+    that dependency, so I implemented @orangepizza's idea of discarding the first
+    4 bytes, as they are guaranteed to be the tag.
+
+    LetsEncrypt engineer @aarongable doesn't think that is safe enough, and
+    believes the data should be fully parsed.
+
+    As a temporary compromise until I weighed options better, I implemented a
+    PREFERNCE to utilize asn1 decoding if the package is installed, with a
+    FALLBACK to just discarding the first 4 bits if it is not available.
+
+    After implementing that, I realized the underlying issue was using the
+    openssl certificate object - which is quite kludgy.  I migrated the function
+    to use the cryptography package's Certificate object, which offers a much
+    cleaner and more reliable way to extract this data.
     """
     log.info("ari_construct_identifier >")
 
-    if openssl_crypto:
+    if cryptography:
+        log.debug(".ari_construct_identifier > cryptography")
         try:
-            cert = openssl_crypto.load_certificate(
-                openssl_crypto.FILETYPE_PEM, cert_pem.encode()
-            )
+            cert = cryptography.x509.load_pem_x509_certificate(cert_pem.encode())
         except Exception as exc:
-            raise OpenSslError_InvalidCertificate(exc)
-        if not cert:
-            raise OpenSslError_InvalidCertificate()
+            raise CryptographyError(exc)
 
         akid = None
-        for i in range(0, cert.get_extension_count()):
-            _ext = cert.get_extension(i)
-            if _ext.get_short_name() == b"authorityKeyIdentifier":
-                # strip the first 4 bytes BECAUSE (certbot pr info below)
-                #   by nature of asn1 encoding single member sequence
-                #   we can strip first 4 bytes to get akid
-                #   seq/len/octetstring/len
-                akid = _ext.get_data()[4:]
-                break
+        try:
+            ext = cert.extensions.get_extension_for_oid(
+                cryptography.x509.oid.ExtensionOID.AUTHORITY_KEY_IDENTIFIER
+            )
+            akid = ext.value.key_identifier
+        except Exception as exc:
+            log.debug("Exception", exc)
         if not akid:
             raise ValueError("akid: not found")
 
         akid_url = base64.urlsafe_b64encode(akid).decode("ascii").replace("=", "")
 
-        serial_no = cert.get_serial_number()
+        serial_no = cert.serial_number
         if not isinstance(serial_no, int):
             raise ValueError("serial: expected integer")
-
-        # we need one more byte when aligend due to sign padding
-        _serial_url = serial_no.to_bytes((serial_no.bit_length() + 8) // 8, "big")
-        serial_url = (
-            base64.urlsafe_b64encode(_serial_url).decode("ascii").replace("=", "")
-        )
+        serial_url = ari__encode_serial_no(serial_no)
 
         return f"{akid_url}.{serial_url}"
 
@@ -3926,11 +3988,7 @@ def ari_construct_identifier(
                 .replace("=", "")
             )
 
-            # we need one more byte when aligend due to sign padding
-            _serial_url = serial_no.to_bytes((serial_no.bit_length() + 8) // 8, "big")
-            serial_url = (
-                base64.urlsafe_b64encode(_serial_url).decode("ascii").replace("=", "")
-            )
+            serial_url = ari__encode_serial_no(serial_no)
 
             return f"{akid_url}.{serial_url}"
 
