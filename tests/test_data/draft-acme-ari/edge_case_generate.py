@@ -1,7 +1,7 @@
 """
 The edge cases generate an AuthorityKeyIdentifer with extraneous params.
 
-The values and contents are designed to mimic the Appendix A cert from the 
+The values and contents are designed to mimic the Appendix A cert from the
 draft-ari-spec RFC
 
 X509v3 Authority Key Identifier:
@@ -91,7 +91,7 @@ def generate_cert(
 
 def decode_akid(cert_pem: bytes) -> str:
     cert = x509.load_pem_x509_certificate(cert_pem)
-    akid = None
+    akid: str
     try:
         ext = cert.extensions.get_extension_for_oid(
             x509.oid.ExtensionOID.AUTHORITY_KEY_IDENTIFIER

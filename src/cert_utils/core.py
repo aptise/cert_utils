@@ -82,11 +82,6 @@ except ImportError:
     acme_crypto_util = None
 
 try:
-    import asn1
-except ImportError:
-    asn1 = None
-
-try:
     from certbot import crypto_util as certbot_crypto_util  # type: ignore[no-redef]
 except ImportError:
     certbot_crypto_util = None
@@ -1404,7 +1399,7 @@ def parse_csr_domains(
                 raise IOError("Error loading {0}: {1}".format(csr_pem_filepath, err))
             data_str = data_bytes.decode("utf8")
 
-        # parse the sa first, then add the commonname
+        # parse the sans first, then add the commonname
         found_domains = san_domains_from_text(data_str)
 
         # note the conditional whitespace before/after CN
@@ -3912,9 +3907,14 @@ def ari_construct_identifier(
     LetsEncrypt engineer @aarongable doesn't think that is safe enough, and
     believes the data should be fully parsed.
 
-    As a temporary compromise until I weigh options better, I am implementing
-    this as PREFERNCE to utilize asn1 decoding if the package is installed,
-    with a FALLBACK to just discarding the first 4 bits if it is not available.
+    As a temporary compromise until I weighed options better, I implemented a
+    PREFERNCE to utilize asn1 decoding if the package is installed, with a
+    FALLBACK to just discarding the first 4 bits if it is not available.
+
+    After implementing that, I realized the underlying issue was using the
+    openssl certificate object - which is quite kludgy.  I migrated the function
+    to use the cryptography package's Certificate object, which offers a much
+    cleaner and more reliable way to extract this data.
     """
     log.info("ari_construct_identifier >")
 
@@ -3943,7 +3943,6 @@ def ari_construct_identifier(
             raise ValueError("serial: expected integer")
         serial_url = ari__encode_serial_no(serial_no)
 
-        print(f"{akid_url}.{serial_url}")
         return f"{akid_url}.{serial_url}"
 
     log.debug(".ari_construct_identifier > openssl fallback")
