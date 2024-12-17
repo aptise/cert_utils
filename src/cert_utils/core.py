@@ -54,6 +54,7 @@ from .errors import OpenSslError_InvalidCertificate
 from .errors import OpenSslError_InvalidCSR
 from .errors import OpenSslError_InvalidKey
 from .errors import OpenSslError_VersionTooLow
+from .errors import ToDo
 from .model import KeyTechnology
 from .utils import _cert_pubkey_technology__text
 from .utils import _csr_pubkey_technology__text
@@ -1022,15 +1023,19 @@ def modulus_md5_csr(
 
         md5(openssl req -noout -modulus -in {FILEPATH})
     """
+    # TODO: Support EC Key Modulus Variant - https://github.com/aptise/cert_utils/issues/15
     # ???: Should this raise an Exception instead of returning `None`?
     log.info("modulus_md5_csr >")
     # cryptography *should* be installed as a dependency of openssl, but who knows!
     if cryptography:
         csr = cryptography.x509.load_pem_x509_csr(csr_pem.encode())
         _pubkey = csr.public_key()
-        if _cryptography__public_key_technology(_pubkey) == "RSA":
+        _keytype = _cryptography__public_key_technology(_pubkey)
+        if _keytype == "RSA":
             modn = _pubkey.public_numbers().n  # type: ignore[union-attr]
             data_str = "{:X}".format(modn)
+        elif _keytype == "EC":
+            return None
         else:
             return None
     else:
@@ -1830,12 +1835,6 @@ def parse_key(
             assert crypto_ec is not None
             assert crypto_rsa is not None
             assert crypto_serialization is not None
-        # TODO: crypto version of `--text`
-
-        # this part ONLY works on RSA keys
-        # can't do this with certbot/pyopenssl yet
-        # see https://github.com/pyca/pyopenssl/issues/291
-        # certbot just wraps that
         try:
             # note: we don't need to provide key_pem_filepath because we already rely on openssl
             rval["check"] = validate_key(key_pem=key_pem)
@@ -1856,6 +1855,11 @@ def parse_key(
                 rval["XX-modulus_md5"] = str(exc)
         elif isinstance(privkey, crypto_ec.EllipticCurvePrivateKey):
             rval["key_technology"] = "EC"
+            # TODO: Support EC Key Modulus Variant - https://github.com/aptise/cert_utils/issues/15
+            # legacy ONLY works on RSA keys
+            # might just rely on spki_sha256
+            # related certbot/pyopenssl ticket:
+            # see https://github.com/pyca/pyopenssl/issues/291
 
         rval["spki_sha256"] = parse_key__spki_sha256(
             key_pem="",

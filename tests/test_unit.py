@@ -31,47 +31,85 @@ EXTENDED_TESTS = bool(int(os.getenv("CERT_UTILS_EXTENDED_TESTS", "0")))
 class _Mixin_fallback_possible(object):
     _fallback = False
     _fallback_global = False
+    _fallback_cryptography = False
+    _fallback_josepy = False
 
 
-class _MixinNoCrypto(_Mixin_fallback_possible):
+class _MixinNoCrypto_Global(_Mixin_fallback_possible):
     _fallback = True
     _fallback_global = True
+    _fallback_cryptography = True
+    _fallback_josepy = True
 
     def setUp(self):
-        # print("_MixinNoCrypto.setUp")
+        # print("_MixinNoCrypto_Global.setUp")
         global cert_utils
+        cert_utils.compat.cryptography.cryptography = None
+        cert_utils.compat.cryptography.josepy = None
         cert_utils.conditionals.cryptography = None
         cert_utils.conditionals.josepy = None
+        cert_utils.convert.cryptography = None
+        cert_utils.convert.josepy = None
+        cert_utils.core.cryptography = None
+        cert_utils.core.josepy = None
+        cert_utils.cryptography = None
+        cert_utils.josepy = None
 
     def tearDown(self):
-        # print("_MixinNoCrypto.tearDown")
+        # print("_MixinNoCrypto_Global.tearDown")
         global cert_utils
+        cert_utils.compat.cryptography.cryptography = cryptography
+        cert_utils.compat.cryptography.josepy = josepy
         cert_utils.conditionals.cryptography = cryptography
         cert_utils.conditionals.josepy = josepy
+        cert_utils.convert.cryptography = cryptography
+        cert_utils.convert.josepy = josepy
+        cert_utils.core.cryptography = cryptography
+        cert_utils.core.josepy = josepy
+        cert_utils.cryptography = cryptography
+        cert_utils.josepy = josepy
 
 
 class _Mixin_Missing_cryptography(_Mixin_fallback_possible):
     _fallback = True
+    _fallback_cryptography = True
 
     def setUp(self):
         global cert_utils
+        cert_utils.compat.cryptography.cryptography = None
         cert_utils.conditionals.cryptography = None
+        cert_utils.convert.cryptography = None
+        cert_utils.core.cryptography = None
+        cert_utils.cryptography = None
 
     def tearDown(self):
         global cert_utils
+        cert_utils.compat.cryptography.cryptography = cryptography
         cert_utils.conditionals.cryptography = cryptography
+        cert_utils.convert.cryptography = cryptography
+        cert_utils.core.cryptography = cryptography
+        cert_utils.cryptography = cryptography
 
 
 class _Mixin_Missing_josepy(_Mixin_fallback_possible):
     _fallback = True
+    _fallback_josepy = True
 
     def setUp(self):
         global cert_utils
+        cert_utils.compat.cryptography.josepy = None
         cert_utils.conditionals.josepy = None
+        cert_utils.convert.josepy = None
+        cert_utils.core.josepy = None
+        cert_utils.josepy = None
 
     def tearDown(self):
         global cert_utils
+        cert_utils.compat.cryptography.josepy = josepy
         cert_utils.conditionals.josepy = josepy
+        cert_utils.convert.josepy = josepy
+        cert_utils.core.josepy = josepy
+        cert_utils.josepy = josepy
 
 
 # ------------------------------------------------------------------------------
@@ -281,7 +319,7 @@ class UnitTest_CertUtils(unittest.TestCase, _Mixin_fallback_possible, _Mixin_fil
                 self.assertEqual(
                     cert_domains, self._cert_sets[cert_set]["cert.domains.all"]
                 )
-                if self._fallback_global:
+                if self._fallback_global or self._fallback_cryptography:
                     self.assertIn(
                         "DEBUG:cert_utils:.parse_cert__domains > openssl fallback",
                         logged.output,
@@ -312,7 +350,7 @@ class UnitTest_CertUtils(unittest.TestCase, _Mixin_fallback_possible, _Mixin_fil
                 self.assertEqual(
                     _fingerprint, self._cert_sets[cert_set]["cert.fingerprints"]["sha1"]
                 )
-                if self._fallback_global:
+                if self._fallback_global or self._fallback_cryptography:
                     self.assertIn(
                         "DEBUG:cert_utils:.fingerprint_cert > openssl fallback",
                         logged.output,
@@ -364,7 +402,7 @@ class UnitTest_CertUtils(unittest.TestCase, _Mixin_fallback_possible, _Mixin_fil
                 self.assertEqual(
                     csr_domains, self._cert_sets[cert_set]["csr.domains.all"]
                 )
-                if self._fallback_global:
+                if self._fallback_global or self._fallback_cryptography:
                     self.assertIn(
                         "DEBUG:cert_utils:.parse_csr_domains > openssl fallback",
                         logged.output,
@@ -387,7 +425,7 @@ class UnitTest_CertUtils(unittest.TestCase, _Mixin_fallback_possible, _Mixin_fil
                 cert_utils.validate_csr(
                     csr_pem=csr_pem, csr_pem_filepath=csr_pem_filepath
                 )
-                if self._fallback_global:
+                if self._fallback_global or self._fallback_cryptography:
                     self.assertIn(
                         "DEBUG:cert_utils:.validate_csr > openssl fallback",
                         logged.output,
@@ -411,7 +449,7 @@ class UnitTest_CertUtils(unittest.TestCase, _Mixin_fallback_possible, _Mixin_fil
                 key_technology = cert_utils.validate_key(
                     key_pem=key_pem, key_pem_filepath=key_pem_filepath
                 )
-                if self._fallback_global or (not cert_utils.core.cryptography):
+                if self._fallback_global or self._fallback_cryptography:
                     self.assertIn(
                         "DEBUG:cert_utils:.validate_key > openssl fallback",
                         logged.output,
@@ -432,7 +470,7 @@ class UnitTest_CertUtils(unittest.TestCase, _Mixin_fallback_possible, _Mixin_fil
                 self.assertEqual(
                     key_technology, KEY_SETS[key_filename]["key_technology"]
                 )
-                if self._fallback_global or (not cert_utils.core.cryptography):
+                if self._fallback_global or self._fallback_cryptography:
                     self.assertIn(
                         "DEBUG:cert_utils:.validate_key > openssl fallback",
                         logged.output,
@@ -458,7 +496,7 @@ class UnitTest_CertUtils(unittest.TestCase, _Mixin_fallback_possible, _Mixin_fil
                 cert_utils.validate_cert(
                     cert_pem=cert_pem, cert_pem_filepath=cert_pem_filepath
                 )
-                if self._fallback_global:
+                if self._fallback_global or self._fallback_cryptography:
                     self.assertIn(
                         "DEBUG:cert_utils:.validate_cert > openssl fallback",
                         logged.output,
@@ -484,7 +522,7 @@ class UnitTest_CertUtils(unittest.TestCase, _Mixin_fallback_possible, _Mixin_fil
                     key_pem=key_pem,
                     key_pem_filepath=key_pem_filepath,
                 )
-                if self._fallback_global:
+                if self._fallback_global or self._fallback_cryptography:
                     self.assertIn(
                         "DEBUG:cert_utils:.make_csr > openssl fallback",
                         logged.output,
@@ -510,7 +548,7 @@ class UnitTest_CertUtils(unittest.TestCase, _Mixin_fallback_possible, _Mixin_fil
                 self.assertEqual(
                     modulus_md5, self._cert_sets[cert_set]["pubkey_modulus_md5"]
                 )
-                if self._fallback_global or (not cert_utils.core.cryptography):
+                if self._fallback_global or self._fallback_cryptography:
                     self.assertIn(
                         "DEBUG:cert_utils:.modulus_md5_key > openssl fallback",
                         logged.output,
@@ -545,7 +583,7 @@ class UnitTest_CertUtils(unittest.TestCase, _Mixin_fallback_possible, _Mixin_fil
                 self.assertEqual(
                     modulus_md5, self._cert_sets[cert_set]["pubkey_modulus_md5"]
                 )
-                if self._fallback_global or (not cert_utils.core.cryptography):
+                if self._fallback_global or self._fallback_cryptography:
                     self.assertIn(
                         "DEBUG:cert_utils:.modulus_md5_csr > openssl fallback",
                         logged.output,
@@ -564,8 +602,8 @@ class UnitTest_CertUtils(unittest.TestCase, _Mixin_fallback_possible, _Mixin_fil
                 csr_pem=csr_pem, csr_pem_filepath=csr_pem_filepath
             )
             if modulus_md5 is None:
-                # TODO: no way of testing this in Pure-python right now
-                if self.__class__ == UnitTest_CertUtils:
+                # TODO: Support EC Key Modulus Variant - https://github.com/aptise/cert_utils/issues/15
+                if csr_filename.startswith("key_technology-ec"):
                     continue
             self.assertEqual(modulus_md5, CSR_SETS[csr_filename]["modulus_md5"])
             # no need to test for fallback behavior again
@@ -588,7 +626,7 @@ class UnitTest_CertUtils(unittest.TestCase, _Mixin_fallback_possible, _Mixin_fil
                 self.assertEqual(
                     modulus_md5, self._cert_sets[cert_set]["pubkey_modulus_md5"]
                 )
-                if self._fallback_global or (not cert_utils.core.cryptography):
+                if self._fallback_global or self._fallback_cryptography:
                     self.assertIn(
                         "DEBUG:cert_utils:.modulus_md5_cert > openssl fallback",
                         logged.output,
@@ -627,7 +665,7 @@ class UnitTest_CertUtils(unittest.TestCase, _Mixin_fallback_possible, _Mixin_fil
                 self.assertEqual(
                     str(cert_enddate), self._cert_sets[cert_set]["cert.notAfter"]
                 )
-                if self._fallback_global or (not cert_utils.core.cryptography):
+                if self._fallback_global or self._fallback_cryptography:
                     self.assertIn(
                         "DEBUG:cert_utils:.parse_cert__enddate > openssl fallback",
                         logged.output,
@@ -656,7 +694,7 @@ class UnitTest_CertUtils(unittest.TestCase, _Mixin_fallback_possible, _Mixin_fil
                 self.assertEqual(
                     str(cert_startdate), self._cert_sets[cert_set]["cert.notBefore"]
                 )
-                if self._fallback_global or (not cert_utils.core.cryptography):
+                if self._fallback_global or self._fallback_cryptography:
                     self.assertIn(
                         "DEBUG:cert_utils:.parse_cert__startdate > openssl fallback",
                         logged.output,
@@ -696,7 +734,7 @@ class UnitTest_CertUtils(unittest.TestCase, _Mixin_fallback_possible, _Mixin_fil
                 rval = cert_utils.parse_cert(
                     cert_pem=cert_pem, cert_pem_filepath=cert_pem_filepath
                 )
-                if self._fallback_global or (not cert_utils.core.cryptography):
+                if self._fallback_global or self._fallback_cryptography:
                     self.assertIn(
                         "DEBUG:cert_utils:.parse_cert > openssl fallback",
                         logged.output,
@@ -726,7 +764,7 @@ class UnitTest_CertUtils(unittest.TestCase, _Mixin_fallback_possible, _Mixin_fil
                 spki_sha256 = cert_utils.parse_cert__spki_sha256(
                     cert_pem=cert_pem, cert_pem_filepath=cert_pem_filepath
                 )
-                if self._fallback_global or (not cert_utils.core.cryptography):
+                if self._fallback_global or self._fallback_cryptography:
                     self.assertIn(
                         "DEBUG:cert_utils:.parse_cert__spki_sha256 > openssl fallback",
                         logged.output,
@@ -839,7 +877,7 @@ class UnitTest_CertUtils(unittest.TestCase, _Mixin_fallback_possible, _Mixin_fil
                     rval["SubjectAlternativeName"],
                     self._cert_sets[cert_set]["csr.domains.san"],
                 )
-                if self._fallback_global or (not cert_utils.core.cryptography):
+                if self._fallback_global or self._fallback_cryptography:
                     self.assertIn(
                         "DEBUG:cert_utils:.parse_csr > openssl fallback",
                         logged.output,
@@ -862,7 +900,7 @@ class UnitTest_CertUtils(unittest.TestCase, _Mixin_fallback_possible, _Mixin_fil
                 self.assertEqual(
                     spki_sha256_b64, self._cert_sets[cert_set]["spki_sha256.b64"]
                 )
-                if self._fallback_global or (not cert_utils.core.cryptography):
+                if self._fallback_global or self._fallback_cryptography:
                     self.assertIn(
                         "DEBUG:cert_utils:.parse_csr__spki_sha256 > openssl fallback",
                         logged.output,
@@ -881,7 +919,7 @@ class UnitTest_CertUtils(unittest.TestCase, _Mixin_fallback_possible, _Mixin_fil
                 self.assertEqual(
                     key_technology, self._cert_sets[cert_set]["key_technology"]
                 )
-                if self._fallback_global:
+                if self._fallback_global or self._fallback_cryptography:
                     self.assertIn(
                         "DEBUG:cert_utils:.parse_csr__key_technology > openssl fallback",
                         logged.output,
@@ -976,7 +1014,7 @@ class UnitTest_CertUtils(unittest.TestCase, _Mixin_fallback_possible, _Mixin_fil
                 self.assertEqual(
                     rval["spki_sha256"], self._cert_sets[cert_set]["spki_sha256"]
                 )
-                if self._fallback_global or (not cert_utils.core.cryptography):
+                if self._fallback_global or self._fallback_cryptography:
                     self.assertIn(
                         "DEBUG:cert_utils:.parse_key > openssl fallback",
                         logged.output,
@@ -999,7 +1037,7 @@ class UnitTest_CertUtils(unittest.TestCase, _Mixin_fallback_possible, _Mixin_fil
                 self.assertEqual(
                     spki_sha256_b64, self._cert_sets[cert_set]["spki_sha256.b64"]
                 )
-                if self._fallback_global or (not cert_utils.core.cryptography):
+                if self._fallback_global or self._fallback_cryptography:
                     self.assertIn(
                         "DEBUG:cert_utils:.parse_key__spki_sha256 > openssl fallback",
                         logged.output,
@@ -1018,7 +1056,7 @@ class UnitTest_CertUtils(unittest.TestCase, _Mixin_fallback_possible, _Mixin_fil
                 self.assertEqual(
                     key_technology, self._cert_sets[cert_set]["key_technology"]
                 )
-                if self._fallback_global:
+                if self._fallback_global or self._fallback_cryptography:
                     self.assertIn(
                         "DEBUG:cert_utils:.parse_key__technology > openssl fallback",
                         logged.output,
@@ -1080,7 +1118,7 @@ class UnitTest_CertUtils(unittest.TestCase, _Mixin_fallback_possible, _Mixin_fil
                     fullchain_pem
                 )
                 self.assertEqual(_cert, cert_pem)
-                if self._fallback_global:
+                if self._fallback_global or self._fallback_cryptography:
                     self.assertIn(
                         "DEBUG:cert_utils:.cert_and_chain_from_fullchain > openssl fallback",
                         logged.output,
@@ -1146,7 +1184,7 @@ class UnitTest_CertUtils(unittest.TestCase, _Mixin_fallback_possible, _Mixin_fil
 
                     _all_certs = cert_utils.decompose_chain(fullchain_pem)
                     self.assertEqual(len(_all_certs), count_intermediates + 1)
-                    if self._fallback_global:
+                    if self._fallback_global or self._fallback_cryptography:
                         self.assertIn(
                             "DEBUG:cert_utils:.decompose_chain > openssl fallback",
                             logged.output,
@@ -1170,7 +1208,7 @@ class UnitTest_CertUtils(unittest.TestCase, _Mixin_fallback_possible, _Mixin_fil
                             root_pem=root_pem, fullchain_pem=fullchain_pem
                         )
                     )
-                    if self._fallback_global:
+                    if self._fallback_global or self._fallback_cryptography:
                         self.assertIn(
                             "DEBUG:cert_utils:.ensure_chain > openssl fallback",
                             logged.output,
@@ -1226,7 +1264,7 @@ class UnitTest_CertUtils(unittest.TestCase, _Mixin_fallback_possible, _Mixin_fil
                 _all_certs = cert_utils.decompose_chain(fullchain_pem)
                 with self.assertLogs("cert_utils", level="DEBUG") as logged:
                     cert_utils.ensure_chain_order(_all_certs)
-                    if self._fallback_global:
+                    if self._fallback_global or self._fallback_cryptography:
                         self.assertIn(
                             "DEBUG:cert_utils:.ensure_chain_order > openssl fallback",
                             logged.output,
@@ -1300,7 +1338,7 @@ class UnitTest_CertUtils(unittest.TestCase, _Mixin_fallback_possible, _Mixin_fil
                 rval = cert_utils.account_key__parse(
                     key_pem=key_pem, key_pem_filepath=key_pem_filepath
                 )
-                if self._fallback_global or (not cert_utils.core.josepy):
+                if self._fallback_global or self._fallback_josepy:
                     self.assertIn(
                         "DEBUG:cert_utils:.account_key__parse > openssl fallback",
                         logged.output,
@@ -1334,7 +1372,7 @@ class UnitTest_CertUtils(unittest.TestCase, _Mixin_fallback_possible, _Mixin_fil
                 signature = cert_utils.jose_b64(_signature)
                 self.assertEqual(signature, expected)
 
-                if self._fallback_global or (not cert_utils.core.cryptography):
+                if self._fallback_global or self._fallback_cryptography:
                     self.assertIn(
                         "DEBUG:cert_utils:.account_key__sign > openssl fallback",
                         logged.output,
@@ -1383,7 +1421,7 @@ class UnitTest_CertUtils(unittest.TestCase, _Mixin_fallback_possible, _Mixin_fil
         with self.assertLogs("cert_utils", level="DEBUG") as logged:
             key_pem = cert_utils.new_key_ec()
             self.assertIn("-----BEGIN EC PRIVATE KEY-----", key_pem)
-            if self._fallback_global or (not cert_utils.core.cryptography):
+            if self._fallback_global or self._fallback_cryptography:
                 self.assertIn(
                     "DEBUG:cert_utils:.new_key_ec > openssl fallback",
                     logged.output,
@@ -1427,7 +1465,7 @@ class UnitTest_CertUtils(unittest.TestCase, _Mixin_fallback_possible, _Mixin_fil
         with self.assertLogs("cert_utils", level="DEBUG") as logged:
             key_pem = cert_utils.new_key_rsa()
             _key_compliance(key_pem)
-            if self._fallback_global:
+            if self._fallback_global or self._fallback_cryptography:
                 self.assertIn(
                     "DEBUG:cert_utils:.new_key_rsa > openssl fallback",
                     logged.output,
@@ -1465,7 +1503,7 @@ class UnitTest_CertUtils(unittest.TestCase, _Mixin_fallback_possible, _Mixin_fil
         fdata_pkcs7 = self._filedata_testfile_binary(fname_pkcs7)
         with self.assertLogs("cert_utils", level="DEBUG") as logged:
             pkcs7_pems = cert_utils.convert_pkcs7_to_pems(fdata_pkcs7)
-            if self._fallback_global or (not cert_utils.core.cryptography):
+            if self._fallback_global or self._fallback_cryptography:
                 self.assertIn(
                     "DEBUG:cert_utils:.convert_pkcs7_to_pems > openssl fallback",
                     logged.output,
@@ -1572,7 +1610,7 @@ class UnitTest_OpenSSL(unittest.TestCase, _Mixin_fallback_possible, _Mixin_filed
             assert _computed_modulus_md5 == _expected_modulus_md5
 
 
-class UnitTest_CertUtils_fallback(_MixinNoCrypto, UnitTest_CertUtils):
+class UnitTest_CertUtils_fallback(_MixinNoCrypto_Global, UnitTest_CertUtils):
     """python -m unittest tests.test_unit.UnitTest_CertUtils_fallback"""
 
     pass
@@ -1596,7 +1634,7 @@ class UnitTest_CertUtils_fallback_missing_josepy(
     pass
 
 
-class UnitTest_OpenSSL_fallback(_MixinNoCrypto, UnitTest_OpenSSL):
+class UnitTest_OpenSSL_fallback(_MixinNoCrypto_Global, UnitTest_OpenSSL):
     """python -m unittest tests.test_unit.UnitTest_OpenSSL_fallback"""
 
     pass
