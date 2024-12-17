@@ -22,6 +22,8 @@ from ._utils import TEST_FILES
 # ==============================================================================
 
 EXTENDED_TESTS = bool(int(os.getenv("CERT_UTILS_EXTENDED_TESTS", "0")))
+if not EXTENDED_TESTS:
+    raise ValueError("FATAL")
 
 # ------------------------------------------------------------------------------
 

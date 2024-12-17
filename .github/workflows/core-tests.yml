@@ -48,5 +48,4 @@ jobs:
     - name: Test with tox/pytest
       # tox is used to run pytest
       run: |
-        printenv
         tox -e py -- ${{ matrix.pytest-args }}
