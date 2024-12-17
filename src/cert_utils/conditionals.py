@@ -3,8 +3,33 @@ from types import ModuleType
 from typing import Optional
 
 # ------------------------------------------------------------------------------
-# Conditional Imports
 
+"""
+Conditional Imports
+
+This package contains our conditional imports.
+
+DO NOT IMPORT FROM THIS PACKAGE.
+Instead, import this package and access the imports through it.
+
+The unit tests need to unset these packages to `None` to ensure fallback
+operations work correctly. If packages are imported from here, they may not
+be property unset in the unit_tests.
+
+BAD:
+    from .conditionals import cryptography
+    cert = cryptography.x509.load_pem_x509_certificate(
+        cert_pem.encode()
+    )
+
+GOOD:
+    from . import conditionals
+    cert = conditionals.cryptography.x509.load_pem_x509_certificate(
+        cert_pem.encode()
+    )
+
+
+"""
 cryptography: Optional[ModuleType]
 crypto_dsa: Optional[ModuleType]
 crypto_ec: Optional[ModuleType]

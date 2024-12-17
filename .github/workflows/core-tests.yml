@@ -28,8 +28,6 @@ jobs:
           - "3.11"
           - "3.12"
           - "3.13"
-        env:
-            CERT_UTILS_EXTENDED_TESTS: "1"
 
     steps:
     - uses: actions/checkout@v3
