@@ -1,7 +1,47 @@
+# stdlib
 from typing import Dict
 from typing import List
+from typing import Optional
+
+# locals
+from . import core
 
 # ==============================================================================
+
+
+class AccountKeyData(object):
+    """
+    An object encapsulating Account Key data
+    """
+
+    key_pem: str
+    key_pem_filepath: Optional[str]
+    jwk: Dict
+    thumbprint: str
+    alg: str
+
+    def __init__(
+        self,
+        key_pem: str,
+        key_pem_filepath: Optional[str] = None,
+    ):
+        """
+        :param key_pem: (required) A PEM encoded RSA key
+        :param key_pem_filepath: (optional) The filepath of a PEM encoded RSA key
+        """
+        self.key_pem = key_pem
+        self.key_pem_filepath = key_pem_filepath
+
+        (_jwk, _thumbprint, _alg) = core.account_key__parse(
+            key_pem=key_pem,
+            key_pem_filepath=key_pem_filepath,
+        )
+        self.jwk = _jwk
+        self.thumbprint = _thumbprint
+        self.alg = _alg
+
+
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 
 class _mixin_mapping(object):

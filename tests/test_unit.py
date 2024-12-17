@@ -274,7 +274,7 @@ class UnitTest_CertUtils(unittest.TestCase, _Mixin_fallback_possible, _Mixin_fil
             cert_filename = "unit_tests/cert_%s/cert.pem" % cert_set
             cert_pem_filepath = self._filepath_testfile(cert_filename)
             cert_pem = self._filedata_testfile(cert_filename)
-            with self.assertLogs("cert_utils.core", level="DEBUG") as logged:
+            with self.assertLogs("cert_utils", level="DEBUG") as logged:
                 cert_domains = cert_utils.parse_cert__domains(
                     cert_pem=cert_pem, cert_pem_filepath=cert_pem_filepath
                 )
@@ -305,7 +305,7 @@ class UnitTest_CertUtils(unittest.TestCase, _Mixin_fallback_possible, _Mixin_fil
             cert_pem = self._filedata_testfile(cert_filename)
 
             # defaults to sha1
-            with self.assertLogs("cert_utils.core", level="DEBUG") as logged:
+            with self.assertLogs("cert_utils", level="DEBUG") as logged:
                 _fingerprint = cert_utils.fingerprint_cert(
                     cert_pem=cert_pem, cert_pem_filepath=cert_pem_filepath
                 )
@@ -355,7 +355,7 @@ class UnitTest_CertUtils(unittest.TestCase, _Mixin_fallback_possible, _Mixin_fil
             csr_filename = "unit_tests/cert_%s/csr.pem" % cert_set
             csr_pem_filepath = self._filepath_testfile(csr_filename)
             csr_pem = self._filedata_testfile(csr_filename)
-            with self.assertLogs("cert_utils.core", level="DEBUG") as logged:
+            with self.assertLogs("cert_utils", level="DEBUG") as logged:
                 csr_domains = cert_utils.parse_csr_domains(
                     csr_pem=csr_pem,
                     csr_pem_filepath=csr_pem_filepath,
@@ -383,7 +383,7 @@ class UnitTest_CertUtils(unittest.TestCase, _Mixin_fallback_possible, _Mixin_fil
             csr_filename = "unit_tests/cert_%s/csr.pem" % cert_set
             csr_pem_filepath = self._filepath_testfile(csr_filename)
             csr_pem = self._filedata_testfile(csr_filename)
-            with self.assertLogs("cert_utils.core", level="DEBUG") as logged:
+            with self.assertLogs("cert_utils", level="DEBUG") as logged:
                 cert_utils.validate_csr(
                     csr_pem=csr_pem, csr_pem_filepath=csr_pem_filepath
                 )
@@ -407,14 +407,11 @@ class UnitTest_CertUtils(unittest.TestCase, _Mixin_fallback_possible, _Mixin_fil
             key_filename = "unit_tests/cert_%s/privkey.pem" % cert_set
             key_pem_filepath = self._filepath_testfile(key_filename)
             key_pem = self._filedata_testfile(key_filename)
-            with self.assertLogs("cert_utils.core", level="DEBUG") as logged:
+            with self.assertLogs("cert_utils", level="DEBUG") as logged:
                 key_technology = cert_utils.validate_key(
                     key_pem=key_pem, key_pem_filepath=key_pem_filepath
                 )
-                if (
-                    self._fallback_global
-                    or (not cert_utils.core.cryptography)
-                ):
+                if self._fallback_global or (not cert_utils.core.cryptography):
                     self.assertIn(
                         "DEBUG:cert_utils.core:.validate_key > openssl fallback",
                         logged.output,
@@ -428,17 +425,14 @@ class UnitTest_CertUtils(unittest.TestCase, _Mixin_fallback_possible, _Mixin_fil
         for key_filename in sorted(KEY_SETS.keys()):
             key_pem_filepath = self._filepath_testfile(key_filename)
             key_pem = self._filedata_testfile(key_filename)
-            with self.assertLogs("cert_utils.core", level="DEBUG") as logged:
+            with self.assertLogs("cert_utils", level="DEBUG") as logged:
                 key_technology = cert_utils.validate_key(
                     key_pem=key_pem, key_pem_filepath=key_pem_filepath
                 )
                 self.assertEqual(
                     key_technology, KEY_SETS[key_filename]["key_technology"]
                 )
-                if (
-                    self._fallback_global
-                    or (not cert_utils.core.cryptography)
-                ):
+                if self._fallback_global or (not cert_utils.core.cryptography):
                     self.assertIn(
                         "DEBUG:cert_utils.core:.validate_key > openssl fallback",
                         logged.output,
@@ -460,7 +454,7 @@ class UnitTest_CertUtils(unittest.TestCase, _Mixin_fallback_possible, _Mixin_fil
             cert_filename = "unit_tests/cert_%s/cert.pem" % cert_set
             cert_pem_filepath = self._filepath_testfile(cert_filename)
             cert_pem = self._filedata_testfile(cert_filename)
-            with self.assertLogs("cert_utils.core", level="DEBUG") as logged:
+            with self.assertLogs("cert_utils", level="DEBUG") as logged:
                 cert_utils.validate_cert(
                     cert_pem=cert_pem, cert_pem_filepath=cert_pem_filepath
                 )
@@ -484,7 +478,7 @@ class UnitTest_CertUtils(unittest.TestCase, _Mixin_fallback_possible, _Mixin_fil
             key_filename = "unit_tests/cert_%s/privkey.pem" % cert_set
             key_pem_filepath = self._filepath_testfile(key_filename)
             key_pem = self._filedata_testfile(key_filename)
-            with self.assertLogs("cert_utils.core", level="DEBUG") as logged:
+            with self.assertLogs("cert_utils", level="DEBUG") as logged:
                 csr_pem = cert_utils.make_csr(
                     domain_names=self._cert_sets[cert_set]["csr.domains.all"],
                     key_pem=key_pem,
@@ -509,7 +503,7 @@ class UnitTest_CertUtils(unittest.TestCase, _Mixin_fallback_possible, _Mixin_fil
             key_filename = "unit_tests/cert_%s/privkey.pem" % cert_set
             key_pem_filepath = self._filepath_testfile(key_filename)
             key_pem = self._filedata_testfile(key_filename)
-            with self.assertLogs("cert_utils.core", level="DEBUG") as logged:
+            with self.assertLogs("cert_utils", level="DEBUG") as logged:
                 modulus_md5 = cert_utils.modulus_md5_key(
                     key_pem=key_pem, key_pem_filepath=key_pem_filepath
                 )
@@ -544,7 +538,7 @@ class UnitTest_CertUtils(unittest.TestCase, _Mixin_fallback_possible, _Mixin_fil
             csr_filename = "unit_tests/cert_%s/csr.pem" % cert_set
             csr_pem_filepath = self._filepath_testfile(csr_filename)
             csr_pem = self._filedata_testfile(csr_filename)
-            with self.assertLogs("cert_utils.core", level="DEBUG") as logged:
+            with self.assertLogs("cert_utils", level="DEBUG") as logged:
                 modulus_md5 = cert_utils.modulus_md5_csr(
                     csr_pem=csr_pem, csr_pem_filepath=csr_pem_filepath
                 )
@@ -587,7 +581,7 @@ class UnitTest_CertUtils(unittest.TestCase, _Mixin_fallback_possible, _Mixin_fil
             cert_filename = "unit_tests/cert_%s/cert.pem" % cert_set
             cert_pem_filepath = self._filepath_testfile(cert_filename)
             cert_pem = self._filedata_testfile(cert_filename)
-            with self.assertLogs("cert_utils.core", level="DEBUG") as logged:
+            with self.assertLogs("cert_utils", level="DEBUG") as logged:
                 modulus_md5 = cert_utils.modulus_md5_cert(
                     cert_pem=cert_pem, cert_pem_filepath=cert_pem_filepath
                 )
@@ -626,7 +620,7 @@ class UnitTest_CertUtils(unittest.TestCase, _Mixin_fallback_possible, _Mixin_fil
             cert_filename = "unit_tests/cert_%s/cert.pem" % cert_set
             cert_pem_filepath = self._filepath_testfile(cert_filename)
             cert_pem = self._filedata_testfile(cert_filename)
-            with self.assertLogs("cert_utils.core", level="DEBUG") as logged:
+            with self.assertLogs("cert_utils", level="DEBUG") as logged:
                 cert_enddate = cert_utils.parse_cert__enddate(
                     cert_pem=cert_pem, cert_pem_filepath=cert_pem_filepath
                 )
@@ -655,7 +649,7 @@ class UnitTest_CertUtils(unittest.TestCase, _Mixin_fallback_possible, _Mixin_fil
             cert_filename = "unit_tests/cert_%s/cert.pem" % cert_set
             cert_pem_filepath = self._filepath_testfile(cert_filename)
             cert_pem = self._filedata_testfile(cert_filename)
-            with self.assertLogs("cert_utils.core", level="DEBUG") as logged:
+            with self.assertLogs("cert_utils", level="DEBUG") as logged:
                 cert_startdate = cert_utils.parse_cert__startdate(
                     cert_pem=cert_pem, cert_pem_filepath=cert_pem_filepath
                 )
@@ -698,7 +692,7 @@ class UnitTest_CertUtils(unittest.TestCase, _Mixin_fallback_possible, _Mixin_fil
             cert_pem = self._filedata_testfile(cert_filename)
 
             # `cert_utils.parse_cert`
-            with self.assertLogs("cert_utils.core", level="DEBUG") as logged:
+            with self.assertLogs("cert_utils", level="DEBUG") as logged:
                 rval = cert_utils.parse_cert(
                     cert_pem=cert_pem, cert_pem_filepath=cert_pem_filepath
                 )
@@ -728,7 +722,7 @@ class UnitTest_CertUtils(unittest.TestCase, _Mixin_fallback_possible, _Mixin_fil
             )
 
             # `cert_utils.parse_cert__spki_sha256`
-            with self.assertLogs("cert_utils.core", level="DEBUG") as logged:
+            with self.assertLogs("cert_utils", level="DEBUG") as logged:
                 spki_sha256 = cert_utils.parse_cert__spki_sha256(
                     cert_pem=cert_pem, cert_pem_filepath=cert_pem_filepath
                 )
@@ -826,7 +820,7 @@ class UnitTest_CertUtils(unittest.TestCase, _Mixin_fallback_possible, _Mixin_fil
             csr_pem = self._filedata_testfile(csr_filename)
 
             # `cert_utils.parse_csr`
-            with self.assertLogs("cert_utils.core", level="DEBUG") as logged:
+            with self.assertLogs("cert_utils", level="DEBUG") as logged:
                 rval = cert_utils.parse_csr(
                     csr_pem=csr_pem, csr_pem_filepath=csr_pem_filepath
                 )
@@ -857,7 +851,7 @@ class UnitTest_CertUtils(unittest.TestCase, _Mixin_fallback_possible, _Mixin_fil
                     )
 
             # `cert_utils.parse_csr__spki_sha256`
-            with self.assertLogs("cert_utils.core", level="DEBUG") as logged:
+            with self.assertLogs("cert_utils", level="DEBUG") as logged:
                 spki_sha256 = cert_utils.parse_csr__spki_sha256(
                     csr_pem=csr_pem, csr_pem_filepath=csr_pem_filepath
                 )
@@ -880,7 +874,7 @@ class UnitTest_CertUtils(unittest.TestCase, _Mixin_fallback_possible, _Mixin_fil
                     )
 
             # `cert_utils.parse_csr__key_technology
-            with self.assertLogs("cert_utils.core", level="DEBUG") as logged:
+            with self.assertLogs("cert_utils", level="DEBUG") as logged:
                 key_technology = cert_utils.parse_csr__key_technology(
                     csr_pem=csr_pem, csr_pem_filepath=csr_pem_filepath
                 )
@@ -969,7 +963,7 @@ class UnitTest_CertUtils(unittest.TestCase, _Mixin_fallback_possible, _Mixin_fil
             key_pem = self._filedata_testfile(key_filename)
 
             # `cert_utils.parse_key`
-            with self.assertLogs("cert_utils.core", level="DEBUG") as logged:
+            with self.assertLogs("cert_utils", level="DEBUG") as logged:
                 rval = cert_utils.parse_key(
                     key_pem=key_pem, key_pem_filepath=key_pem_filepath
                 )
@@ -994,7 +988,7 @@ class UnitTest_CertUtils(unittest.TestCase, _Mixin_fallback_possible, _Mixin_fil
                     )
 
             # `cert_utils.parse_key__spki_sha256`
-            with self.assertLogs("cert_utils.core", level="DEBUG") as logged:
+            with self.assertLogs("cert_utils", level="DEBUG") as logged:
                 spki_sha256 = cert_utils.parse_key__spki_sha256(
                     key_pem=key_pem, key_pem_filepath=key_pem_filepath
                 )
@@ -1017,7 +1011,7 @@ class UnitTest_CertUtils(unittest.TestCase, _Mixin_fallback_possible, _Mixin_fil
                     )
 
             # `cert_utils.parse_key__technology`
-            with self.assertLogs("cert_utils.core", level="DEBUG") as logged:
+            with self.assertLogs("cert_utils", level="DEBUG") as logged:
                 key_technology = cert_utils.parse_key__technology(
                     key_pem=key_pem, key_pem_filepath=key_pem_filepath
                 )
@@ -1081,7 +1075,7 @@ class UnitTest_CertUtils(unittest.TestCase, _Mixin_fallback_possible, _Mixin_fil
             cert_pem_filepath = self._filepath_testfile(cert_filename)
             cert_pem = self._filedata_testfile(cert_filename)
 
-            with self.assertLogs("cert_utils.core", level="DEBUG") as logged:
+            with self.assertLogs("cert_utils", level="DEBUG") as logged:
                 (_cert, _chain) = cert_utils.cert_and_chain_from_fullchain(
                     fullchain_pem
                 )
@@ -1146,7 +1140,7 @@ class UnitTest_CertUtils(unittest.TestCase, _Mixin_fallback_possible, _Mixin_fil
                 self.assertEqual(_cert, cert_pem)
                 self.assertEqual(_chain, test_pems[idx]["chain"])
 
-                with self.assertLogs("cert_utils.core", level="DEBUG") as logged:
+                with self.assertLogs("cert_utils", level="DEBUG") as logged:
                     _upstream_certs = cert_utils.decompose_chain(_chain)
                     self.assertEqual(len(_upstream_certs), count_intermediates)
 
@@ -1165,7 +1159,7 @@ class UnitTest_CertUtils(unittest.TestCase, _Mixin_fallback_possible, _Mixin_fil
 
                 # `ensure_chain` can accept two types of data
                 root_pem = test_pems[idx]["root"]
-                with self.assertLogs("cert_utils.core", level="DEBUG") as logged:
+                with self.assertLogs("cert_utils", level="DEBUG") as logged:
                     self.assertTrue(
                         cert_utils.ensure_chain(
                             root_pem=root_pem, chain_pem=_chain, cert_pem=cert_pem
@@ -1230,7 +1224,7 @@ class UnitTest_CertUtils(unittest.TestCase, _Mixin_fallback_possible, _Mixin_fil
                 # ENSURE THE CHAIN ORDER
                 # forward: YAY!
                 _all_certs = cert_utils.decompose_chain(fullchain_pem)
-                with self.assertLogs("cert_utils.core", level="DEBUG") as logged:
+                with self.assertLogs("cert_utils", level="DEBUG") as logged:
                     cert_utils.ensure_chain_order(_all_certs)
                     if self._fallback_global:
                         self.assertIn(
@@ -1269,7 +1263,7 @@ class UnitTest_CertUtils(unittest.TestCase, _Mixin_fallback_possible, _Mixin_fil
             key_pem = self._filedata_testfile(key_pem_filepath)
 
             # convert
-            with self.assertLogs("cert_utils.core", level="DEBUG") as logged:
+            with self.assertLogs("cert_utils", level="DEBUG") as logged:
                 rval = cert_utils.convert_lejson_to_pem(key_jsons)
             if (
                 self._fallback_global
@@ -1302,7 +1296,7 @@ class UnitTest_CertUtils(unittest.TestCase, _Mixin_fallback_possible, _Mixin_fil
             key_pem_filepath = self._filepath_testfile(key_pem_filename)
             key_pem = self._filedata_testfile(key_pem_filepath)
 
-            with self.assertLogs("cert_utils.core", level="DEBUG") as logged:
+            with self.assertLogs("cert_utils", level="DEBUG") as logged:
                 rval = cert_utils.account_key__parse(
                     key_pem=key_pem, key_pem_filepath=key_pem_filepath
                 )
@@ -1333,7 +1327,7 @@ class UnitTest_CertUtils(unittest.TestCase, _Mixin_fallback_possible, _Mixin_fil
             input = self._account_sets[account_set]["signature.input"]
             expected = self._account_sets[account_set]["signature.output"]
 
-            with self.assertLogs("cert_utils.core", level="DEBUG") as logged:
+            with self.assertLogs("cert_utils", level="DEBUG") as logged:
                 _signature = cert_utils.account_key__sign(
                     input, key_pem=key_pem, key_pem_filepath=key_pem_filepath
                 )
@@ -1386,13 +1380,10 @@ class UnitTest_CertUtils(unittest.TestCase, _Mixin_fallback_possible, _Mixin_fil
         python -m unittest tests.test_unit.UnitTest_CertUtils.test_new_key_ec
         """
         # test no bits
-        with self.assertLogs("cert_utils.core", level="DEBUG") as logged:
+        with self.assertLogs("cert_utils", level="DEBUG") as logged:
             key_pem = cert_utils.new_key_ec()
             self.assertIn("-----BEGIN EC PRIVATE KEY-----", key_pem)
-            if (
-                self._fallback_global
-                or (not cert_utils.core.cryptography)
-            ):
+            if self._fallback_global or (not cert_utils.core.cryptography):
                 self.assertIn(
                     "DEBUG:cert_utils.core:.new_key_ec > openssl fallback",
                     logged.output,
@@ -1433,7 +1424,7 @@ class UnitTest_CertUtils(unittest.TestCase, _Mixin_fallback_possible, _Mixin_fil
                 ),
             )
 
-        with self.assertLogs("cert_utils.core", level="DEBUG") as logged:
+        with self.assertLogs("cert_utils", level="DEBUG") as logged:
             key_pem = cert_utils.new_key_rsa()
             _key_compliance(key_pem)
             if self._fallback_global:
@@ -1472,12 +1463,9 @@ class UnitTest_CertUtils(unittest.TestCase, _Mixin_fallback_possible, _Mixin_fil
         fname_pkcs7 = "letsencrypt-certs/trustid-x3-root.p7c"
         fpath_pkcs7 = self._filepath_testfile(fname_pkcs7)
         fdata_pkcs7 = self._filedata_testfile_binary(fname_pkcs7)
-        with self.assertLogs("cert_utils.core", level="DEBUG") as logged:
+        with self.assertLogs("cert_utils", level="DEBUG") as logged:
             pkcs7_pems = cert_utils.convert_pkcs7_to_pems(fdata_pkcs7)
-            if (
-                self._fallback_global
-                or (not cert_utils.core.cryptography)
-            ):
+            if self._fallback_global or (not cert_utils.core.cryptography):
                 self.assertIn(
                     "DEBUG:cert_utils.core:.convert_pkcs7_to_pems > openssl fallback",
                     logged.output,

@@ -1,41 +1,37 @@
+# General Utility Functions
+
 # stdlib
+import base64
 import binascii
 import hashlib
 import re
-from types import ModuleType
+import tempfile
 from typing import Iterable
 from typing import List
 from typing import Optional
-from typing import Tuple
-from typing import TYPE_CHECKING
 from typing import Union
-
-
-cryptography: Optional[ModuleType]
-serialization: Optional[ModuleType]
-
-
-try:
-    import cryptography
-    from cryptography.hazmat.primitives import serialization
-except ImportError:
-    cryptography = None
-    serialization = None
-
 
 # ==============================================================================
 
+_RE_rn = re.compile(r"\r\n")
 
-# from certbot.crypto_util
+
+# https://github.com/certbot/certbot/blob/master/certbot/certbot/crypto_util.py#L482
+#
 # Finds one CERTIFICATE stricttextualmsg according to rfc7468#section-3.
 # Does not validate the base64text - use crypto.load_certificate.
+#
+# NOTE: this functions slightly differently as " *?" was added
+#       the first two letsencrypt certificates added a trailing space, which may
+#       not be compliant with the specification
 CERT_PEM_REGEX = re.compile(
-    b"""-----BEGIN CERTIFICATE-----\r?
+    """-----BEGIN CERTIFICATE----- *?\r?
 .+?\r?
------END CERTIFICATE-----\r?
+-----END CERTIFICATE----- *?\r?
 """,
     re.DOTALL,  # DOTALL (/s) because the base64text may include newlines
 )
+
 
 # technically we could end in a dot (\.?)
 RE_domain = re.compile(
@@ -44,7 +40,66 @@ RE_domain = re.compile(
 )
 
 
+# note the conditional whitespace before/after `CN`
+# this is because of differing openssl versions
+RE_openssl_x509_subject = re.compile(r"Subject:.*? CN ?= ?([^\s,;/]+)")
+RE_openssl_x509_san = re.compile(
+    r"X509v3 Subject Alternative Name: ?\n +([^\n]+)\n?", re.MULTILINE | re.DOTALL
+)
+
+
+# openssl 3 does not have "keyid:" as a prefix
+# a keyid prefix is okay!
+# we do not want the alternates, which are uri+serial; but take that out in results
+RE_openssl_x509_authority_key_identifier = re.compile(
+    r"X509v3 Authority Key Identifier: ?\n +(?:keyid:)?([^\n]+)\n?",
+    re.MULTILINE | re.DOTALL,
+)
+# we have a potential line in there for the OSCP or something else.
+RE_openssl_x509_issuer_uri = re.compile(
+    r"Authority Information Access: ?\n(?:[^\n]*^\n)? +CA Issuers - URI:([^\n]+)\n?",
+    re.MULTILINE | re.DOTALL,
+)
+
+RE_openssl_x509_serial = re.compile(r"Serial Number: ?(\d+)")
+
+
+# depending on openssl version, the "Public key: " text might list the bits
+# it may or may not also have a dash in the phrase "Public Key"
+# it may or may not be prefaced with the PublicKey type
+RE_openssl_x509_keytype_rsa = re.compile(
+    r"Subject Public Key Info:\n"
+    r"\s+Public Key Algorithm: rsaEncryption\n"
+    r"\s+(RSA )?Public(\ |\-)Key:",
+    re.MULTILINE,
+)
+RE_openssl_x509_keytype_ec = re.compile(
+    r"Subject Public Key Info:\n"
+    r"\s+Public Key Algorithm: id-ecPublicKey\n"
+    r"\s+(EC )?Public(\ |\-)Key:",
+    re.MULTILINE,
+)
+
+
 # ------------------------------------------------------------------------------
+
+
+def cleanup_pem_text(pem_text: str) -> str:
+    """
+    * standardizes newlines;
+    * removes trailing spaces;
+    * ensures a trailing newline.
+
+    :param pem_text: PEM formatted string
+    :type pem_text: str
+    :returns: cleaned PEM text
+    :rtype: str
+    """
+    pem_text = _RE_rn.sub("\n", pem_text)
+    _pem_text_lines = [i.strip() for i in pem_text.split("\n")]
+    _pem_text_lines = [i for i in _pem_text_lines if i]
+    pem_text = "\n".join(_pem_text_lines) + "\n"
+    return pem_text
 
 
 def convert_binary_to_hex(input: bytes) -> str:
@@ -72,45 +127,6 @@ def convert_binary_to_hex(input: bytes) -> str:
     # _as_hex = "79B459E67BB6E5E40173800888C81A58F6E99B6E"
     _as_hex_str = _as_hex.decode("utf8")
     return _as_hex_str
-
-
-def cryptography__cert_and_chain_from_fullchain(fullchain_pem: str) -> Tuple[str, str]:
-    """Split fullchain_pem into cert_pem and chain_pem
-
-    from certbot.crypto_util
-
-    :param str fullchain_pem: concatenated cert + chain
-
-    :returns: tuple of string cert_pem and chain_pem
-    :rtype: tuple
-
-    :raises errors.Error: If there are less than 2 certificates in the chain.
-
-    """
-    # First pass: find the boundary of each certificate in the chain.
-    # TODO: This will silently skip over any "explanatory text" in between boundaries,
-    # which is prohibited by RFC8555.
-    if TYPE_CHECKING:
-        assert cryptography is not None
-        assert serialization is not None
-
-    certs = CERT_PEM_REGEX.findall(fullchain_pem.encode())
-    if len(certs) < 2:
-        raise ValueError(
-            "failed to parse fullchain into cert and chain: "
-            + "less than 2 certificates in chain"
-        )
-
-    # Second pass: for each certificate found, parse it using OpenSSL and re-encode it,
-    # with the effect of normalizing any encoding variations (e.g. CRLF, whitespace).
-    certs_normalized = []
-    for cert_pem in certs:
-        cert = cryptography.x509.load_pem_x509_certificate(cert_pem)
-        cert_pem = cert.public_bytes(serialization.Encoding.PEM).decode()
-        certs_normalized.append(cert_pem)
-
-    # Since each normalized cert has a newline suffix, no extra newlines are required.
-    return (certs_normalized[0], "".join(certs_normalized[1:]))
 
 
 def domains_from_list(domain_names: Iterable[str]) -> List[str]:
@@ -153,10 +169,61 @@ def hex_with_colons(as_hex: str) -> str:
     return output
 
 
+def jose_b64(b: bytes) -> str:
+    # helper function base64 encode for jose spec
+    return base64.urlsafe_b64encode(b).decode("utf8").replace("=", "")
+
+
 def md5_text(text: Union[bytes, str]) -> str:
     if isinstance(text, str):
         text = text.encode()
     return hashlib.md5(text).hexdigest()
+
+
+def new_pem_tempfile(pem_data: str) -> tempfile._TemporaryFileWrapper:
+    """
+    this is just a convenience wrapper to create a tempfile and seek(0)
+
+    :param pem_data: PEM encoded string to seed the tempfile with
+    :type pem_data: str
+    :returns: a tempfile instance
+    :rtype: tempfile.NamedTemporaryFile
+    """
+    tmpfile_pem = tempfile.NamedTemporaryFile()
+    if isinstance(pem_data, str):
+        pem_bytes = pem_data.encode()
+    tmpfile_pem.write(pem_bytes)
+    tmpfile_pem.seek(0)
+    return tmpfile_pem
+
+
+def new_der_tempfile(der_data: bytes) -> tempfile._TemporaryFileWrapper:
+    """
+    this is just a convenience wrapper to create a tempfile and seek(0)
+
+    :param der_data: DER encoded string to seed the tempfile with
+    :type der_data: str
+    :returns: a tempfile instance
+    :rtype: `tempfile.NamedTemporaryFile`
+    """
+    tmpfile_der = tempfile.NamedTemporaryFile()
+    tmpfile_der.write(der_data)
+    tmpfile_der.seek(0)
+    return tmpfile_der
+
+
+def split_pem_chain(pem_text: str) -> List[str]:
+    """
+    splits a PEM encoded Certificate chain into multiple Certificates
+
+    :param pem_text: PEM formatted string containing one or more Certificates
+    :type pem_text: str
+    :returns: a list of PEM encoded Certificates
+    :rtype: list
+    """
+    _certs = CERT_PEM_REGEX.findall(pem_text)
+    certs = [cleanup_pem_text(i) for i in _certs]
+    return certs
 
 
 def validate_domains(domain_names: Iterable[str]) -> bool:
@@ -169,3 +236,100 @@ def validate_domains(domain_names: Iterable[str]) -> bool:
         if not RE_domain.match(d):
             raise ValueError("invalid domain: `%s`", d)
     return True
+
+
+# ------------------------------------------------------------------------------
+
+
+def san_domains_from_text(text: str) -> List[str]:
+    """
+    Helper function to extract SAN domains from a chunk of text in a x509 object
+
+    :param text: string extracted from a x509 document
+    :type text: str
+    :returns: list of domains
+    :rtype: list
+    """
+    san_domains = set([])
+    _subject_alt_names = RE_openssl_x509_san.search(text)
+    if _subject_alt_names is not None:
+        for _san in _subject_alt_names.group(1).split(", "):
+            if _san.startswith("DNS:"):
+                san_domains.add(_san[4:].lower())
+    return sorted(list(san_domains))
+
+
+def authority_key_identifier_from_text(text: str) -> Optional[str]:
+    """
+    :param text: string extracted from a x509 document
+    :type text: str
+    :returns: authority_key_identifier
+    :rtype: str
+
+    openssl will print a uppercase hex pairs, separated by a colon
+    we should remove the colons
+    """
+    results = RE_openssl_x509_authority_key_identifier.findall(text)
+    if results:
+        authority_key_identifier = results[0]
+        # ensure we have a key_id and not "URI:" or other convention
+        if authority_key_identifier[2] == ":":
+            return authority_key_identifier.replace(":", "")
+    return None
+
+
+def serial_from_text(text: str) -> Optional[int]:
+    """
+    :param text: string extracted from a x509 document
+    :type text: str
+    :returns: serial
+    :rtype: int
+    """
+    results = RE_openssl_x509_serial.findall(text)
+    if results:
+        serial = results[0]
+        return int(serial)
+    return None
+
+
+def issuer_uri_from_text(text: str) -> Optional[str]:
+    """
+    :param text: string extracted from a x509 document
+    :type text: str
+    :returns: issuer_uri
+    :rtype: str
+    """
+    results = RE_openssl_x509_issuer_uri.findall(text)
+    if results:
+        return results[0]
+    return None
+
+
+def _cert_pubkey_technology__text(cert_text: str) -> Optional[str]:
+    """
+    :param cert_text: string extracted from a x509 document
+    :type cert_text: str
+    :returns: Pubkey type: "RSA" or "EC"
+    :rtype: str
+    """
+    # `cert_text` is the output of of `openssl x509 -noout -text -in MYCERT `
+    if RE_openssl_x509_keytype_rsa.search(cert_text):
+        return "RSA"
+    elif RE_openssl_x509_keytype_ec.search(cert_text):
+        return "EC"
+    return None
+
+
+def _csr_pubkey_technology__text(csr_text: str) -> Optional[str]:
+    """
+    :param csr_text: string extracted from a CSR document
+    :type csr_text: str
+    :returns: Pubkey type: "RSA" or "EC"
+    :rtype: str
+    """
+    # `csr_text` is the output of of `openssl req -noout -text -in MYCERT`
+    if RE_openssl_x509_keytype_rsa.search(csr_text):
+        return "RSA"
+    elif RE_openssl_x509_keytype_ec.search(csr_text):
+        return "EC"
+    return None
