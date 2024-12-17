@@ -1071,6 +1071,7 @@ def make_csr(
     key_pem_filepath: Optional[str] = None,
     ipaddrs: Optional[List[Union[ipaddress.IPv4Address, ipaddress.IPv6Address]]] = None,
     must_staple: bool = False,
+    max_domains: int = MAX_DOMAINS_PER_CERTIFICATE,
 ) -> str:
     """
     This routine will use crypto/certbot if available.
@@ -1087,6 +1088,9 @@ def make_csr(
     :type ipaddrs: list of strings
     :param bool must_staple: Whether to include the TLS Feature extension (aka
         OCSP Must Staple: https://tools.ietf.org/html/rfc7633).
+
+    :param int max_domains: the max domains to put on a certificate;
+        defaults to package max
 
     :returns: CSR, likely PEM encoded
     :rtype: str
@@ -1114,7 +1118,7 @@ def make_csr(
         raise OpenSslError_CsrGeneration(
             "At least one of domains or ipaddrs parameter need to be not empty"
         )
-    elif len(domain_names) + len(ipaddrs) > MAX_DOMAINS_PER_CERTIFICATE:
+    elif len(domain_names) + len(ipaddrs) > max_domains:
         raise OpenSslError_CsrGeneration(
             "LetsEncrypt can only allow `%s` domains per certificate"
         )
@@ -1316,7 +1320,7 @@ def _cryptography__cert_or_req__all_names(
         )
         _sans = ext.value.get_values_for_type(cryptography.x509.DNSName)  # type: ignore[attr-defined]
         sans = [san.decode() if isinstance(san, bytes) else san for san in _sans]
-        
+
     except cryptography.x509.ExtensionNotFound:
         pass
     if cn is None:
@@ -3217,8 +3221,8 @@ def new_key_rsa(bits: int = 4096) -> str:
         )
     if cryptography:
         if TYPE_CHECKING:
-            assert crypto_rsa is not None 
-            assert crypto_serialization is not None 
+            assert crypto_rsa is not None
+            assert crypto_serialization is not None
         key_rsa = crypto_rsa.generate_private_key(
             public_exponent=65537,
             key_size=bits,
@@ -3458,7 +3462,7 @@ def decompose_chain(fullchain_pem: str) -> List[str]:
     # with the effect of normalizing any encoding variations (e.g. CRLF, whitespace).
     if cryptography:
         if TYPE_CHECKING:
-            assert crypto_serialization is not None 
+            assert crypto_serialization is not None
         certs_normalized = []
         for cert_pem in certs:
             cert = cryptography.x509.load_pem_x509_certificate(cert_pem.encode())
@@ -3866,7 +3870,7 @@ def account_key__sign(
     if cryptography:
         if TYPE_CHECKING:
             assert crypto_hashes is not None
-            assert crypto_serialization is not None 
+            assert crypto_serialization is not None
         log.debug(".account_key__sign > cryptography")
         pkey = crypto_serialization.load_pem_private_key(key_pem.encode(), None)
         # possible loads are "Union[DSAPrivateKey, DSAPublicKey, RSAPrivateKey, RSAPublicKey]"
