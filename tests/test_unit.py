@@ -44,30 +44,14 @@ class _MixinNoCrypto_Global(_Mixin_fallback_possible):
     def setUp(self):
         # print("_MixinNoCrypto_Global.setUp")
         global cert_utils
-        cert_utils.compat.cryptography.cryptography = None
-        cert_utils.compat.cryptography.josepy = None
         cert_utils.conditionals.cryptography = None
         cert_utils.conditionals.josepy = None
-        cert_utils.convert.cryptography = None
-        cert_utils.convert.josepy = None
-        cert_utils.core.cryptography = None
-        cert_utils.core.josepy = None
-        cert_utils.cryptography = None
-        cert_utils.josepy = None
 
     def tearDown(self):
         # print("_MixinNoCrypto_Global.tearDown")
         global cert_utils
-        cert_utils.compat.cryptography.cryptography = cryptography
-        cert_utils.compat.cryptography.josepy = josepy
         cert_utils.conditionals.cryptography = cryptography
         cert_utils.conditionals.josepy = josepy
-        cert_utils.convert.cryptography = cryptography
-        cert_utils.convert.josepy = josepy
-        cert_utils.core.cryptography = cryptography
-        cert_utils.core.josepy = josepy
-        cert_utils.cryptography = cryptography
-        cert_utils.josepy = josepy
 
 
 class _Mixin_Missing_cryptography(_Mixin_fallback_possible):
@@ -76,19 +60,11 @@ class _Mixin_Missing_cryptography(_Mixin_fallback_possible):
 
     def setUp(self):
         global cert_utils
-        cert_utils.compat.cryptography.cryptography = None
         cert_utils.conditionals.cryptography = None
-        cert_utils.convert.cryptography = None
-        cert_utils.core.cryptography = None
-        cert_utils.cryptography = None
 
     def tearDown(self):
         global cert_utils
-        cert_utils.compat.cryptography.cryptography = cryptography
         cert_utils.conditionals.cryptography = cryptography
-        cert_utils.convert.cryptography = cryptography
-        cert_utils.core.cryptography = cryptography
-        cert_utils.cryptography = cryptography
 
 
 class _Mixin_Missing_josepy(_Mixin_fallback_possible):
@@ -97,19 +73,11 @@ class _Mixin_Missing_josepy(_Mixin_fallback_possible):
 
     def setUp(self):
         global cert_utils
-        cert_utils.compat.cryptography.josepy = None
         cert_utils.conditionals.josepy = None
-        cert_utils.convert.josepy = None
-        cert_utils.core.josepy = None
-        cert_utils.josepy = None
 
     def tearDown(self):
         global cert_utils
-        cert_utils.compat.cryptography.josepy = josepy
         cert_utils.conditionals.josepy = josepy
-        cert_utils.convert.josepy = josepy
-        cert_utils.core.josepy = josepy
-        cert_utils.josepy = josepy
 
 
 # ------------------------------------------------------------------------------
@@ -1305,8 +1273,8 @@ class UnitTest_CertUtils(unittest.TestCase, _Mixin_fallback_possible, _Mixin_fil
                 rval = cert_utils.convert_lejson_to_pem(key_jsons)
             if (
                 self._fallback_global
-                or (not cert_utils.core.cryptography)
-                or (not cert_utils.core.josepy)
+                or self._fallback_cryptography
+                or self._fallback_josepy
             ):
                 self.assertIn(
                     "DEBUG:cert_utils:.convert_lejson_to_pem > openssl fallback",

@@ -9,10 +9,7 @@ from typing import TYPE_CHECKING
 from typing import Union
 
 # locals
-from ..conditionals import crypto_ec  # Optional[pypi:cryptography]
-from ..conditionals import crypto_rsa  # Optional[pypi:cryptography]
-from ..conditionals import crypto_serialization  # Optional[pypi:cryptography]
-from ..conditionals import cryptography  # Optional[pypi:cryptography]
+from .. import conditionals
 from ..utils import CERT_PEM_REGEX
 
 if TYPE_CHECKING:
@@ -63,11 +60,11 @@ def _cryptography__public_key_technology(
     :rtype: str
     """
     if TYPE_CHECKING:
-        assert crypto_rsa is not None
-        assert crypto_ec is not None
-    if isinstance(publickey, crypto_rsa.RSAPublicKey):
+        assert conditionals.crypto_rsa is not None
+        assert conditionals.crypto_ec is not None
+    if isinstance(publickey, conditionals.crypto_rsa.RSAPublicKey):
         return "RSA"
-    elif isinstance(publickey, crypto_ec.EllipticCurvePublicKey):
+    elif isinstance(publickey, conditionals.crypto_ec.EllipticCurvePublicKey):
         return "EC"
     return None
 
@@ -86,10 +83,12 @@ def _cryptography__public_key_spki_sha256(
     :returns: spki_sha256
     :rtype: str
     """
-    assert crypto_serialization is not None  # nest under `if TYPE_CHECKING` not needed
+    assert (
+        conditionals.crypto_serialization is not None
+    )  # nest under `if TYPE_CHECKING` not needed
     _public_bytes = cryptography_publickey.public_bytes(  # type: ignore[union-attr]
-        crypto_serialization.Encoding.DER,
-        crypto_serialization.PublicFormat.SubjectPublicKeyInfo,
+        conditionals.crypto_serialization.Encoding.DER,
+        conditionals.crypto_serialization.PublicFormat.SubjectPublicKeyInfo,
     )
     spki_sha256 = hashlib.sha256(_public_bytes).digest()
     if as_b64:
@@ -104,11 +103,11 @@ def _cryptography__public_key_spki_sha256(
 def _cryptography__cert_or_req__all_names(
     loaded_cert_or_req: Union["Certificate", "CertificateSigningRequest"],
 ) -> List[str]:
-    assert cryptography is not None
+    assert conditionals.cryptography is not None
     cn: Optional[str] = None
     try:
         _cn = loaded_cert_or_req.subject.get_attributes_for_oid(
-            cryptography.x509.oid.NameOID.COMMON_NAME
+            conditionals.cryptography.x509.oid.NameOID.COMMON_NAME
         )[0].value
         cn = _cn.decode() if isinstance(_cn, bytes) else _cn
     except IndexError:
@@ -116,12 +115,12 @@ def _cryptography__cert_or_req__all_names(
     sans: List[str] = []
     try:
         ext = loaded_cert_or_req.extensions.get_extension_for_oid(
-            cryptography.x509.oid.ExtensionOID.SUBJECT_ALTERNATIVE_NAME
+            conditionals.cryptography.x509.oid.ExtensionOID.SUBJECT_ALTERNATIVE_NAME
         )
-        _sans = ext.value.get_values_for_type(cryptography.x509.DNSName)  # type: ignore[attr-defined]
+        _sans = ext.value.get_values_for_type(conditionals.cryptography.x509.DNSName)  # type: ignore[attr-defined]
         sans = [san.decode() if isinstance(san, bytes) else san for san in _sans]
 
-    except cryptography.x509.ExtensionNotFound:
+    except conditionals.cryptography.x509.ExtensionNotFound:
         pass
     if cn is None:
         return sans
@@ -130,8 +129,6 @@ def _cryptography__cert_or_req__all_names(
 
 def cryptography__cert_and_chain_from_fullchain(fullchain_pem: str) -> Tuple[str, str]:
     """Split fullchain_pem into cert_pem and chain_pem
-
-    from certbot.crypto_util
 
     :param str fullchain_pem: concatenated cert + chain
 
@@ -145,8 +142,8 @@ def cryptography__cert_and_chain_from_fullchain(fullchain_pem: str) -> Tuple[str
     # TODO: This will silently skip over any "explanatory text" in between boundaries,
     # which is prohibited by RFC8555.
     if TYPE_CHECKING:
-        assert cryptography is not None
-        assert crypto_serialization is not None
+        assert conditionals.cryptography is not None
+        assert conditionals.crypto_serialization is not None
 
     certs = CERT_PEM_REGEX.findall(fullchain_pem)
     if len(certs) < 2:
@@ -159,8 +156,12 @@ def cryptography__cert_and_chain_from_fullchain(fullchain_pem: str) -> Tuple[str
     # with the effect of normalizing any encoding variations (e.g. CRLF, whitespace).
     certs_normalized = []
     for cert_pem in certs:
-        cert = cryptography.x509.load_pem_x509_certificate(cert_pem.encode())
-        cert_pem = cert.public_bytes(crypto_serialization.Encoding.PEM).decode()
+        cert = conditionals.cryptography.x509.load_pem_x509_certificate(
+            cert_pem.encode()
+        )
+        cert_pem = cert.public_bytes(
+            conditionals.crypto_serialization.Encoding.PEM
+        ).decode()
         certs_normalized.append(cert_pem)
 
     # Since each normalized cert has a newline suffix, no extra newlines are required.

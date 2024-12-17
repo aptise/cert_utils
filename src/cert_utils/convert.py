@@ -12,10 +12,7 @@ from typing import TYPE_CHECKING
 import psutil
 
 # locals
-from .conditionals import crypto_pkcs7  # Optional[pypi:cryptography]
-from .conditionals import crypto_serialization  # Optional[pypi:cryptography]
-from .conditionals import cryptography  # Optional[pypi:cryptography]
-from .conditionals import josepy  # Optional[pypi:cryptography]
+from . import conditionals
 from .core import check_openssl_version
 from .core import openssl_path
 from .core import openssl_version
@@ -130,13 +127,13 @@ def convert_pkcs7_to_pems(pkcs7_data: bytes) -> List[str]:
     """
     # TODO: accept a pkcs7 filepath; FallbackError_FilepathRequired
     log.info("convert_pkcs7_to_pems >")
-    if cryptography:
+    if conditionals.cryptography:
         if TYPE_CHECKING:
-            assert crypto_pkcs7 is not None
-            assert crypto_serialization is not None
-        certs_loaded = crypto_pkcs7.load_der_pkcs7_certificates(pkcs7_data)
+            assert conditionals.crypto_pkcs7 is not None
+            assert conditionals.crypto_serialization is not None
+        certs_loaded = conditionals.crypto_pkcs7.load_der_pkcs7_certificates(pkcs7_data)
         certs_bytes = [
-            cert.public_bytes(crypto_serialization.Encoding.PEM)
+            cert.public_bytes(conditionals.crypto_serialization.Encoding.PEM)
             for cert in certs_loaded
         ]
         certs_string = [cert.decode("utf8") for cert in certs_bytes]
@@ -245,14 +242,14 @@ def convert_lejson_to_pem(pkey_jsons: str) -> str:
     """
     log.info("convert_lejson_to_pem >")
 
-    if cryptography and josepy:
+    if conditionals.cryptography and conditionals.josepy:
         if TYPE_CHECKING:
-            assert crypto_serialization is not None
-        pkey = josepy.JWKRSA.json_loads(pkey_jsons)
+            assert conditionals.crypto_serialization is not None
+        pkey = conditionals.josepy.JWKRSA.json_loads(pkey_jsons)
         as_pem = pkey.key.private_bytes(
-            encoding=crypto_serialization.Encoding.PEM,
-            format=crypto_serialization.PrivateFormat.TraditionalOpenSSL,
-            encryption_algorithm=crypto_serialization.NoEncryption(),
+            encoding=conditionals.crypto_serialization.Encoding.PEM,
+            format=conditionals.crypto_serialization.PrivateFormat.TraditionalOpenSSL,
+            encryption_algorithm=conditionals.crypto_serialization.NoEncryption(),
         )
         as_pem = as_pem.decode("utf8")
         as_pem = cleanup_pem_text(as_pem)
