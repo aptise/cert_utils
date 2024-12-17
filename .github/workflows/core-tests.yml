@@ -12,9 +12,6 @@ on:
   pull_request:
     branches: [ main ]
 
-env:
-    CERT_UTILS_EXTENDED_TESTS: 1
-
 jobs:
   run-core-tests:
     name: core-tests-${{ matrix.python-version }}-${{ matrix.os }}
@@ -31,6 +28,8 @@ jobs:
           - "3.11"
           - "3.12"
           - "3.13"
+        env:
+            CERT_UTILS_EXTENDED_TESTS: 1
 
     steps:
     - uses: actions/checkout@v3
