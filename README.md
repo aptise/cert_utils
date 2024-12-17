@@ -4,12 +4,13 @@ cert_utils
 ==========
 
 **cert_utils** offers support for common operations when dealing with SSL
-Certificates within the LetsEncrypt ecosystem.
+Certificates, specifically within the LetsEncrypt ecosystem.
 
 This library was originally developed as a toolkit for bugfixing and
 troubleshooting large ACME installations.
 
-**cert_utils** will attempt to process operations with Python when possible.
+**cert_utils** will attempt to process operations with Python via the modern
+[Cryptography](https://cryptography.io/en/latest/) package when possible.
 If the required Python libraries are not installed, it will fallback to using
 OpenSSL commandline via subprocesses.  **cert_utils** does a bit of work to
 standardize certificate operations across versions of Python and OpenSSL that

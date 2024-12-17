@@ -2,7 +2,6 @@
 """
 import os
 import re
-import sys
 
 from setuptools import find_packages
 from setuptools import setup
@@ -26,7 +25,7 @@ requires = [
 ]
 tests_require = [
     "certbot",
-    "cryptography",
+    "cryptography>=42.0.0",
     "josepy",
     "mypy",
     "pytest",
@@ -34,20 +33,6 @@ tests_require = [
     "types-python-dateutil",
     "types-requests",
 ]
-
-# PyOpenSSL Version Pinning
-#   23.1.0 is a bad release, see
-#   https://github.com/pyca/pyopenssl/issues/1199
-if (sys.version_info.major == 3) and (sys.version_info.minor == 6):
-    # PyOpenSSl 23.2.0 introduces a backwards incompatible change
-    #   Invalid versions are now rejected in OpenSSL.crypto.X509Req.set_version.
-    # The `acme` package (via Certbot) ends support for py3.6 on version `v1.23.0`
-    #   v1.23.0 calls make_csr with a bad version, and does not pin PyOpenSSL
-    tests_require.append("PyOpenSSL>=17.5.0,!=23.1.0,<23.2.0")
-    tests_require.append("types-PyOpenSSL>=17.5.0,!=23.1.0,<23.2.0")
-else:
-    tests_require.append("PyOpenSSL>=17.5.0,!=23.1.0")
-    tests_require.append("types-PyOpenSSL>=17.5.0,!=23.1.0")
 
 testing_extras = tests_require + []
 
@@ -79,7 +64,6 @@ setup(
         "Intended Audience :: Developers",
         "Programming Language :: Python",
         "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.6",
         "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",

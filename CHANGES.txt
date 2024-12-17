@@ -1,9 +1,22 @@
+0.2.0
+    * replaced pyopenssl with cryptography.
+      pyopenssl was originally used because certbot required it and this package
+      was originally developed to troubleshoot certbot installations;
+      however certbot uses cryptography, so we can consider that to be available
+      and it is the officially preferred interface by both projects and the psf.
+    * split the package into multiple files
+      this is for internal use and organization is subject to change.
+      please access the main namespace.
+    * dropped Python3.6
+      this package requires cryptography>=42.0.0, specifically for chain verification
+      cryptography dropped Python3.6 in v41.0.0
+
 0.1.9
     pulled ari serial_no decoder into a separate unction
     parsing akid defensively against edge case variants:
         in web pki it is almost always "keyid:"
         however the rfc allows for "uri:"+"serial:", 
-           either in addition to keyid or replacing it
+        either in addition to keyid or replacing it
     this should be the final release in the 0.1.x branch;
     work has been started for 0.2.0, which will migrate away from openssl
 

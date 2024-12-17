@@ -2,20 +2,18 @@
 import base64
 import binascii
 import hashlib
+import ipaddress
 import json
 import logging
 import os
 import re
 import subprocess
 import tempfile
-import textwrap
-from types import ModuleType
 from typing import Any
 from typing import Dict
 from typing import List
 from typing import Optional
 from typing import Tuple
-from typing import Type
 from typing import TYPE_CHECKING
 from typing import Union
 
@@ -24,6 +22,22 @@ from dateutil import parser as dateutil_parser
 import psutil
 
 # localapp
+from . import conditionals
+from .compat.cryptography import _cryptography__cert_or_req__all_names
+from .compat.cryptography import _cryptography__public_key_spki_sha256
+from .compat.cryptography import _cryptography__public_key_technology
+from .compat.cryptography import _format_cryptography_components
+from .compat.cryptography import cryptography__cert_and_chain_from_fullchain
+from .compat.openssl import _cleanup_openssl_modulus
+from .compat.openssl import _format_openssl_components
+from .compat.openssl import _openssl_cert__normalize_pem
+from .compat.openssl import _openssl_cert_single_op__pem_filepath
+from .compat.openssl import _openssl_spki_hash_cert
+from .compat.openssl import _openssl_spki_hash_csr
+from .compat.openssl import _openssl_spki_hash_pkey
+from .compat.openssl import cert_ext__pem_filepath
+from .compat.openssl import csr_single_op__pem_filepath
+from .compat.openssl import key_single_op__pem_filepath
 from .errors import CryptographyError
 from .errors import FallbackError_FilepathRequired
 from .errors import OpenSslError
@@ -32,16 +46,30 @@ from .errors import OpenSslError_InvalidCertificate
 from .errors import OpenSslError_InvalidCSR
 from .errors import OpenSslError_InvalidKey
 from .errors import OpenSslError_VersionTooLow
+from .errors import ToDo
 from .model import KeyTechnology
+from .utils import _cert_pubkey_technology__text
+from .utils import _csr_pubkey_technology__text
+from .utils import authority_key_identifier_from_text
+from .utils import cleanup_pem_text
 from .utils import convert_binary_to_hex
+from .utils import issuer_uri_from_text
+from .utils import jose_b64
+from .utils import new_pem_tempfile
+from .utils import RE_openssl_x509_subject
+from .utils import san_domains_from_text
+from .utils import serial_from_text
+from .utils import split_pem_chain
+
+# from .utils import new_der_tempfile
 
 # ==============================================================================
 
 if TYPE_CHECKING:
     import datetime
-    from OpenSSL.crypto import PKey
-    from OpenSSL.crypto import X509Req
     from cryptography.x509 import Certificate
+    from cryptography.x509 import CertificateSigningRequest
+    from cryptography.hazmat.primitives.hashes import HashAlgorithm
     from cryptography.hazmat.primitives.asymmetric.dsa import DSAPrivateKey
     from cryptography.hazmat.primitives.asymmetric.dsa import DSAPublicKey
     from cryptography.hazmat.primitives.asymmetric.rsa import RSAPrivateKey
@@ -55,6 +83,14 @@ if TYPE_CHECKING:
     _TYPES_CRYPTOGRAPHY_KEYS = Union[
         DSAPrivateKey, DSAPublicKey, RSAPrivateKey, RSAPublicKey
     ]
+    _TYPES_CRYPTOGRAPHY_PRIVATEKEY = Union[
+        DSAPrivateKey,
+        RSAPrivateKey,
+    ]
+    _TYPES_CRYPTOGRAPHY_PUBLICKEY = Union[
+        DSAPublicKey,
+        RSAPublicKey,
+    ]
     _TYPES_CRYPTOGRAPHY_PUBLICKEY_EXTENDED = Union[
         DSAPublicKey,
         RSAPublicKey,
@@ -65,107 +101,16 @@ if TYPE_CHECKING:
         X448PublicKey,
     ]
 
-# ------------------------------------------------------------------------------
-# Conditional Imports
-
-acme_crypto_util: Optional[ModuleType]
-asn1: Optional[ModuleType]
-certbot_crypto_util: Optional[ModuleType]
-cryptography: Optional[ModuleType]
-crypto_serialization: Optional[ModuleType]
-josepy: Optional[ModuleType]
-openssl_crypto: Optional[ModuleType]
-
-try:
-    from acme import crypto_util as acme_crypto_util  # type: ignore[no-redef]
-except ImportError:
-    acme_crypto_util = None
-
-try:
-    from certbot import crypto_util as certbot_crypto_util  # type: ignore[no-redef]
-except ImportError:
-    certbot_crypto_util = None
-
-try:
-    import cryptography
-    from cryptography.hazmat.backends import default_backend as crypto_default_backend
-    from cryptography.hazmat.primitives import serialization as crypto_serialization
-    from cryptography.hazmat.primitives.asymmetric import ec as crypto_ec
-    from cryptography.hazmat.primitives.asymmetric import rsa as crypto_rsa
-    from cryptography.hazmat.primitives.serialization import pkcs7 as crypto_pkcs7
-except ImportError:
-    raise
-    cryptography = None
-    crypto_default_backend = None
-    crypto_serialization = None
-    crypto_ec = None
-    crypto_rsa = None
-    crypto_pkcs7 = None
-
-try:
-    import josepy
-except ImportError:
-    josepy = None
-
-try:
-    from OpenSSL import crypto as openssl_crypto
-except ImportError:
-    openssl_crypto = None
 
 # ------------------------------------------------------------------------------
 
 NEEDS_TEMPFILES = True
-if (
-    acme_crypto_util
-    and certbot_crypto_util
-    and crypto_serialization
-    and josepy
-    and openssl_crypto
-):
-    """
-    acme_crypto_util
-        make_csr
-    certbot_crypto_util
-        parse_cert__domains
-        validate_key
-        validate_csr
-        cert_and_chain_from_fullchain
-    crypto_serialization
-        convert_pkcs7_to_pems
-        convert_lejson_to_pem
-    josepy:
-        account_key__parse
-    openssl_crypto and certbot_crypto_util
-        parse_csr_domains
-        parse_cert__spki_sha256
-        parse_csr__spki_sha256
-        parse_key__spki_sha256
-        parse_key__technology
-        parse_key
-    openssl_crypto:
-        validate_cert
-        fingerprint_cert
-        modulus_md5_key
-        modulus_md5_csr
-        modulus_md5_cert
-        parse_cert__enddate
-        parse_cert__startdate
-        parse_cert__key_technology
-        parse_cert
-        parse_csr__key_technology
-        parse_csr
-        new_key_ec
-        new_key_rsa
-        decompose_chain
-        ensure_chain
-        ensure_chain_order
-        account_key__sign
-    """
+if conditionals.cryptography and conditionals.josepy:
     NEEDS_TEMPFILES = False
 
 # ==============================================================================
 
-log = logging.getLogger(__name__)
+log = logging.getLogger("cert_utils")
 log.setLevel(logging.INFO)
 
 # ------------------------------------------------------------------------------
@@ -183,7 +128,6 @@ openssl_path_conf = (
 ACME_VERSION = "v2"
 openssl_version: Optional[List[int]] = None
 _RE_openssl_version = re.compile(r"OpenSSL ((\d+\.\d+\.\d+)\w*) ", re.I)
-_RE_rn = re.compile(r"\r\n")
 _openssl_behavior: Optional[str] = None  # 'a' or 'b'
 
 
@@ -231,63 +175,6 @@ def update_from_appsettings(appsettings: Dict[str, Any]) -> None:
 # ==============================================================================
 
 
-# note the conditional whitespace before/after `CN`
-# this is because of differing openssl versions
-RE_openssl_x509_subject = re.compile(r"Subject:.*? CN ?= ?([^\s,;/]+)")
-RE_openssl_x509_san = re.compile(
-    r"X509v3 Subject Alternative Name: ?\n +([^\n]+)\n?", re.MULTILINE | re.DOTALL
-)
-
-
-# openssl 3 does not have "keyid:" as a prefix
-# a keyid prefix is okay!
-# we do not want the alternates, which are uri+serial; but take that out in results
-RE_openssl_x509_authority_key_identifier = re.compile(
-    r"X509v3 Authority Key Identifier: ?\n +(?:keyid:)?([^\n]+)\n?",
-    re.MULTILINE | re.DOTALL,
-)
-# we have a potential line in there for the OSCP or something else.
-RE_openssl_x509_issuer_uri = re.compile(
-    r"Authority Information Access: ?\n(?:[^\n]*^\n)? +CA Issuers - URI:([^\n]+)\n?",
-    re.MULTILINE | re.DOTALL,
-)
-
-RE_openssl_x509_serial = re.compile(r"Serial Number: ?(\d+)")
-
-#
-# https://github.com/certbot/certbot/blob/master/certbot/certbot/crypto_util.py#L482
-#
-# Finds one CERTIFICATE stricttextualmsg according to rfc7468#section-3.
-# Does not validate the base64text - use crypto.load_certificate.
-#
-# NOTE: this functions slightly differently as " *?" was added
-#       the first two letsencrypt certificates added a trailing space, which may
-#       not be compliant with the specification
-CERT_PEM_REGEX = re.compile(
-    """-----BEGIN CERTIFICATE----- *?\r?
-.+?\r?
------END CERTIFICATE----- *?\r?
-""",
-    re.DOTALL,  # DOTALL (/s) because the base64text may include newlines
-)
-
-# depending on openssl version, the "Public key: " text might list the bits
-# it may or may not also have a dash in the phrase "Public Key"
-# it may or may not be prefaced with the PublicKey type
-RE_openssl_x509_keytype_rsa = re.compile(
-    r"Subject Public Key Info:\n"
-    r"\s+Public Key Algorithm: rsaEncryption\n"
-    r"\s+(RSA )?Public(\ |\-)Key:",
-    re.MULTILINE,
-)
-RE_openssl_x509_keytype_ec = re.compile(
-    r"Subject Public Key Info:\n"
-    r"\s+Public Key Algorithm: id-ecPublicKey\n"
-    r"\s+(EC )?Public(\ |\-)Key:",
-    re.MULTILINE,
-)
-
-
 # see https://community.letsencrypt.org/t/issuing-for-common-rsa-key-sizes-only/133839
 # see https://letsencrypt.org/docs/integration-guide/
 ALLOWED_BITS_RSA = [2048, 3072, 4096]
@@ -318,311 +205,6 @@ EXTENSION_TO_MIME = {
         "*": "application/pkcs8",
     },
 }
-
-
-# ==============================================================================
-
-# General Utility Functions
-
-
-def new_pem_tempfile(pem_data: str) -> tempfile._TemporaryFileWrapper:
-    """
-    this is just a convenience wrapper to create a tempfile and seek(0)
-
-    :param pem_data: PEM encoded string to seed the tempfile with
-    :type pem_data: str
-    :returns: a tempfile instance
-    :rtype: tempfile.NamedTemporaryFile
-    """
-    tmpfile_pem = tempfile.NamedTemporaryFile()
-    if isinstance(pem_data, str):
-        pem_bytes = pem_data.encode()
-    tmpfile_pem.write(pem_bytes)
-    tmpfile_pem.seek(0)
-    return tmpfile_pem
-
-
-def new_der_tempfile(der_data: bytes) -> tempfile._TemporaryFileWrapper:
-    """
-    this is just a convenience wrapper to create a tempfile and seek(0)
-
-    :param der_data: DER encoded string to seed the tempfile with
-    :type der_data: str
-    :returns: a tempfile instance
-    :rtype: `tempfile.NamedTemporaryFile`
-    """
-    tmpfile_der = tempfile.NamedTemporaryFile()
-    tmpfile_der.write(der_data)
-    tmpfile_der.seek(0)
-    return tmpfile_der
-
-
-def cleanup_pem_text(pem_text: str) -> str:
-    """
-    * standardizes newlines;
-    * removes trailing spaces;
-    * ensures a trailing newline.
-
-    :param pem_text: PEM formatted string
-    :type pem_text: str
-    :returns: cleaned PEM text
-    :rtype: str
-    """
-    pem_text = _RE_rn.sub("\n", pem_text)
-    _pem_text_lines = [i.strip() for i in pem_text.split("\n")]
-    _pem_text_lines = [i for i in _pem_text_lines if i]
-    pem_text = "\n".join(_pem_text_lines) + "\n"
-    return pem_text
-
-
-def split_pem_chain(pem_text: str) -> List[str]:
-    """
-    splits a PEM encoded Certificate chain into multiple Certificates
-
-    :param pem_text: PEM formatted string containing one or more Certificates
-    :type pem_text: str
-    :returns: a list of PEM encoded Certificates
-    :rtype: list
-    """
-    _certs = CERT_PEM_REGEX.findall(pem_text)
-    certs = [cleanup_pem_text(i) for i in _certs]
-    return certs
-
-
-def convert_der_to_pem(der_data: bytes) -> str:
-    """
-    :param der_data: DER encoded string
-    :type der_data: str
-    :returns: PEM encoded version of the DER Certificate
-    :rtype: str
-    """
-    # PEM is just a b64 encoded DER Certificate with the header/footer
-    as_pem = """-----BEGIN CERTIFICATE-----\n{0}\n-----END CERTIFICATE-----\n""".format(
-        "\n".join(textwrap.wrap(base64.b64encode(der_data).decode("utf8"), 64))
-    )
-    return as_pem
-
-
-def convert_der_to_pem__csr(der_data: bytes) -> str:
-    """
-    :param der_data: CSR in DER encoding
-    :type der_data: str
-    :returns: PEM encoded version of the DER encoded CSR
-    :rtype: str
-    """
-    # PEM is just a b64 encoded DER CertificateRequest with the header/footer
-    as_pem = """-----BEGIN CERTIFICATE REQUEST-----\n{0}\n-----END CERTIFICATE REQUEST-----\n""".format(
-        "\n".join(textwrap.wrap(base64.b64encode(der_data).decode("utf8"), 64))
-    )
-    return as_pem
-
-
-def convert_der_to_pem__rsakey(der_data: bytes) -> str:
-    """
-    :param der_data: RSA Key in DER encoding
-    :type der_data: str
-    :returns: PEM encoded version of the RSA Key
-    :rtype: str
-
-    The OpenSSL Equivalent / Fallback is::
-
-        openssl rsa -in {FILEPATH} -inform der -outform pem
-    """
-    # PEM is just a b64 encoded DER RSA KEY with the header/footer
-    as_pem = """-----BEGIN RSA PRIVATE KEY-----\n{0}\n-----END RSA PRIVATE KEY-----\n""".format(
-        "\n".join(textwrap.wrap(base64.b64encode(der_data).decode("utf8"), 64))
-    )
-    return as_pem
-
-
-def convert_pem_to_der(pem_data: str) -> bytes:
-    """
-    :param pem_data: PEM encoded data
-    :type pem_data: str
-    :returns: DER encoded version of the PEM data
-    :rtype: str
-
-    The OpenSSL Equivalent / Fallback is::
-
-        openssl req -in {FILEPATH} -outform DER
-
-    The RFC requires the PEM header/footer to start/end with 5 dashes
-    This function is a bit lazy and does not check that.
-    """
-    # PEM is just a b64 encoded DER data with the appropiate header/footer
-    lines = [_l.strip() for _l in pem_data.strip().split("\n")]
-    # remove the BEGIN CERT
-    if (
-        ("BEGIN CERTIFICATE" in lines[0])
-        or ("BEGIN RSA PRIVATE KEY" in lines[0])
-        or ("BEGIN PRIVATE KEY" in lines[0])
-        or ("BEGIN CERTIFICATE REQUEST" in lines[0])
-    ):
-        lines = lines[1:]
-    if (
-        ("END CERTIFICATE" in lines[-1])
-        or ("END RSA PRIVATE KEY" in lines[-1])
-        or ("END PRIVATE KEY" in lines[-1])
-        or ("END CERTIFICATE REQUEST" in lines[-1])
-    ):
-        lines = lines[:-1]
-    stringed = "".join(lines)
-    result = base64.b64decode(stringed)
-    return result
-
-
-def convert_pkcs7_to_pems(pkcs7_data: bytes) -> List[str]:
-    """
-    :param pkcs7_data: pkcs7 encoded Certifcate Chain
-    :type pem_data: str
-    :returns: list of PEM encoded Certificates in the pkcs7_data
-    :rtype: list
-
-    The OpenSSL Equivalent / Fallback is::
-
-        openssl pkcs7 -inform DER -in {FILEPATH} -print_certs -outform PEM
-    """
-    # TODO: accept a pkcs7 filepath; FallbackError_FilepathRequired
-    log.info("convert_pkcs7_to_pems >")
-    if crypto_pkcs7 and crypto_serialization:
-        certs_loaded = crypto_pkcs7.load_der_pkcs7_certificates(pkcs7_data)
-        certs_bytes = [
-            cert.public_bytes(crypto_serialization.Encoding.PEM)
-            for cert in certs_loaded
-        ]
-        certs_string = [cert.decode("utf8") for cert in certs_bytes]
-        certs_string = [cleanup_pem_text(cert) for cert in certs_string]
-        return certs_string
-
-    log.debug(".convert_pkcs7_to_pems > openssl fallback")
-    if openssl_version is None:
-        check_openssl_version()
-
-    _tmpfile_der = new_der_tempfile(pkcs7_data)
-    try:
-        cert_der_filepath = _tmpfile_der.name
-        with psutil.Popen(
-            [
-                openssl_path,
-                "pkcs7",
-                "-inform",
-                "DER",
-                "-in",
-                cert_der_filepath,
-                "-print_certs",
-                "-outform",
-                "PEM",
-            ],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-        ) as proc:
-            data_bytes, err = proc.communicate()
-            if not data_bytes:
-                raise OpenSslError_InvalidCertificate(err)
-            data_str = data_bytes.decode()
-            # OpenSSL might return extra info
-            # for example: "subject=/O=Digital Signature Trust Co./CN=DST Root CA X3\nissuer=/O=Digital Signature Trust Co./CN=DST Root CA X3\n-----BEGIN CERTIFICATE---[...]"
-            # split_pem_chain works perfectly with this payload!
-            certs = split_pem_chain(data_str)
-        return certs
-    except Exception as exc:  # noqa: F841
-        raise
-    finally:
-        _tmpfile_der.close()
-
-
-def san_domains_from_text(text: str) -> List[str]:
-    """
-    Helper function to extract SAN domains from a chunk of text in a x509 object
-
-    :param text: string extracted from a x509 document
-    :type text: str
-    :returns: list of domains
-    :rtype: list
-    """
-    san_domains = set([])
-    _subject_alt_names = RE_openssl_x509_san.search(text)
-    if _subject_alt_names is not None:
-        for _san in _subject_alt_names.group(1).split(", "):
-            if _san.startswith("DNS:"):
-                san_domains.add(_san[4:].lower())
-    return sorted(list(san_domains))
-
-
-def authority_key_identifier_from_text(text: str) -> Optional[str]:
-    """
-    :param text: string extracted from a x509 document
-    :type text: str
-    :returns: authority_key_identifier
-    :rtype: str
-
-    openssl will print a uppercase hex pairs, separated by a colon
-    we should remove the colons
-    """
-    results = RE_openssl_x509_authority_key_identifier.findall(text)
-    if results:
-        authority_key_identifier = results[0]
-        # ensure we have a key_id and not "URI:" or other convention
-        if authority_key_identifier[2] == ":":
-            return authority_key_identifier.replace(":", "")
-    return None
-
-
-def serial_from_text(text: str) -> Optional[int]:
-    """
-    :param text: string extracted from a x509 document
-    :type text: str
-    :returns: serial
-    :rtype: int
-    """
-    results = RE_openssl_x509_serial.findall(text)
-    if results:
-        serial = results[0]
-        return int(serial)
-    return None
-
-
-def issuer_uri_from_text(text: str) -> Optional[str]:
-    """
-    :param text: string extracted from a x509 document
-    :type text: str
-    :returns: issuer_uri
-    :rtype: str
-    """
-    results = RE_openssl_x509_issuer_uri.findall(text)
-    if results:
-        return results[0]
-    return None
-
-
-def _cert_pubkey_technology__text(cert_text: str) -> Optional[str]:
-    """
-    :param cert_text: string extracted from a x509 document
-    :type cert_text: str
-    :returns: Pubkey type: "RSA" or "EC"
-    :rtype: str
-    """
-    # `cert_text` is the output of of `openssl x509 -noout -text -in MYCERT `
-    if RE_openssl_x509_keytype_rsa.search(cert_text):
-        return "RSA"
-    elif RE_openssl_x509_keytype_ec.search(cert_text):
-        return "EC"
-    return None
-
-
-def _csr_pubkey_technology__text(csr_text: str) -> Optional[str]:
-    """
-    :param csr_text: string extracted from a CSR document
-    :type csr_text: str
-    :returns: Pubkey type: "RSA" or "EC"
-    :rtype: str
-    """
-    # `csr_text` is the output of of `openssl req -noout -text -in MYCERT`
-    if RE_openssl_x509_keytype_rsa.search(csr_text):
-        return "RSA"
-    elif RE_openssl_x509_keytype_ec.search(csr_text):
-        return "EC"
-    return None
 
 
 # ==============================================================================
@@ -674,438 +256,16 @@ def check_openssl_version(replace: bool = False) -> List[int]:
     return openssl_version
 
 
-def _openssl_cert__normalize_pem(cert_pem: str) -> str:
-    """
-    normalize a cert using openssl
-    NOTE: this is an openssl fallback routine
-
-    :param cert_pem: PEM encoded Certificate data
-    :type cert_pem: str
-    :returns: normalized Certificate
-    :rtype: str
-
-    This runs via OpenSSL:
-
-        openssl x509 -in {FILEPATH}
-    """
-    if openssl_version is None:
-        check_openssl_version()
-
-    _tmpfile_pem = new_pem_tempfile(cert_pem)
-    try:
-        cert_pem_filepath = _tmpfile_pem.name
-        with psutil.Popen(
-            [openssl_path, "x509", "-in", cert_pem_filepath],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-        ) as proc:
-            data_bytes, err = proc.communicate()
-            if not data_bytes:
-                raise OpenSslError_InvalidCertificate(err)
-            data_str = data_bytes.decode("utf8")
-            data_str = data_str.strip()
-        return data_str
-    except Exception as exc:  # noqa: F841
-        raise
-    finally:
-        _tmpfile_pem.close()
-
-
-def _openssl_spki_hash_cert(
-    key_technology: str = "",
-    cert_pem_filepath: str = "",
-    as_b64: Optional[bool] = None,
-) -> str:
-    """
-    :param key_technology: Is the key an "EC" or "RSA" key?
-    :type key_technology: str
-    :param cert_pem_filepath: REQUIRED filepath to PEM Certificate.
-                              Used for commandline OpenSSL fallback operations.
-    :type cert_pem_filepath: str
-    :param as_b64: Should the result be returned in Base64 encoding? default None
-    :type as_b64: boolean
-    :returns: spki_hash
-    :rtype: str
-
-    The OpenSSL Equivalent / Fallback is::
-
-        openssl x509 -pubkey -noout -in {CERT_FILEPATH} | \
-        openssl {key_technology} -pubout -outform DER -pubin | \
-        openssl dgst -sha256 -binary | \
-        openssl enc -base64
-    """
-    if key_technology not in ("EC", "RSA"):
-        raise ValueError("must submit `key_technology`")
-    key_technology = key_technology.lower()
-    if not cert_pem_filepath:
-        raise FallbackError_FilepathRequired("Must submit `cert_pem_filepath`.")
-    if openssl_version is None:
-        check_openssl_version()
-
-    spki_hash = None
-    # convert to DER
-    p1 = p2 = p3 = proc4 = None
-    try:
-        # extract the key
-        p1 = psutil.Popen(
-            [
-                openssl_path,
-                "x509",
-                "-pubkey",
-                "-noout",
-                "-in",
-                cert_pem_filepath,
-            ],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-        )
-        # convert to DER
-        p2 = psutil.Popen(
-            [
-                openssl_path,
-                key_technology,
-                "-pubin",
-                "-pubout",
-                "-outform",
-                "DER",
-            ],
-            stdin=p1.stdout,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-        )
-        # digest
-        p3 = psutil.Popen(
-            [
-                openssl_path,
-                "dgst",
-                "-sha256",
-                "-binary",
-            ],
-            stdin=p2.stdout,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-        )
-        # encode
-        spki_hash = None
-        if as_b64:
-            with psutil.Popen(
-                [
-                    openssl_path,
-                    "enc",
-                    "-base64",
-                ],
-                stdin=p3.stdout,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-            ) as proc4:
-                spki_hash, err = proc4.communicate()
-                if err:
-                    raise OpenSslError("could not generate SPKI Hash")
-        else:
-            spki_hash, err = p3.communicate()
-            if err:
-                raise OpenSslError("could not generate SPKI Hash")
-            spki_hash = binascii.b2a_hex(spki_hash)
-            spki_hash = spki_hash.upper()
-        spki_hash = spki_hash.strip()
-        spki_hash = spki_hash.decode("utf8")
-
-    finally:
-        # Note: explicitly close what we opened
-        for _p in (
-            p1,
-            p2,
-            p3,
-        ):
-            if _p is not None:
-                try:
-                    _p.stdout.close()
-                    _p.stderr.close()
-                    _p.terminate()
-                    _p.wait()
-                except psutil.NoSuchProcess:
-                    pass
-    return spki_hash
-
-
-def _openssl_spki_hash_csr(
-    key_technology: str = "",
-    csr_pem_filepath: str = "",
-    as_b64: Optional[bool] = None,
-) -> str:
-    """
-    :param key_technology: Is the key an "EC" or "RSA" key?
-    :type key_technology: str
-    :param csr_pem_filepath: REQUIRED filepath to PEM CSR.
-                             Used for commandline OpenSSL fallback operations.
-    :type csr_pem_filepath: str
-    :param as_b64: Should the result be returned in Base64 encoding? default None
-    :type as_b64: boolean
-    :returns: spki_hash
-    :rtype: str
-
-    The OpenSSL Equivalent / Fallback is::
-
-        openssl REQ -pubkey -noout -in {CSR_FILEPATH} | \
-        openssl {key_technology} -pubout -outform DER -pubin | \
-        openssl dgst -sha256 -binary | \
-        openssl enc -base64
-    """
-    if key_technology not in ("EC", "RSA"):
-        raise ValueError("must submit `key_technology`")
-    key_technology = key_technology.lower()
-    if not csr_pem_filepath:
-        raise FallbackError_FilepathRequired("Must submit `csr_pem_filepath`.")
-    if openssl_version is None:
-        check_openssl_version()
-
-    spki_hash = None
-    # convert to DER
-    p1 = p2 = p3 = proc4 = None
-    try:
-        # extract the key
-        p1 = psutil.Popen(
-            [
-                openssl_path,
-                "req",
-                "-pubkey",
-                "-noout",
-                "-in",
-                csr_pem_filepath,
-            ],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-        )
-        # convert to DER
-        p2 = psutil.Popen(
-            [
-                openssl_path,
-                key_technology,
-                "-pubin",
-                "-pubout",
-                "-outform",
-                "DER",
-            ],
-            stdin=p1.stdout,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-        )
-        # digest
-        p3 = psutil.Popen(
-            [
-                openssl_path,
-                "dgst",
-                "-sha256",
-                "-binary",
-            ],
-            stdin=p2.stdout,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-        )
-        # encode
-        spki_hash = None
-        if as_b64:
-            with psutil.Popen(
-                [
-                    openssl_path,
-                    "enc",
-                    "-base64",
-                ],
-                stdin=p3.stdout,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-            ) as proc4:
-                spki_hash, err = proc4.communicate()
-                if err:
-                    raise OpenSslError("could not generate SPKI Hash")
-        else:
-            spki_hash, err = p3.communicate()
-            if err:
-                raise OpenSslError("could not generate SPKI Hash")
-            spki_hash = binascii.b2a_hex(spki_hash)
-            spki_hash = spki_hash.upper()
-        spki_hash = spki_hash.strip()
-        spki_hash = spki_hash.decode("utf8")
-    finally:
-        # Note: explicitly close what we opened
-        for _p in (
-            p1,
-            p2,
-            p3,
-        ):
-            if _p is not None:
-                try:
-                    _p.stdout.close()
-                    _p.stderr.close()
-                    _p.terminate()
-                    _p.wait()
-                except psutil.NoSuchProcess:
-                    pass
-    return spki_hash
-
-
-def _openssl_spki_hash_pkey(
-    key_technology: str = "",
-    key_pem_filepath: str = "",
-    as_b64: Optional[bool] = None,
-) -> str:
-    """
-    :param key_technology: Is the key an "EC" or "RSA" key?
-    :type key_technology: str
-    :param key_pem_filepath: REQUIRED filepath to PEM encoded PrivateKey.
-                             Used for commandline OpenSSL fallback operations.
-    :type key_pem_filepath: str
-    :param as_b64: Should the result be returned in Base64 encoding? default None
-    :type as_b64: boolean
-    :returns: spki_hash
-    :rtype: str
-
-    The OpenSSL Equivalent / Fallback is::
-
-        openssl rsa -in {KEY_FILEPATH} -pubout -outform der | \
-        openssl dgst -sha256 -binary | \
-        openssl enc -base64
-    """
-    if key_technology not in ("EC", "RSA"):
-        raise ValueError("must submit `key_technology`")
-    key_technology = key_technology.lower()
-    if not key_pem_filepath:
-        raise FallbackError_FilepathRequired("Must submit `key_pem_filepath`.")
-    if openssl_version is None:
-        check_openssl_version()
-
-    spki_hash = None
-    # convert to DER
-    p1 = p2 = proc3 = None
-    try:
-        # convert to DER
-        p1 = psutil.Popen(
-            [
-                openssl_path,
-                key_technology,
-                "-pubout",
-                "-outform",
-                "DER",
-                "-in",
-                key_pem_filepath,
-            ],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-        )
-        # digest
-        p2 = psutil.Popen(
-            [
-                openssl_path,
-                "dgst",
-                "-sha256",
-                "-binary",
-            ],
-            stdin=p1.stdout,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-        )
-        # encode
-        if as_b64:
-            with psutil.Popen(
-                [
-                    openssl_path,
-                    "enc",
-                    "-base64",
-                ],
-                stdin=p2.stdout,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-            ) as proc3:
-                spki_hash, err = proc3.communicate()
-                if err:
-                    raise OpenSslError("could not generate SPKI Hash")
-        else:
-            spki_hash, err = p2.communicate()
-            if err:
-                raise OpenSslError("could not generate SPKI Hash")
-            spki_hash = binascii.b2a_hex(spki_hash)
-            spki_hash = spki_hash.upper()
-        spki_hash = spki_hash.strip()
-        spki_hash = spki_hash.decode("utf8")
-    finally:
-        # Note: explicitly close what we opened
-        for _p in (
-            p1,
-            p2,
-        ):
-            if _p is not None:
-                try:
-                    _p.stdout.close()
-                    _p.stderr.close()
-                    _p.terminate()
-                    _p.wait()
-                except psutil.NoSuchProcess:
-                    pass
-    return spki_hash
-
-
-# ==============================================================================
-
-
-def _openssl_crypto__key_technology(
-    key: Union[Type, "PKey"],
-) -> Optional[str]:
-    """
-    :param key: key object, with a `type()` method
-    :type key: instance of
-      * `openssl_crypto.load_certificate.get_pubkey()`, or
-      * `openssl_crypto.load_privatekey()`, or
-      * similar
-    :returns: type of key: RSA, EC, DSA
-    :rtype: str
-    """
-    assert openssl_crypto is not None  # nest under `if TYPE_CHECKING` not needed
-    cert_type = key.type()
-    if cert_type == openssl_crypto.TYPE_RSA:
-        return "RSA"
-    elif cert_type == openssl_crypto.TYPE_EC:
-        return "EC"
-    elif cert_type == openssl_crypto.TYPE_DSA:
-        return "DSA"
-    return None
-
-
-def _cryptography__public_key_spki_sha256(
-    cryptography_publickey: Union[
-        "_TYPES_CRYPTOGRAPHY_KEYS", "_TYPES_CRYPTOGRAPHY_PUBLICKEY_EXTENDED"
-    ],
-    as_b64: Optional[bool] = None,
-) -> str:
-    """
-    :param cryptography_publickey: a PublicKey from the cryptography package
-    :type cryptography_publickey: cryptography.hazmat.backends.openssl.rsa._RSAPublicKey
-    :param as_b64: Should the result be returned in Base64 encoding? default None
-    :type as_b64: boolean
-    :returns: spki_sha256
-    :rtype: str
-    """
-    assert crypto_serialization is not None  # nest under `if TYPE_CHECKING` not needed
-    _public_bytes = cryptography_publickey.public_bytes(  # type: ignore[union-attr]
-        crypto_serialization.Encoding.DER,
-        crypto_serialization.PublicFormat.SubjectPublicKeyInfo,
-    )
-    spki_sha256 = hashlib.sha256(_public_bytes).digest()
-    if as_b64:
-        spki_sha256 = base64.b64encode(spki_sha256)
-    else:
-        spki_sha256 = binascii.b2a_hex(spki_sha256)
-        spki_sha256 = spki_sha256.upper()
-    _spki_sha256 = spki_sha256.decode("utf8")
-    return _spki_sha256
-
-
 # ==============================================================================
 
 
 def make_csr(
-    domain_names: List[str],
+    domain_names: Optional[List[str]] = None,
     key_pem: Optional[str] = None,
     key_pem_filepath: Optional[str] = None,
+    ipaddrs: Optional[List[Union[ipaddress.IPv4Address, ipaddress.IPv6Address]]] = None,
+    must_staple: bool = False,
+    max_domains: int = MAX_DOMAINS_PER_CERTIFICATE,
 ) -> str:
     """
     This routine will use crypto/certbot if available.
@@ -1118,6 +278,14 @@ def make_csr(
     :param key_pem_filepath: Optional filepath to the PEM encoded PrivateKey.
                              Only used for commandline OpenSSL fallback operations.
     :type key_pem_filepath: str
+    :param ipaddrs: a list of ip addresses
+    :type ipaddrs: list of strings
+    :param bool must_staple: Whether to include the TLS Feature extension (aka
+        OCSP Must Staple: https://tools.ietf.org/html/rfc7633).
+
+    :param int max_domains: the max domains to put on a certificate;
+        defaults to package max
+
     :returns: CSR, likely PEM encoded
     :rtype: str
 
@@ -1135,22 +303,71 @@ def make_csr(
     """
     log.info("make_csr >")
     # keep synced with: lib.letsencrypt_info.LIMITS["names/certificate"]["limit"]
-    if len(domain_names) > MAX_DOMAINS_PER_CERTIFICATE:
+
+    if domain_names is None:
+        domain_names = []
+    if ipaddrs is None:
+        ipaddrs = []
+    if len(domain_names) + len(ipaddrs) == 0:
+        raise OpenSslError_CsrGeneration(
+            "At least one of domains or ipaddrs parameter need to be not empty"
+        )
+    elif len(domain_names) + len(ipaddrs) > max_domains:
         raise OpenSslError_CsrGeneration(
             "LetsEncrypt can only allow `%s` domains per certificate"
-            % MAX_DOMAINS_PER_CERTIFICATE
         )
 
     # first try with python
-    if acme_crypto_util:
+    if conditionals.cryptography:
+        if TYPE_CHECKING:
+            assert conditionals.crypto_dsa is not None
+            assert conditionals.crypto_ec is not None
+            assert conditionals.crypto_ed25519 is not None
+            assert conditionals.crypto_ed448 is not None
+            assert conditionals.crypto_hashes is not None
+            assert conditionals.crypto_rsa is not None
+            assert conditionals.crypto_serialization is not None
+
         if not key_pem:
             raise ValueError("Must submit `key_pem`")
-        try:
-            csr_bytes = acme_crypto_util.make_csr(key_pem.encode(), domain_names)
-        except Exception as exc:
-            raise OpenSslError_CsrGeneration(exc)
-        csr_string = csr_bytes.decode("utf8")
-        return csr_string
+
+        private_key = conditionals.crypto_serialization.load_pem_private_key(
+            key_pem.encode(), password=None
+        )
+
+        if not isinstance(
+            private_key,
+            (
+                conditionals.crypto_dsa.DSAPrivateKey,
+                conditionals.crypto_ec.EllipticCurvePrivateKey,
+                conditionals.crypto_ed25519.Ed25519PrivateKey,
+                conditionals.crypto_ed448.Ed448PrivateKey,
+                conditionals.crypto_rsa.RSAPrivateKey,
+            ),
+        ):
+            raise ValueError(f"Invalid private key type: {type(private_key)}")
+
+        builder = (
+            conditionals.cryptography.x509.CertificateSigningRequestBuilder()
+            .subject_name(conditionals.cryptography.x509.Name([]))
+            .add_extension(
+                conditionals.cryptography.x509.SubjectAlternativeName(
+                    [conditionals.cryptography.x509.DNSName(d) for d in domain_names]
+                    + [conditionals.cryptography.x509.IPAddress(i) for i in ipaddrs]
+                ),
+                critical=False,
+            )
+        )
+        if must_staple:
+            builder = builder.add_extension(
+                conditionals.cryptography.x509.TLSFeature(
+                    [conditionals.cryptography.x509.TLSFeatureType.status_request]
+                ),
+                critical=False,
+            )
+
+        csr = builder.sign(private_key, conditionals.crypto_hashes.SHA256())
+        return csr.public_bytes(conditionals.crypto_serialization.Encoding.PEM)
 
     log.debug(".make_csr > openssl fallback")
     if key_pem_filepath is None:
@@ -1303,11 +520,11 @@ def parse_cert__domains(
         openssl x509 -in {FILEPATH} -noout -text
     """
     log.info("parse_cert__domains >")
-    if certbot_crypto_util:
-        # !!!: `get_names_from_cert` is typed for `bytes`, but doctring is `string`
-        #    :  both work, but lets go with the typing
-        all_domains = certbot_crypto_util.get_names_from_cert(cert_pem.encode())
-        return all_domains
+    if conditionals.cryptography:
+        cert = conditionals.cryptography.x509.load_pem_x509_certificate(
+            cert_pem.encode()
+        )
+        return _cryptography__cert_or_req__all_names(cert)
 
     log.debug(".parse_cert__domains > openssl fallback")
     # fallback onto OpenSSL
@@ -1372,13 +589,9 @@ def parse_csr_domains(
         openssl req -in {FILEPATH} -noout -text
     """
     log.info("parse_csr_domains >")
-    if certbot_crypto_util and openssl_crypto:
-        load_func = openssl_crypto.load_certificate_request
-        # !!!: `_get_names_from_cert_or_req` is typed for `bytes`, but doctring is `string`
-        #    :  both work, but lets go with the typing
-        found_domains = certbot_crypto_util._get_names_from_cert_or_req(
-            csr_pem.encode(), load_func, typ=openssl_crypto.FILETYPE_PEM
-        )
+    if conditionals.cryptography:
+        csr = conditionals.cryptography.x509.load_pem_x509_csr(csr_pem.encode())
+        found_domains = _cryptography__cert_or_req__all_names(csr)
     else:
         log.debug(".parse_csr_domains > openssl fallback")
         # fallback onto OpenSSL
@@ -1447,21 +660,26 @@ def validate_key(
         openssl RSA -in {FILEPATH}
     """
     log.info("validate_key >")
-    if crypto_serialization and crypto_rsa and crypto_ec:
-        log.debug(".validate_key > crypto")
+    if conditionals.cryptography:
+        log.debug(".validate_key > cryptography")
+        if TYPE_CHECKING:
+            assert conditionals.crypto_serialization is not None
+            assert conditionals.crypto_rsa is not None
+            assert conditionals.crypto_ec is not None
         try:
             # rsa
             # try:
             #   data = certbot_crypto_util.valid_privkey(key_pem)
             # except OpenSslError_InvalidKey as exc:
             #   return None
-            data = crypto_serialization.load_pem_private_key(
-                key_pem.encode(), None, crypto_default_backend()
+            key = conditionals.crypto_serialization.load_pem_private_key(
+                key_pem.encode(), None
             )
-            if isinstance(data, crypto_rsa.RSAPrivateKey):
+            if isinstance(key, conditionals.crypto_rsa.RSAPrivateKey):
                 return "RSA"
-            elif isinstance(data, crypto_ec.EllipticCurvePrivateKey):
+            elif isinstance(key, conditionals.crypto_ec.EllipticCurvePrivateKey):
                 return "EC"
+            return None
         except Exception as exc:
             raise OpenSslError_InvalidKey(exc)
     log.debug(".validate_key > openssl fallback")
@@ -1519,13 +737,9 @@ def validate_csr(
         openssl req -text -noout -verify -in {FILEPATH}
     """
     log.info("validate_csr >")
-    if certbot_crypto_util:
-        # !!!: `valid_csr` is typed for `bytes`, but doctring is `string`
-        #    :  both work, but lets go with the typing
-        data = certbot_crypto_util.valid_csr(csr_pem.encode())
-        if not data:
-            raise OpenSslError_InvalidCSR()
-        return True
+    if conditionals.cryptography:
+        csr = conditionals.cryptography.x509.load_pem_x509_csr(csr_pem.encode())
+        return csr.is_signature_valid
 
     log.debug(".validate_csr > openssl fallback")
     # openssl req -text -noout -verify -in {CSR}
@@ -1571,14 +785,14 @@ def validate_cert(
         openssl x509 -in {FILEPATH} -inform PEM -noout -text
     """
     log.info("validate_cert >")
-    if openssl_crypto:
+    if conditionals.cryptography:
         try:
-            data = openssl_crypto.load_certificate(
-                openssl_crypto.FILETYPE_PEM, cert_pem.encode()
+            cert = conditionals.cryptography.x509.load_pem_x509_certificate(
+                cert_pem.encode()
             )
         except Exception as exc:
             raise OpenSslError_InvalidCertificate(exc)
-        if not data:
+        if not cert:
             raise OpenSslError_InvalidCertificate()
         return True
 
@@ -1665,19 +879,27 @@ def fingerprint_cert(
         raise ValueError(
             "algorithm `%s` not in `%s`" % (algorithm, _accepted_algorithms)
         )
-    if openssl_crypto:
+    if conditionals.cryptography:
+        if TYPE_CHECKING:
+            assert conditionals.crypto_hashes is not None
         try:
-            data = openssl_crypto.load_certificate(
-                openssl_crypto.FILETYPE_PEM, cert_pem.encode()
+            cert = conditionals.cryptography.x509.load_pem_x509_certificate(
+                cert_pem.encode()
             )
         except Exception as exc:
             raise OpenSslError_InvalidCertificate(exc)
-        if not data:
+        if not cert:
             raise OpenSslError_InvalidCertificate()
-        fingerprint = data.digest(algorithm)
-        _fingerprint = fingerprint.decode("utf8")
-        _fingerprint = _fingerprint.replace(":", "")
-        return _fingerprint
+        _hash: "HashAlgorithm"
+        if algorithm == "sha1":
+            _hash = conditionals.crypto_hashes.SHA1()
+        elif algorithm == "sha256":
+            _hash = conditionals.crypto_hashes.SHA256()
+        elif algorithm == "md5":
+            _hash = conditionals.crypto_hashes.MD5()
+        _fingerprint_bytes = cert.fingerprint(_hash)
+        fingerprint = _fingerprint_bytes.hex().upper()
+        return fingerprint
 
     log.debug(".fingerprint_cert > openssl fallback")
     if openssl_version is None:
@@ -1719,109 +941,6 @@ def fingerprint_cert(
     return data_str
 
 
-def _cleanup_openssl_md5(data: bytes) -> str:
-    """
-    some versions of openssl handle the md5 as:
-        '1231231231'
-    others handle as
-        "(stdin)= 123123'
-    """
-    data = data.strip()
-    data_str = data.decode("utf8")
-    if len(data_str) == 32 and (data_str[:9] != "(stdin)= "):
-        return data_str
-    if data_str[:9] != "(stdin)= " or not data_str:
-        raise OpenSslError("error reading md5 (i)")
-    data_str = data_str[9:]
-    if len(data_str) != 32:
-        raise OpenSslError("error reading md5 (ii)")
-    return data_str
-
-
-def _cleanup_openssl_modulus(data: str) -> str:
-    data = data.strip()
-    if data[:8] == "Modulus=":
-        data = data[8:]
-    return data
-
-
-def _format_crypto_components(
-    data: Union[
-        List[str],
-        List[Tuple[str, ...]],
-        List[Tuple[bytes, bytes]],
-    ],
-    fieldset: Optional[str] = None,
-) -> str:
-    """
-    :param data: input
-    :param fieldset: is unused. would be "issuer" or "subject"
-
-    `get_components()` is somewhat structured
-    the following are valid:
-    * [('CN', 'Pebble Intermediate CA 601ea1')]
-    * [('C', 'US'), ('O', 'Internet Security Research Group'), ('CN', 'ISRG Root X2')]
-    * [('C', 'US'), ('O', 'Internet Security Research Group'), ('CN', 'ISRG Root X1')]
-    * [('O', 'Digital Signature Trust Co.'), ('CN', 'DST Root CA X3')]
-    cert = openssl_crypto.load_certificate(openssl_crypto.FILETYPE_PEM, cert_pem)
-    _issuer = cert.get_issuer().get_components()
-    _subject = cert.get_subject().get_components()
-    """
-    _out = []
-    for _in_set in data:
-        _converted = [i.decode("utf8") if isinstance(i, bytes) else i for i in _in_set]  # type: ignore[attr-defined]
-        _out.append("=".join(_converted))
-    out = "\n".join(_out).strip()
-    return out
-
-
-def _format_openssl_components(
-    data: str,
-    fieldset: Optional[str] = None,
-) -> str:
-    """
-    different openssl versions give different responses. FUN.
-
-    To make things easier, just format this into the crypto compatible payload,
-    then invoke the crypto formattter
-
-    openssl = [0, 9, 8]
-    subject= /C=US/O=Internet Security Research Group/CN=ISRG Root X2
-
-    openssl = [1, 1, 1]
-    issuer=C = US, O = Internet Security Research Group, CN = ISRG Root X2
-    """
-    # print(openssl_version, data)
-    if fieldset in ("issuer", "subject"):
-        if fieldset == "issuer":
-            if data.startswith("issuer= "):
-                data = data[8:]
-            elif data.startswith("issuer="):
-                data = data[7:]
-        elif fieldset == "subject":
-            if data.startswith("subject= "):
-                data = data[9:]
-            elif data.startswith("subject="):
-                data = data[8:]
-        data_list: List[str]
-        if "/" in data:
-            data_list = [i.strip() for i in data.split("/")]
-        elif "," in data:
-            data_list = [i.strip() for i in data.split(",")]
-        else:
-            data_list = [
-                data,
-            ]
-        _out = []
-        for _cset in data_list:
-            _cset_split = _cset.split("=")
-            _cset_edited = tuple(i.strip() for i in _cset_split)
-            _out.append(_cset_edited)
-        return _format_crypto_components(_out, fieldset=fieldset)
-    else:
-        raise ValueError("invalid fieldset")
-
-
 def modulus_md5_key(
     key_pem: str,
     key_pem_filepath: Optional[str] = None,
@@ -1845,12 +964,15 @@ def modulus_md5_key(
     # ???: Should this raise an Exception instead of returning `None`?
     log.info("modulus_md5_key >")
     # cryptography *should* be installed as a dependency of openssl, but who knows!
-    if openssl_crypto and cryptography:
-        privkey = openssl_crypto.load_privatekey(
-            openssl_crypto.FILETYPE_PEM, key_pem.encode()
+    if conditionals.cryptography:
+        if TYPE_CHECKING:
+            assert conditionals.crypto_rsa is not None
+            assert conditionals.crypto_serialization is not None
+        privkey = conditionals.crypto_serialization.load_pem_private_key(
+            key_pem.encode(), password=None
         )
-        if _openssl_crypto__key_technology(privkey) == "RSA":
-            modn = privkey.to_cryptography_key().public_key().public_numbers().n  # type: ignore[union-attr]
+        if isinstance(privkey, conditionals.crypto_rsa.RSAPrivateKey):
+            modn = privkey.public_key().public_numbers().n  # type: ignore[union-attr]
             data_str = "{:X}".format(modn)
         else:
             return None
@@ -1901,17 +1023,19 @@ def modulus_md5_csr(
 
         md5(openssl req -noout -modulus -in {FILEPATH})
     """
+    # TODO: Support EC Key Modulus Variant - https://github.com/aptise/cert_utils/issues/15
     # ???: Should this raise an Exception instead of returning `None`?
     log.info("modulus_md5_csr >")
     # cryptography *should* be installed as a dependency of openssl, but who knows!
-    if openssl_crypto and cryptography:
-        csr = openssl_crypto.load_certificate_request(
-            openssl_crypto.FILETYPE_PEM, csr_pem.encode()
-        )
-        _pubkey = csr.get_pubkey()
-        if _openssl_crypto__key_technology(_pubkey) == "RSA":
-            modn = _pubkey.to_cryptography_key().public_numbers().n  # type: ignore[union-attr]
+    if conditionals.cryptography:
+        csr = conditionals.cryptography.x509.load_pem_x509_csr(csr_pem.encode())
+        _pubkey = csr.public_key()
+        _keytype = _cryptography__public_key_technology(_pubkey)
+        if _keytype == "RSA":
+            modn = _pubkey.public_numbers().n  # type: ignore[union-attr]
             data_str = "{:X}".format(modn)
+        elif _keytype == "EC":
+            return None
         else:
             return None
     else:
@@ -1963,13 +1087,13 @@ def modulus_md5_cert(
     """
     log.info("modulus_md5_cert >")
     # cryptography *should* be installed as a dependency of openssl, but who knows!
-    if openssl_crypto and cryptography:
-        cert = openssl_crypto.load_certificate(
-            openssl_crypto.FILETYPE_PEM, cert_pem.encode()
+    if conditionals.cryptography:
+        cert = conditionals.cryptography.x509.load_pem_x509_certificate(
+            cert_pem.encode()
         )
-        _pubkey = cert.get_pubkey()
-        if _openssl_crypto__key_technology(_pubkey) == "RSA":
-            modn = cert.get_pubkey().to_cryptography_key().public_numbers().n  # type: ignore[union-attr]
+        _pubkey = cert.public_key()
+        if _cryptography__public_key_technology(_pubkey) == "RSA":
+            modn = _pubkey.public_numbers().n  # type: ignore[union-attr]
             data_str = "{:X}".format(modn)
         else:
             return None
@@ -2004,231 +1128,6 @@ def modulus_md5_cert(
     return data_str
 
 
-def _openssl_cert_single_op__pem(
-    cert_pem: str,
-    single_op: str,
-) -> str:
-    """
-    this just invokes `_openssl_cert_single_op__pem_filepath` with a tempfile
-    """
-    _tmpfile_pem = new_pem_tempfile(cert_pem)
-    try:
-        cert_pem_filepath = _tmpfile_pem.name
-        return _openssl_cert_single_op__pem_filepath(cert_pem_filepath, single_op)
-    except Exception as exc:  # noqa: F841
-        raise
-    finally:
-        _tmpfile_pem.close()
-
-
-def _openssl_cert_single_op__pem_filepath(
-    pem_filepath: str,
-    single_op: str,
-) -> str:
-    """
-    handles a single pem operation to `openssl x509`
-
-    :param pem_filepath: filepath to pem encoded cert
-    :type pem_filepath: str
-    :param single_op: operation
-    :type single_op: str
-    :returns: openssl output
-    :rtype: str
-
-    openssl x509 -noout -issuer -in cert.pem
-    openssl x509 -noout -issuer_hash -in cert.pem
-
-    openssl x509 -noout -issuer_hash -in {CERT}
-    returns the data found in
-       X509v3 extensions:
-           X509v3 Authority Key Identifier:
-               keyid:{VALUE}
-
-    openssl x509 -noout -subject_hash -in {CERT}
-    returns the data found in
-       X509v3 extensions:
-           X509v3 Subject Key Identifier:
-               {VALUE}
-
-    The OpenSSL Equivalent / Fallback is::
-
-        openssl x509 -noout {OPERATION} -in {FILEPATH})
-    """
-    if single_op not in (
-        "-issuer_hash",
-        "-issuer",
-        "-subject_hash",
-        "-subject",
-        "-startdate",
-        "-enddate",
-    ):
-        raise ValueError("invalid `single_op`")
-    if not pem_filepath:
-        raise FallbackError_FilepathRequired("Must submit `pem_filepath`.")
-    if openssl_version is None:
-        check_openssl_version()
-
-    with psutil.Popen(
-        [openssl_path, "x509", "-noout", single_op, "-in", pem_filepath],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-    ) as proc:
-        data_bytes, err = proc.communicate()
-        if not data_bytes:
-            raise OpenSslError_InvalidCertificate(err)
-        data_str = data_bytes.decode("utf8")
-        data_str = data_str.strip()
-    return data_str
-
-
-def cert_ext__pem_filepath(
-    pem_filepath: str,
-    ext: str,
-) -> str:
-    """
-    handles a single pem operation to `openssl x509` with EXTENSION
-    /usr/local/bin/openssl x509  -noout -ext subjectAltName -in cert.pem
-    /usr/local/bin/openssl x509  -noout -ext authorityKeyIdentifier -in cert.pem
-    /usr/local/bin/openssl x509  -noout -ext authorityInfoAccess -in cert.pem
-
-    :param pem_filepath: filepath to the PEM encoded Certificate
-    :type pem_filepath: str
-    :param ext: a supported x509 extension
-    :type ext: str
-    :returns: openssl output value
-    :rtype: str
-
-    The OpenSSL Equivalent / Fallback is::
-
-        openssl x509 -noout -ext {EXT} -in {FILEPATH})
-    """
-    if ext not in ("subjectAltName", "authorityKeyIdentifier", "authorityInfoAccess"):
-        raise ValueError("invalid `ext`")
-    if not pem_filepath:
-        raise FallbackError_FilepathRequired("Must submit `pem_filepath`.")
-    if openssl_version is None:
-        check_openssl_version()
-
-    with psutil.Popen(
-        [openssl_path, "x509", "-noout", "-ext", ext, "-in", pem_filepath],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-    ) as proc:
-        data_bytes, err = proc.communicate()
-        if not data_bytes:
-            raise OpenSslError_InvalidCertificate(err)
-        data_str = data_bytes.decode("utf8")
-        data_str = data_str.strip()
-    return data_str
-
-
-def csr_single_op__pem_filepath(
-    pem_filepath: str,
-    single_op: str,
-) -> str:
-    """
-    handles a single pem operation to `openssl req` with EXTENSION
-
-    openssl req -noout -subject -in csr.pem
-
-    :param pem_filepath: filepath to the PEM encoded CSR.
-    :type pem_filepath: str
-    :param single_op: a supported `openssl req` operation
-    :type single_op: str
-    :returns: openssl output value
-    :rtype: str
-
-    The OpenSSL Equivalent / Fallback is::
-
-        openssl req -noout {OPERATION} -in {FILEPATH})
-    """
-    if single_op not in ("-subject",):
-        raise ValueError("invalid `single_op`")
-    if not pem_filepath:
-        raise FallbackError_FilepathRequired("Must submit `pem_filepath`.")
-    if openssl_version is None:
-        check_openssl_version()
-
-    with psutil.Popen(
-        [openssl_path, "req", "-noout", single_op, "-in", pem_filepath],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-    ) as proc:
-        data_bytes, err = proc.communicate()
-        if not data_bytes:
-            raise OpenSslError_InvalidCSR(err)
-        data_str = data_bytes.decode("utf8")
-        data_str = data_str.strip()
-    return data_str
-
-
-def key_single_op__pem_filepath(
-    keytype: str = "RSA",
-    pem_filepath: str = "",
-    single_op: str = "",
-) -> str:
-    """
-    :param keytype: the type of key: RSA or EC
-    :type keytype: str
-    :param pem_filepath: filepath to the PEM encoded Key
-    :type pem_filepath: str
-    :param single_op: a supported `openssl rsa/ec` operation
-    :type single_op: str
-    :returns: openssl output value
-    :rtype: str
-
-    THIS SHOULD NOT BE USED BY INTERNAL CODE
-
-    This is a bit odd...
-
-    1. If "-check" is okay (or reading is okay), there may be no output on stdout
-       HOWEVER
-       the read message (success) may happen on stderr
-    2. If openssl can't read the file, it will raise an exception
-
-    earlier versions of openssl DO NOT HAVE `ec --check`
-    current versions do
-
-    The OpenSSL Equivalent / Fallback is::
-
-        openssl {KEYTYPE} -noout {OPERATION} -in {FILEPATH})
-
-    Such as:
-
-        openssl rsa -noout -check -in {KEY}
-        openssl rsa -noout -modulus -in {KEY}
-        openssl rsa -noout -text -in {KEY}
-
-        openssl ec -noout -in {KEY}
-        openssl ec -noout -modulus -in {KEY}
-        openssl ec -noout -text -in {KEY}
-    """
-    if keytype not in ("RSA", "EC"):
-        raise ValueError("keytype must be `RSA or EC`")
-    if single_op not in ("-check", "-modulus", "-text"):
-        raise ValueError("invalid `single_op`")
-    if not pem_filepath:
-        raise FallbackError_FilepathRequired("Must submit `pem_filepath`.")
-    if openssl_version is None:
-        check_openssl_version()
-
-    with psutil.Popen(
-        [openssl_path, keytype.lower(), "-noout", single_op, "-in", pem_filepath],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-    ) as proc:
-        data_bytes, err = proc.communicate()
-        if not data_bytes:
-            if err.startswith(b"unknown option -check"):
-                raise OpenSslError_VersionTooLow(err)
-            elif err != b"read EC key\nEC Key valid.\n":
-                # this happens, where some versions give an error and no data!
-                raise OpenSslError_InvalidKey(err)
-        data_str = data_bytes.decode("utf8")
-        data_str = data_str.strip()
-    return data_str
-
-
 def parse_cert__enddate(
     cert_pem: str,
     cert_pem_filepath: Optional[str] = None,
@@ -2250,12 +1149,11 @@ def parse_cert__enddate(
         openssl x509 -noout -enddate -in {FILEPATH})
     """
     log.info("parse_cert__enddate >")
-    # cryptography *should* be installed as a dependency of openssl, but who knows!
-    if openssl_crypto and cryptography:
-        cert = openssl_crypto.load_certificate(
-            openssl_crypto.FILETYPE_PEM, cert_pem.encode()
+    if conditionals.cryptography:
+        cert = conditionals.cryptography.x509.load_pem_x509_certificate(
+            cert_pem.encode()
         )
-        date = cert.to_cryptography().not_valid_after
+        date = cert.not_valid_after_utc
     else:
         log.debug(".parse_cert__enddate > openssl fallback")
         # openssl x509 -enddate -noout -in {CERT}
@@ -2266,7 +1164,7 @@ def parse_cert__enddate(
             raise OpenSslError_InvalidCertificate("unexpected format")
         data_date = data[9:]
         date = dateutil_parser.parse(data_date)
-        date = date.replace(tzinfo=None)
+        # date = date.replace(tzinfo=None)
     return date
 
 
@@ -2291,12 +1189,11 @@ def parse_cert__startdate(
         openssl x509 -noout -startdate -in {FILEPATH})
     """
     log.info("parse_cert__startdate >")
-    # cryptography *should* be installed as a dependency of openssl, but who knows!
-    if openssl_crypto and cryptography:
-        cert = openssl_crypto.load_certificate(
-            openssl_crypto.FILETYPE_PEM, cert_pem.encode()
+    if conditionals.cryptography:
+        cert = conditionals.cryptography.x509.load_pem_x509_certificate(
+            cert_pem.encode()
         )
-        date = cert.to_cryptography().not_valid_before
+        date = cert.not_valid_before_utc
     else:
         log.debug(".parse_cert__startdate > openssl fallback")
         # openssl x509 -startdate -noout -in {CERT}
@@ -2307,7 +1204,7 @@ def parse_cert__startdate(
             raise OpenSslError_InvalidCertificate("unexpected format")
         data_date = data[10:]
         date = dateutil_parser.parse(data_date)
-        date = date.replace(tzinfo=None)
+        # date = date.replace(tzinfo=None)
     return date
 
 
@@ -2335,12 +1232,13 @@ def parse_cert__spki_sha256(
     """
     log.info("parse_cert__spki_sha256 >")
     # cryptography *should* be installed as a dependency of openssl, but who knows!
-    if openssl_crypto and cryptography:
+    if conditionals.cryptography:
         if not cryptography_cert:
-            cert = openssl_crypto.load_certificate(
-                openssl_crypto.FILETYPE_PEM, cert_pem.encode()
+            cryptography_cert = (
+                conditionals.cryptography.x509.load_pem_x509_certificate(
+                    cert_pem.encode()
+                )
             )
-            cryptography_cert = cert.to_cryptography()
         assert cryptography_cert is not None  # nest under `if TYPE_CHECKING` not needed
         cryptography_publickey = cryptography_cert.public_key()
         return _cryptography__public_key_spki_sha256(
@@ -2391,11 +1289,12 @@ def parse_cert__key_technology(
         openssl x509 -in {FILEPATH} -noout -text
     """
     log.info("parse_cert__key_technology >")
-    if openssl_crypto:
-        cert = openssl_crypto.load_certificate(
-            openssl_crypto.FILETYPE_PEM, cert_pem.encode()
+    if conditionals.cryptography:
+        cert = conditionals.cryptography.x509.load_pem_x509_certificate(
+            cert_pem.encode()
         )
-        return _openssl_crypto__key_technology(cert.get_pubkey())
+        publickey = cert.public_key()
+        return _cryptography__public_key_technology(publickey)
     log.debug(".parse_cert__key_technology > openssl fallback")
     # `openssl x509 -in MYCERT -noout -text`
     if openssl_version is None:
@@ -2448,67 +1347,67 @@ def parse_cert(
     }
 
     # cryptography *should* be installed as a dependency of openssl, but who knows!
-    if openssl_crypto and cryptography:
-        cert = openssl_crypto.load_certificate(
-            openssl_crypto.FILETYPE_PEM, cert_pem.encode()
+    if conditionals.cryptography:
+        if TYPE_CHECKING:
+            assert conditionals.crypto_hashes is not None
+        cert = conditionals.cryptography.x509.load_pem_x509_certificate(
+            cert_pem.encode()
         )
-        cert_cryptography = cert.to_cryptography()
-        _issuer = cert.get_issuer().get_components()
-        _subject = cert.get_subject().get_components()
-        rval["issuer"] = _format_crypto_components(_issuer, fieldset="issuer")
-        rval["subject"] = _format_crypto_components(_subject, fieldset="subject")
-        rval["enddate"] = cert_cryptography.not_valid_after
-        rval["startdate"] = cert_cryptography.not_valid_before
-        rval["key_technology"] = _openssl_crypto__key_technology(cert.get_pubkey())
-        fingerprint_bytes = cert.digest("sha1")
-        fingerprint = fingerprint_bytes.decode("utf8")
-        rval["fingerprint_sha1"] = fingerprint.replace(":", "")
+        publickey = cert.public_key()
+        rval["issuer"] = _format_cryptography_components(cert.issuer)
+        rval["subject"] = _format_cryptography_components(cert.subject)
+        rval["enddate"] = cert.not_valid_after_utc
+        rval["startdate"] = cert.not_valid_before_utc
+        rval["key_technology"] = _cryptography__public_key_technology(publickey)
+        _fingerprint_bytes = cert.fingerprint(conditionals.crypto_hashes.SHA1())
+        rval["fingerprint_sha1"] = _fingerprint_bytes.hex().upper()
         rval["spki_sha256"] = parse_cert__spki_sha256(
             cert_pem=cert_pem,
             cert_pem_filepath=cert_pem_filepath,
-            cryptography_cert=cert_cryptography,
+            cryptography_cert=cert,
             as_b64=False,
         )
-        rval["serial"] = cert.get_serial_number()
+        rval["serial"] = cert.serial_number
         try:
-            ext = cert_cryptography.extensions.get_extension_for_oid(
-                cryptography.x509.oid.ExtensionOID.SUBJECT_ALTERNATIVE_NAME
+            ext = cert.extensions.get_extension_for_oid(
+                conditionals.cryptography.x509.oid.ExtensionOID.SUBJECT_ALTERNATIVE_NAME
             )
             if ext:
-                _names: List[str] = ext.value.get_values_for_type(cryptography.x509.DNSName)  # type: ignore[attr-defined]
+                _names: List[str] = ext.value.get_values_for_type(conditionals.cryptography.x509.DNSName)  # type: ignore[attr-defined]
                 rval["SubjectAlternativeName"] = sorted(_names)
-        except Exception as exc:  # noqa: F841
+        except conditionals.cryptography.x509.ExtensionNotFound as exc:  # noqa: F841
             pass
         try:
-            ext = cert_cryptography.extensions.get_extension_for_oid(
-                cryptography.x509.oid.ExtensionOID.AUTHORITY_KEY_IDENTIFIER
+            ext = cert.extensions.get_extension_for_oid(
+                conditionals.cryptography.x509.oid.ExtensionOID.AUTHORITY_KEY_IDENTIFIER
             )
             if ext:
                 # this comes out as binary, so we need to convert it to the
                 # openssl version, which is an list of uppercase hex pairs
                 _as_binary = ext.value.key_identifier  # type: ignore[attr-defined]
                 rval["authority_key_identifier"] = convert_binary_to_hex(_as_binary)
-        except Exception as exc:  # noqa: F841
+        except conditionals.cryptography.x509.ExtensionNotFound as exc:  # noqa: F841
             pass
         try:
-            ext = cert_cryptography.extensions.get_extension_for_oid(
-                cryptography.x509.oid.ExtensionOID.AUTHORITY_KEY_IDENTIFIER
+            ext = cert.extensions.get_extension_for_oid(
+                conditionals.cryptography.x509.oid.ExtensionOID.AUTHORITY_KEY_IDENTIFIER
             )
             if ext:
                 # this comes out as binary, so we need to convert it to the
                 # openssl version, which is an list of uppercase hex pairs
                 _as_binary = ext.value.key_identifier  # type: ignore[attr-defined]
                 rval["authority_key_identifier"] = convert_binary_to_hex(_as_binary)
-        except Exception as exc:  # noqa: F841
+        except conditionals.cryptography.x509.ExtensionNotFound as exc:  # noqa: F841
             pass
         try:
-            ext = cert_cryptography.extensions.get_extension_for_oid(
-                cryptography.x509.oid.ExtensionOID.AUTHORITY_INFORMATION_ACCESS
+            ext = cert.extensions.get_extension_for_oid(
+                conditionals.cryptography.x509.oid.ExtensionOID.AUTHORITY_INFORMATION_ACCESS
             )
             if ext:
                 for _item in ext.value:  # type: ignore[attr-defined]
                     if not isinstance(
-                        _item, cryptography.x509.extensions.AccessDescription
+                        _item,
+                        conditionals.cryptography.x509.extensions.AccessDescription,
                     ):
                         continue
                     # _item.access_method is either:
@@ -2517,14 +1416,14 @@ def parse_cert(
                     # we only care about CA_ISSUERS
                     if (
                         _item.access_method
-                        == cryptography.x509.oid.AuthorityInformationAccessOID.CA_ISSUERS
+                        == conditionals.cryptography.x509.oid.AuthorityInformationAccessOID.CA_ISSUERS
                     ):
                         if isinstance(
                             _item.access_location,
-                            cryptography.x509.UniformResourceIdentifier,
+                            conditionals.cryptography.x509.UniformResourceIdentifier,
                         ):
                             rval["issuer_uri"] = _item.access_location.value
-        except Exception as exc:  # noqa: F841
+        except conditionals.cryptography.x509.ExtensionNotFound as exc:  # noqa: F841
             pass
         return rval
 
@@ -2624,7 +1523,7 @@ def parse_cert(
 def parse_csr__key_technology(
     csr_pem: str,
     csr_pem_filepath: Optional[str] = None,
-    crypto_csr: Optional["X509Req"] = None,
+    csr: Optional["CertificateSigningRequest"] = None,
 ) -> Optional[str]:
     """
     :param csr_pem: PEM encoded CSR
@@ -2632,8 +1531,8 @@ def parse_csr__key_technology(
     :param csr_pem_filepath: Optional filepath to PEM encoded CSR.
                              Only used for commandline OpenSSL fallback operations.
     :type csr_pem_filepath: str
-    :param crypto_csr: openssl cryptography object
-    :type crypto_csr: `OpenSSL.crypto.X509Req`
+    :param _csr: cryptography CSR object
+    :type csr: `cryptography.x509.CertificateSigningRequest`
     :returns: key technology type
     :rtype: str or None
 
@@ -2643,13 +1542,11 @@ def parse_csr__key_technology(
         openssl req -in {FILEPATH} -noout -text
     """
     log.info("parse_csr__key_technology >")
-    if openssl_crypto:
-        if not crypto_csr:
-            crypto_csr = openssl_crypto.load_certificate_request(
-                openssl_crypto.FILETYPE_PEM, csr_pem.encode()
-            )
-        assert crypto_csr is not None  # nest under `if TYPE_CHECKING` not needed
-        return _openssl_crypto__key_technology(crypto_csr.get_pubkey())
+    if conditionals.cryptography:
+        if not csr:
+            csr = conditionals.cryptography.x509.load_pem_x509_csr(csr_pem.encode())
+        assert csr is not None  # nest under `if TYPE_CHECKING` not needed
+        return _cryptography__public_key_technology(csr.public_key())
     log.debug(".parse_csr__key_technology > openssl fallback")
     # `openssl req -in MYCERT -noout -text`
     if not csr_pem_filepath:
@@ -2672,7 +1569,7 @@ def parse_csr__key_technology(
 def parse_csr__spki_sha256(
     csr_pem: str,
     csr_pem_filepath: Optional[str] = None,
-    crypto_csr: Optional["X509Req"] = None,
+    csr: Optional["CertificateSigningRequest"] = None,
     key_technology: Optional[str] = None,
     as_b64: Optional[bool] = None,
 ) -> str:
@@ -2680,7 +1577,7 @@ def parse_csr__spki_sha256(
     :param str csr_pem: CSR in PEM encoding
     :param str csr_pem_filepath: Optional filepath to PEM encoded CSR.
                                  Only used for commandline OpenSSL fallback operations.
-    :param object crypto_csr: optional hint to aid in crypto commands
+    :param object csr: optional hint to aid in crypto commands
     :param str key_technology: optional hint to aid in openssl fallback
     :param bool as_b64: encode with b64?
     :returns: spki sha256
@@ -2692,16 +1589,12 @@ def parse_csr__spki_sha256(
     """
     log.info("parse_csr__spki_sha256 >")
     # cryptography *should* be installed as a dependency of openssl, but who knows!
-    if openssl_crypto and cryptography:
-        if not crypto_csr:
-            crypto_csr = openssl_crypto.load_certificate_request(
-                openssl_crypto.FILETYPE_PEM, csr_pem.encode()
-            )
-        assert crypto_csr is not None  # nest under `if TYPE_CHECKING` not needed
-        cryptography_publickey = crypto_csr.get_pubkey().to_cryptography_key()
-        spki_sha256 = _cryptography__public_key_spki_sha256(
-            cryptography_publickey, as_b64=as_b64
-        )
+    if conditionals.cryptography:
+        if not csr:
+            csr = conditionals.cryptography.x509.load_pem_x509_csr(csr_pem.encode())
+        assert csr is not None  # nest under `if TYPE_CHECKING` not needed
+        publickey = csr.public_key()
+        spki_sha256 = _cryptography__public_key_spki_sha256(publickey, as_b64=as_b64)
         return spki_sha256
     log.debug(".parse_csr__spki_sha256 > openssl fallback")
     if not csr_pem_filepath:
@@ -2750,29 +1643,25 @@ def parse_csr(
     }
 
     # cryptography *should* be installed as a dependency of openssl, but who knows!
-    if openssl_crypto and cryptography:
-        _crypto_csr = openssl_crypto.load_certificate_request(
-            openssl_crypto.FILETYPE_PEM, csr_pem.encode()
-        )
-        _subject = _crypto_csr.get_subject().get_components()
-        rval["subject"] = _format_crypto_components(_subject, fieldset="subject")
-        _cryptography_csr = _crypto_csr.to_cryptography()
+    if conditionals.cryptography:
+        csr = conditionals.cryptography.x509.load_pem_x509_csr(csr_pem.encode())
+        # _subject = csr.subject.get_attributes_for_oid(cryptography.x509.oid.NameOID.COMMON_NAME)
+        # _subject[0].value
+        rval["subject"] = csr.subject.rfc4514_string() if csr.subject else ""
         try:
-            ext = _cryptography_csr.extensions.get_extension_for_oid(
-                cryptography.x509.oid.ExtensionOID.SUBJECT_ALTERNATIVE_NAME
+            ext = csr.extensions.get_extension_for_oid(
+                conditionals.cryptography.x509.oid.ExtensionOID.SUBJECT_ALTERNATIVE_NAME
             )
             if ext:
-                _names = ext.value.get_values_for_type(cryptography.x509.DNSName)  # type: ignore[attr-defined]
+                _names = ext.value.get_values_for_type(conditionals.cryptography.x509.DNSName)  # type: ignore[attr-defined]
                 rval["SubjectAlternativeName"] = sorted(_names)
         except Exception as exc:  # noqa: F841
             pass
-        rval["key_technology"] = _openssl_crypto__key_technology(
-            _crypto_csr.get_pubkey()
-        )
+        rval["key_technology"] = _cryptography__public_key_technology(csr.public_key())
         rval["spki_sha256"] = parse_csr__spki_sha256(
             csr_pem=csr_pem,
             csr_pem_filepath=csr_pem_filepath,
-            crypto_csr=_crypto_csr,
+            csr=csr,
             as_b64=False,
         )
         return rval
@@ -2817,7 +1706,7 @@ def parse_csr(
 def parse_key__spki_sha256(
     key_pem: str,
     key_pem_filepath: Optional[str] = None,
-    cryptography_publickey: Optional["_TYPES_CRYPTOGRAPHY_KEYS"] = None,
+    publickey: Optional["_TYPES_CRYPTOGRAPHY_KEYS"] = None,
     key_technology: Optional[str] = None,
     as_b64: Optional[bool] = None,
 ) -> str:
@@ -2839,19 +1728,16 @@ def parse_key__spki_sha256(
     """
     log.info("parse_key__spki_sha256 >")
     # cryptography *should* be installed as a dependency of openssl, but who knows!
-    if openssl_crypto and cryptography:
-        if not cryptography_publickey:
-            _crypto_privkey = openssl_crypto.load_privatekey(
-                openssl_crypto.FILETYPE_PEM, key_pem
+    if conditionals.cryptography:
+        if TYPE_CHECKING:
+            assert conditionals.crypto_serialization is not None
+        if not publickey:
+            privkey = conditionals.crypto_serialization.load_pem_private_key(
+                key_pem.encode(), password=None
             )
-            _cryptography_privkey = _crypto_privkey.to_cryptography_key()
-            cryptography_publickey = _cryptography_privkey.public_key()  # type: ignore[union-attr]
-        assert (
-            cryptography_publickey is not None
-        )  # nest under `if TYPE_CHECKING` not needed
-        spki_sha256 = _cryptography__public_key_spki_sha256(
-            cryptography_publickey, as_b64=as_b64
-        )
+            publickey = privkey.public_key()  # type: ignore[union-attr]
+        assert publickey is not None  # nest under `if TYPE_CHECKING` not needed
+        spki_sha256 = _cryptography__public_key_spki_sha256(publickey, as_b64=as_b64)
         return spki_sha256
     log.debug(".parse_key__spki_sha256 > openssl fallback")
     if not key_pem_filepath:
@@ -2878,27 +1764,30 @@ def parse_key__spki_sha256(
 def parse_key__technology(
     key_pem: str,
     key_pem_filepath: Optional[str] = None,
-    crypto_privatekey: Optional["PKey"] = None,
+    privatekey: Optional["_TYPES_CRYPTOGRAPHY_PRIVATEKEY"] = None,
 ) -> str:
     """
     :param str key_pem: Key in PEM form
     :param str key_pem_filepath: Optional filepath to PEM.
                                  Only used for commandline OpenSSL fallback operations.
-    :param object crypto_privatekey: optional hint to aid in crypto commands
+    :param object privatekey: optional private key
     :returns: key technology
     :rtype: str
     """
     log.info("parse_key__technology >")
-    if openssl_crypto:
-        if not crypto_privatekey:
-            crypto_privatekey = openssl_crypto.load_privatekey(
-                openssl_crypto.FILETYPE_PEM, key_pem
+    if conditionals.cryptography:
+        if TYPE_CHECKING:
+            assert conditionals.crypto_ec is not None
+            assert conditionals.crypto_rsa is not None
+            assert conditionals.crypto_serialization is not None
+        if not privatekey:
+            privatekey = conditionals.crypto_serialization.load_pem_private_key(
+                key_pem.encode(), None
             )
-        assert crypto_privatekey is not None  # nest under `if TYPE_CHECKING` not needed
-        _cert_type = crypto_privatekey.type()
-        if _cert_type == openssl_crypto.TYPE_RSA:
+        assert privatekey is not None  # nest under `if TYPE_CHECKING` not needed
+        if isinstance(privatekey, conditionals.crypto_rsa.RSAPrivateKey):
             return "RSA"
-        elif _cert_type == openssl_crypto.TYPE_EC:
+        elif isinstance(privatekey, conditionals.crypto_ec.EllipticCurvePrivateKey):
             return "EC"
         raise OpenSslError_InvalidKey("I don't know what kind of key this is")
     log.debug(".parse_key__technology > openssl fallback")
@@ -2954,41 +1843,41 @@ def parse_key(
         "spki_sha256": None,
     }
     # cryptography *should* be installed as a dependency of openssl, but who knows!
-    if openssl_crypto and cryptography:
-        # TODO: crypto version of `--text`
-
-        # this part ONLY works on RSA keys
-        # can't do this with certbot/pyopenssl yet
-        # see https://github.com/pyca/pyopenssl/issues/291
-        # certbot just wraps that
+    if conditionals.cryptography:
+        if TYPE_CHECKING:
+            assert conditionals.crypto_ec is not None
+            assert conditionals.crypto_rsa is not None
+            assert conditionals.crypto_serialization is not None
         try:
             # note: we don't need to provide key_pem_filepath because we already rely on openssl
             rval["check"] = validate_key(key_pem=key_pem)
         except Exception as exc:
             rval["check"] = str(exc)
-
-        _crypto_privkey = openssl_crypto.load_privatekey(
-            openssl_crypto.FILETYPE_PEM, key_pem
+        privkey = conditionals.crypto_serialization.load_pem_private_key(
+            key_pem.encode(), password=None
         )
-        _cert_type = _crypto_privkey.type()
-        _cryptography_privkey = _crypto_privkey.to_cryptography_key()
-        _cryptography_publickey = _cryptography_privkey.public_key()  # type: ignore[union-attr]
-        if _cert_type == openssl_crypto.TYPE_RSA:
+        publickey = privkey.public_key()  # type: ignore[union-attr]
+        if isinstance(privkey, conditionals.crypto_rsa.RSAPrivateKey):
             rval["key_technology"] = "RSA"
             try:
-                modn = _cryptography_publickey.public_numbers().n  # type: ignore[union-attr]
+                modn = publickey.public_numbers().n  # type: ignore[union-attr]
                 modn = "{:X}".format(modn)
                 modn = modn.encode()
                 rval["modulus_md5"] = hashlib.md5(modn).hexdigest()
             except Exception as exc:
                 rval["XX-modulus_md5"] = str(exc)
-        elif _cert_type == openssl_crypto.TYPE_EC:
+        elif isinstance(privkey, conditionals.crypto_ec.EllipticCurvePrivateKey):
             rval["key_technology"] = "EC"
+            # TODO: Support EC Key Modulus Variant - https://github.com/aptise/cert_utils/issues/15
+            # legacy ONLY works on RSA keys
+            # might just rely on spki_sha256
+            # related certbot/pyopenssl ticket:
+            # see https://github.com/pyca/pyopenssl/issues/291
 
         rval["spki_sha256"] = parse_key__spki_sha256(
             key_pem="",
             key_pem_filepath=None,
-            cryptography_publickey=_cryptography_publickey,
+            publickey=publickey,
             as_b64=False,
         )
         return rval
@@ -3098,20 +1987,23 @@ def new_key_ec(bits: int = 384) -> str:
             % (ALLOWED_BITS_ECDSA, bits)
         )
 
-    if crypto_ec and crypto_serialization and (crypto_default_backend is not None):
+    if conditionals.cryptography:
+        if TYPE_CHECKING:
+            assert conditionals.crypto_ec is not None
+            assert conditionals.crypto_serialization is not None
         # see https://github.com/pyca/pyopenssl/issues/291
         if 256 == bits:
-            key = crypto_ec.generate_private_key(
-                crypto_ec.SECP256R1(), crypto_default_backend()
+            key = conditionals.crypto_ec.generate_private_key(
+                conditionals.crypto_ec.SECP256R1()
             )
         elif 384 == bits:
-            key = crypto_ec.generate_private_key(
-                crypto_ec.SECP384R1(), crypto_default_backend()
+            key = conditionals.crypto_ec.generate_private_key(
+                conditionals.crypto_ec.SECP384R1()
             )
         key_pem = key.private_bytes(
-            encoding=crypto_serialization.Encoding.PEM,
-            format=crypto_serialization.PrivateFormat.TraditionalOpenSSL,
-            encryption_algorithm=crypto_serialization.NoEncryption(),
+            encoding=conditionals.crypto_serialization.Encoding.PEM,
+            format=conditionals.crypto_serialization.PrivateFormat.TraditionalOpenSSL,
+            encryption_algorithm=conditionals.crypto_serialization.NoEncryption(),
         )
         # load it: openssl_crypto.load_privatekey(openssl_crypto.FILETYPE_PEM, key_pem)
         key_pem_str = key_pem.decode("utf8")
@@ -3168,8 +2060,19 @@ def new_key_rsa(bits: int = 4096) -> str:
             "LetsEncrypt only supports RSA keys with bits: %s; not %s"
             % (str(ALLOWED_BITS_RSA), bits)
         )
-    if certbot_crypto_util:
-        key_pem = certbot_crypto_util.make_key(bits)
+    if conditionals.cryptography:
+        if TYPE_CHECKING:
+            assert conditionals.crypto_rsa is not None
+            assert conditionals.crypto_serialization is not None
+        key_rsa = conditionals.crypto_rsa.generate_private_key(
+            public_exponent=65537,
+            key_size=bits,
+        )
+        key_pem = key_rsa.private_bytes(
+            encoding=conditionals.crypto_serialization.Encoding.PEM,
+            format=conditionals.crypto_serialization.PrivateFormat.TraditionalOpenSSL,
+            encryption_algorithm=conditionals.crypto_serialization.NoEncryption(),
+        )
         key_pem_str = key_pem.decode("utf8")
         key_pem_str = cleanup_pem_text(key_pem_str)
         return key_pem_str
@@ -3200,135 +2103,6 @@ def new_key_rsa(bits: int = 4096) -> str:
     return key_pem_str
 
 
-def convert_jwk_to_ans1(pkey_jsons: str) -> str:
-    """
-    input is a json string
-
-    adapted from https://github.com/JonLundy
-    who shared this gist under the MIT license:
-        https://gist.github.com/JonLundy/f25c99ee0770e19dc595
-
-    :param pkey_jsons: JWK Key
-    :type pkey_jsons: str
-    :returns: Key in ANS1 Format
-    :rtype: str
-    """
-    pkey = json.loads(pkey_jsons)
-
-    def enc(data_bytes: bytes) -> str:
-        missing_padding = 4 - len(data_bytes) % 4
-        if missing_padding:
-            data_bytes += b"=" * missing_padding
-        data_bytes = binascii.hexlify(base64.b64decode(data_bytes, b"-_")).upper()
-        data_str = data_bytes.decode("utf8")
-        return "0x" + data_str
-
-    for k, v in list(pkey.items()):
-        if k == "kty":
-            continue
-        pkey[k] = enc(v.encode())
-
-    converted = []
-    converted.append("asn1=SEQUENCE:private_key\n[private_key]\nversion=INTEGER:0")
-    converted.append("n=INTEGER:{}".format(pkey["n"]))
-    converted.append("e=INTEGER:{}".format(pkey["e"]))
-    converted.append("d=INTEGER:{}".format(pkey["d"]))
-    converted.append("p=INTEGER:{}".format(pkey["p"]))
-    converted.append("q=INTEGER:{}".format(pkey["q"]))
-    converted.append("dp=INTEGER:{}".format(pkey["dp"]))
-    converted.append("dq=INTEGER:{}".format(pkey["dq"]))
-    converted.append("qi=INTEGER:{}".format(pkey["qi"]))
-    converted.append("")  # trailing newline
-    converted_ = "\n".join(converted)
-    return converted_
-
-
-def convert_lejson_to_pem(pkey_jsons: str) -> str:
-    """
-    This routine will use crypto/certbot if available.
-    If not, openssl is used via subprocesses
-
-    input is a json string
-
-    adapted from https://github.com/JonLundy
-    who shared this gist under the MIT license:
-        https://gist.github.com/JonLundy/f25c99ee0770e19dc595
-
-    openssl asn1parse -noout -out private_key.der -genconf <(python conv.py private_key.json)
-    openssl rsa -in private_key.der -inform der > private_key.pem
-    openssl rsa -in private_key.pem
-
-    :param pkey_jsons: LetsEncrypt JSON formatted Key
-    :type pkey_jsons: str
-    :returns: Key in PEM Encoding
-    :rtype: str
-    """
-    log.info("convert_lejson_to_pem >")
-
-    if crypto_serialization and josepy:
-        pkey = josepy.JWKRSA.json_loads(pkey_jsons)
-        as_pem = pkey.key.private_bytes(
-            encoding=crypto_serialization.Encoding.PEM,
-            format=crypto_serialization.PrivateFormat.TraditionalOpenSSL,
-            encryption_algorithm=crypto_serialization.NoEncryption(),
-        )
-        as_pem = as_pem.decode("utf8")
-        as_pem = cleanup_pem_text(as_pem)
-
-        # note: we don't need to provide key_pem_filepath because we already rely on openssl
-        key_technology = validate_key(key_pem=as_pem)
-        return as_pem
-
-    log.debug(".convert_lejson_to_pem > openssl fallback")
-    if openssl_version is None:
-        check_openssl_version()
-
-    pkey_ans1 = convert_jwk_to_ans1(pkey_jsons)
-    as_pem = None
-    tmpfiles = []
-    try:
-        tmpfile_ans1 = new_pem_tempfile(pkey_ans1)
-        tmpfiles.append(tmpfile_ans1)
-
-        tmpfile_der = new_pem_tempfile("")
-        tmpfiles.append(tmpfile_der)
-
-        with psutil.Popen(
-            [
-                openssl_path,
-                "asn1parse",
-                "-noout",
-                "-out",
-                tmpfile_der.name,
-                "-genconf",
-                tmpfile_ans1.name,
-            ],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-        ) as proc:
-            generated, err = proc.communicate()
-            if err:
-                raise ValueError(err)
-        # convert to pem
-        as_pem = convert_der_to_pem__rsakey(tmpfile_der.read())
-
-        # we need a tmpfile to validate it
-        tmpfile_pem = new_pem_tempfile(as_pem)
-        tmpfiles.append(tmpfile_pem)
-
-        # validate it
-        key_technology = validate_key(  # noqa: F841
-            key_pem=as_pem, key_pem_filepath=tmpfile_pem.name
-        )
-        return as_pem
-
-    except Exception as exc:  # noqa: F841
-        raise
-    finally:
-        for t in tmpfiles:
-            t.close()
-
-
 def cert_and_chain_from_fullchain(
     fullchain_pem: str,
 ) -> Tuple[str, str]:
@@ -3348,10 +2122,11 @@ def cert_and_chain_from_fullchain(
     https://raw.githubusercontent.com/certbot/certbot/master/LICENSE.txt
     """
     log.info("cert_and_chain_from_fullchain >")
-    if certbot_crypto_util:
+    if conditionals.cryptography:
         try:
-            return certbot_crypto_util.cert_and_chain_from_fullchain(fullchain_pem)
+            return cryptography__cert_and_chain_from_fullchain(fullchain_pem)
         except Exception as exc:
+            raise
             raise OpenSslError(exc)
 
     log.debug(".cert_and_chain_from_fullchain > openssl fallback")
@@ -3396,16 +2171,18 @@ def decompose_chain(fullchain_pem: str) -> List[str]:
         )
     # Second pass: for each certificate found, parse it using OpenSSL and re-encode it,
     # with the effect of normalizing any encoding variations (e.g. CRLF, whitespace).
-    if openssl_crypto:
-        certs_normalized = [
-            openssl_crypto.dump_certificate(
-                openssl_crypto.FILETYPE_PEM,
-                openssl_crypto.load_certificate(
-                    openssl_crypto.FILETYPE_PEM, cert.encode()
-                ),
-            ).decode("utf8")
-            for cert in certs
-        ]
+    if conditionals.cryptography:
+        if TYPE_CHECKING:
+            assert conditionals.crypto_serialization is not None
+        certs_normalized = []
+        for cert_pem in certs:
+            cert = conditionals.cryptography.x509.load_pem_x509_certificate(
+                cert_pem.encode()
+            )
+            cert_pem = cert.public_bytes(
+                conditionals.crypto_serialization.Encoding.PEM
+            ).decode()
+            certs_normalized.append(cert_pem)
         return certs_normalized
     log.debug(".decompose_chain > openssl fallback")
     certs_normalized = []
@@ -3499,28 +2276,37 @@ def ensure_chain(
     if intermediates[-1] == cert_pem:
         intermediates = intermediates[:-1]
 
-    if openssl_crypto:
+    if conditionals.cryptography:
         # build a root storage
-        store = openssl_crypto.X509Store()
-        root_parsed = openssl_crypto.load_certificate(
-            openssl_crypto.FILETYPE_PEM, root_pem.encode()
+        root_cert = conditionals.cryptography.x509.load_pem_x509_certificate(
+            root_pem.encode()
         )
-        store.add_cert(root_parsed)
+        store = conditionals.cryptography.x509.verification.Store(
+            certs=[
+                root_cert,
+            ]
+        )
 
+        intermediate_certs = []
         for _intermediate_pem in reversed(intermediates):
-            _intermediate_parsed = openssl_crypto.load_certificate(
-                openssl_crypto.FILETYPE_PEM, _intermediate_pem.encode()
+            _intermediate_cert = (
+                conditionals.cryptography.x509.load_pem_x509_certificate(
+                    _intermediate_pem.encode()
+                )
             )
-            # Check the chain certificate before adding it to the store.
-            _store_ctx = openssl_crypto.X509StoreContext(store, _intermediate_parsed)
-            _store_ctx.verify_certificate()
-            store.add_cert(_intermediate_parsed)
+            intermediate_certs.append(_intermediate_cert)
 
-        cert_parsed = openssl_crypto.load_certificate(
-            openssl_crypto.FILETYPE_PEM, cert_pem.encode()
+        cert_cert = conditionals.cryptography.x509.load_pem_x509_certificate(
+            cert_pem.encode()
         )
-        _store_ctx = openssl_crypto.X509StoreContext(store, cert_parsed)
-        _store_ctx.verify_certificate()
+        builder = conditionals.cryptography.x509.verification.PolicyBuilder().store(
+            store
+        )
+
+        try:
+            builder.build_client_verifier().verify(cert_cert, intermediate_certs)
+        except Exception as exc:  # noqa: F841
+            raise
         return True
 
     log.debug(".ensure_chain > openssl fallback")
@@ -3592,7 +2378,7 @@ def ensure_chain_order(
     # reverse the cert list
     # we're going to pretend the last item is a root
     r_chain_certs = chain_certs[::-1]
-    if openssl_crypto:
+    if conditionals.cryptography:
         # TODO: openssl crypto does not seem to support partial chains yet
         # as a stopgap, just look to ensure the issuer/subject match
         """
@@ -3619,15 +2405,15 @@ def ensure_chain_order(
         # loop the certs
         for idx, cert_pem in enumerate(r_chain_certs):
             # everyone generates data
-            cert = openssl_crypto.load_certificate(
-                openssl_crypto.FILETYPE_PEM, cert_pem.encode()
+            cert = conditionals.cryptography.x509.load_pem_x509_certificate(
+                cert_pem.encode()
             )
             parsed_certs[idx] = cert
             if idx == 0:
                 continue
             # only after the first cert do we need to check the last cert
             upchain = parsed_certs[idx - 1]
-            if upchain.get_subject() != cert.get_issuer():
+            if upchain.subject != cert.issuer:
                 raise OpenSslError("could not verify: upchain does not match issuer")
         return True
     log.debug(".ensure_chain_order > openssl fallback")
@@ -3679,43 +2465,6 @@ def ensure_chain_order(
 # ------------------------------------------------------------------------------
 
 
-def jose_b64(b: bytes) -> str:
-    # helper function base64 encode for jose spec
-    return base64.urlsafe_b64encode(b).decode("utf8").replace("=", "")
-
-
-class AccountKeyData(object):
-    """
-    An object encapsulating Account Key data
-    """
-
-    key_pem: str
-    key_pem_filepath: Optional[str]
-    jwk: Dict
-    thumbprint: str
-    alg: str
-
-    def __init__(
-        self,
-        key_pem: str,
-        key_pem_filepath: Optional[str] = None,
-    ):
-        """
-        :param key_pem: (required) A PEM encoded RSA key
-        :param key_pem_filepath: (optional) The filepath of a PEM encoded RSA key
-        """
-        self.key_pem = key_pem
-        self.key_pem_filepath = key_pem_filepath
-
-        (_jwk, _thumbprint, _alg) = account_key__parse(
-            key_pem=key_pem,
-            key_pem_filepath=key_pem_filepath,
-        )
-        self.jwk = _jwk
-        self.thumbprint = _thumbprint
-        self.alg = _alg
-
-
 def account_key__parse(
     key_pem: str,
     key_pem_filepath: Optional[str] = None,
@@ -3735,8 +2484,8 @@ def account_key__parse(
     """
     log.info("account_key__parse >")
     alg = "RS256"
-    if josepy:
-        _jwk = josepy.JWKRSA.load(key_pem.encode("utf8"))
+    if conditionals.josepy:
+        _jwk = conditionals.josepy.JWKRSA.load(key_pem.encode("utf8"))
         jwk = _jwk.public_key().fields_to_partial_json()
         jwk["kty"] = "RSA"
         thumbprint = jose_b64(_jwk.thumbprint())
@@ -3806,17 +2555,21 @@ def account_key__sign(
     if not isinstance(data, bytes):
         data = data.encode()
     # cryptography *should* be installed as a dependency of openssl, but who knows!
-    if openssl_crypto and crypto_rsa and cryptography:
-        pkey: "PKey" = openssl_crypto.load_privatekey(
-            openssl_crypto.FILETYPE_PEM, key_pem
+    if conditionals.cryptography:
+        if TYPE_CHECKING:
+            assert conditionals.crypto_hashes is not None
+            assert conditionals.crypto_serialization is not None
+        log.debug(".account_key__sign > cryptography")
+        pkey = conditionals.crypto_serialization.load_pem_private_key(
+            key_pem.encode(), None
         )
         # possible loads are "Union[DSAPrivateKey, DSAPublicKey, RSAPrivateKey, RSAPublicKey]"
         # but only RSAPublicKey is used or will work
         # TODO: check to ensure key type is RSAPublicKey
-        signature = pkey.to_cryptography_key().sign(  # type: ignore[union-attr, call-arg]
+        signature = pkey.sign(  # type: ignore[union-attr, call-arg]
             data,
-            cryptography.hazmat.primitives.asymmetric.padding.PKCS1v15(),  # type: ignore[arg-type]
-            cryptography.hazmat.primitives.hashes.SHA256(),
+            conditionals.cryptography.hazmat.primitives.asymmetric.padding.PKCS1v15(),  # type: ignore[arg-type]
+            conditionals.crypto_hashes.SHA256(),
         )
         return signature
     log.debug(".account_key__sign > openssl fallback")
@@ -3918,17 +2671,19 @@ def ari_construct_identifier(
     """
     log.info("ari_construct_identifier >")
 
-    if cryptography:
+    if conditionals.cryptography:
         log.debug(".ari_construct_identifier > cryptography")
         try:
-            cert = cryptography.x509.load_pem_x509_certificate(cert_pem.encode())
+            cert = conditionals.cryptography.x509.load_pem_x509_certificate(
+                cert_pem.encode()
+            )
         except Exception as exc:
             raise CryptographyError(exc)
 
         akid = None
         try:
             ext = cert.extensions.get_extension_for_oid(
-                cryptography.x509.oid.ExtensionOID.AUTHORITY_KEY_IDENTIFIER
+                conditionals.cryptography.x509.oid.ExtensionOID.AUTHORITY_KEY_IDENTIFIER
             )
             akid = ext.value.key_identifier
         except Exception as exc:

@@ -24,7 +24,7 @@ from typing_extensions import Required
 from typing_extensions import TypedDict
 
 # localapp
-from .core import cleanup_pem_text
+from .utils import cleanup_pem_text
 from .utils import md5_text
 
 

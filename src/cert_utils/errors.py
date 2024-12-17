@@ -7,6 +7,11 @@ class CertUtilsError(Exception):
     pass
 
 
+class ToDo(CertUtilsError):
+    # raised when this is something for us to do
+    pass
+
+
 class CryptographyError(CertUtilsError):
     pass
 

@@ -43,6 +43,8 @@ except AttributeError:
 
 # ==============================================================================
 
+USER_AGENT = "cert_utils/%s" % cert_utils.__VERSION__
+
 
 class PeerData(TypedDict, total=False):
     peername: Tuple[str, int]
@@ -133,6 +135,7 @@ def new_session() -> requests.Session:
     """generate a new Session with our hook built in"""
     sess = requests.Session()
     sess.hooks["response"].insert(0, response_initial_hook)
+    sess.headers.update({"User-Agent": USER_AGENT})
     return sess
 
 

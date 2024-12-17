@@ -91,7 +91,7 @@ def generate_cert(
 
 def decode_akid(cert_pem: bytes) -> str:
     cert = x509.load_pem_x509_certificate(cert_pem)
-    akid: str
+    akid: str = ""
     try:
         ext = cert.extensions.get_extension_for_oid(
             x509.oid.ExtensionOID.AUTHORITY_KEY_IDENTIFIER
