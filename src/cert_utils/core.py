@@ -1970,10 +1970,10 @@ def new_private_key(
     :returns: PrivateKey in PEM format
     :rtype: str
     """
-    if key_technology_id == KeyTechnology.RSA:
+    if key_technology_id == KeyTechnologyEnum.RSA:
         kwargs_rsa = {"bits": rsa_bits} if rsa_bits else {}
         return new_key_rsa(**kwargs_rsa)
-    elif key_technology_id == KeyTechnology.EC:
+    elif key_technology_id == KeyTechnologyEnum.EC:
         kwargs_ec = {"curve": ec_curve} if ec_curve else {}
         return new_key_ec(**kwargs_ec)
     else:
