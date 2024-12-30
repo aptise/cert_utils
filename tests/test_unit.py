@@ -1353,7 +1353,7 @@ class UnitTest_CertUtils(unittest.TestCase, _Mixin_fallback_possible, _Mixin_fil
 
     def test__new_account_key(self):
         """
-        python -m unittest tests.test_unit.UnitTest_CertUtils.test__private_key__new
+        python -m unittest tests.test_unit.UnitTest_CertUtils.test__new_account_key
         """
         _combinations = (
             (model.KeyTechnologyEnum.RSA, 2048, None),
@@ -1366,7 +1366,7 @@ class UnitTest_CertUtils(unittest.TestCase, _Mixin_fallback_possible, _Mixin_fil
             key_pem = cert_utils.new_account_key(
                 _combo[0], rsa_bits=_combo[1], ec_curve=_combo[2]
             )
-            if _combo[0] == model.KeyTechnology.RSA:
+            if _combo[0] == model.KeyTechnologyEnum.RSA:
                 # crypto: -----BEGIN PRIVATE KEY-----
                 # openssl fallback: -----BEGIN RSA PRIVATE KEY-----
                 self.assertIn(
@@ -1376,7 +1376,7 @@ class UnitTest_CertUtils(unittest.TestCase, _Mixin_fallback_possible, _Mixin_fil
                         "-----BEGIN PRIVATE KEY-----",
                     ),
                 )
-            elif _combo[0] == model.KeyTechnology.EC:
+            elif _combo[0] == model.KeyTechnologyEnum.EC:
                 self.assertEqual(
                     "-----BEGIN EC PRIVATE KEY-----", key_pem.split("\n")[0]
                 )
@@ -1396,7 +1396,7 @@ class UnitTest_CertUtils(unittest.TestCase, _Mixin_fallback_possible, _Mixin_fil
             key_pem = cert_utils.new_private_key(
                 _combo[0], rsa_bits=_combo[1], ec_curve=_combo[2]
             )
-            if _combo[0] == model.KeyTechnology.RSA:
+            if _combo[0] == model.KeyTechnologyEnum.RSA:
                 # crypto: -----BEGIN PRIVATE KEY-----
                 # openssl fallback: -----BEGIN RSA PRIVATE KEY-----
                 self.assertIn(
@@ -1406,7 +1406,7 @@ class UnitTest_CertUtils(unittest.TestCase, _Mixin_fallback_possible, _Mixin_fil
                         "-----BEGIN PRIVATE KEY-----",
                     ),
                 )
-            elif _combo[0] == model.KeyTechnology.EC:
+            elif _combo[0] == model.KeyTechnologyEnum.EC:
                 self.assertEqual(
                     "-----BEGIN EC PRIVATE KEY-----", key_pem.split("\n")[0]
                 )

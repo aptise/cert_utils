@@ -2,6 +2,7 @@
     * new_account_key supports LetsEncrypt updates to EC
     * ALLOWED_CURVES_ECDSA is now a list of strings
     * new_ec_key named argument is now curve(str)
+    * functions now require KeyTechnologyEnum, not KeyTechnology for key_technology_id
 
 0.2.0
     * replaced pyopenssl with cryptography.

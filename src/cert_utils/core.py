@@ -1942,13 +1942,13 @@ def new_account_key(
     :returns: AccountKey in PEM format
     :rtype: str
     """
-    if key_technology_id == KeyTechnology.RSA:
+    if key_technology_id == KeyTechnologyEnum.RSA:
         if rsa_bits not in ALLOWED_BITS_RSA:
             raise ValueError(
                 "LetsEncrypt only supports RSA keys with bits: %s" % ALLOWED_BITS_RSA
             )
         return new_key_rsa(bits=rsa_bits)
-    elif key_technology_id == KeyTechnology.EC:
+    elif key_technology_id == KeyTechnologyEnum.EC:
         if ec_curve not in ALLOWED_CURVES_ECDSA:
             raise ValueError(
                 "LetsEncrypt only supports EC with curves: %s" % ALLOWED_CURVES_ECDSA
