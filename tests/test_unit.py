@@ -1381,6 +1381,8 @@ class UnitTest_CertUtils(unittest.TestCase, _Mixin_fallback_possible, _Mixin_fil
                     "-----BEGIN EC PRIVATE KEY-----", key_pem.split("\n")[0]
                 )
 
+            key_parsed = cert_utils.account_key__parse(key_pem=key_pem)
+
     def test__private_key__new(self):
         """
         python -m unittest tests.test_unit.UnitTest_CertUtils.test__private_key__new

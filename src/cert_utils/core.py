@@ -263,7 +263,7 @@ def make_csr(
     max_domains: int = MAX_DOMAINS_PER_CERTIFICATE,
 ) -> str:
     """
-    This routine will use crypto/certbot if available.
+    This routine will use cryptography if available.
     If not, openssl is used via subprocesses
 
     :param domain_names: a list of fully qualified domain names
@@ -499,7 +499,7 @@ def parse_cert__domains(
         * san (subjectAlternateName)
         * subject (commonName)
 
-    This routine will use crypto/certbot if available.
+    This routine will use cryptography if available.
     If not, openssl is used via subprocesses
 
     :param cert_pem: a PEM encoded Certificate
@@ -561,7 +561,7 @@ def parse_csr_domains(
     """
     checks found names against `submitted_domain_names`
 
-    This routine will use crypto/certbot if available.
+    This routine will use cryptography if available.
     If not, openssl is used via subprocesses
 
     `submitted_domain_names` should be all lowecase
@@ -635,7 +635,7 @@ def validate_key(
     raises an Exception if invalid
     returns the key_technology if valid
 
-    This routine will use crypto/certbot if available.
+    This routine will use cryptography if available.
     If not, openssl is used via subprocesses
 
     This may have issues on older openssl systems
@@ -662,11 +662,6 @@ def validate_key(
             assert conditionals.crypto_rsa is not None
             assert conditionals.crypto_ec is not None
         try:
-            # rsa
-            # try:
-            #   data = certbot_crypto_util.valid_privkey(key_pem)
-            # except OpenSslError_InvalidKey as exc:
-            #   return None
             key = conditionals.crypto_serialization.load_pem_private_key(
                 key_pem.encode(), None
             )
@@ -716,7 +711,7 @@ def validate_csr(
     """
     raises an error if invalid
 
-    This routine will use crypto/certbot if available.
+    This routine will use cryptography if available.
     If not, openssl is used via subprocesses
 
     :param csr_pem: a PEM encoded CSR, required
@@ -764,7 +759,7 @@ def validate_cert(
     """
     raises an error if invalid
 
-    This routine will use crypto/certbot if available.
+    This routine will use cryptography if available.
     If not, openssl is used via subprocesses
 
     :param cert_pem: a PEM encoded Certificate
@@ -835,7 +830,7 @@ def fingerprint_cert(
     """
     Derives the Certificate's fingerprint
 
-    This routine will use crypto/certbot if available.
+    This routine will use cryptography if available.
     If not, openssl is used via subprocesses
 
     colons will be removed, they can be reintroduced on render
@@ -941,7 +936,7 @@ def modulus_md5_key(
     key_pem_filepath: Optional[str] = None,
 ) -> Optional[str]:
     """
-    This routine will use crypto/certbot if available.
+    This routine will use cryptography if available.
     If not, openssl is used via subprocesses
 
     :param key_pem: a PEM encoded PrivateKey
@@ -1003,7 +998,7 @@ def modulus_md5_csr(
     csr_pem_filepath: Optional[str] = None,
 ) -> Optional[str]:
     """
-    This routine will use crypto/certbot if available.
+    This routine will use cryptography if available.
     If not, openssl is used via subprocesses
 
     :param csr_pem: a PEM encoded CSR
@@ -1065,7 +1060,7 @@ def modulus_md5_cert(
     cert_pem_filepath: Optional[str] = None,
 ) -> Optional[str]:
     """
-    This routine will use crypto/certbot if available.
+    This routine will use cryptography if available.
     If not, openssl is used via subprocesses
 
     :param cert_pem: a PEM encoded Certificate
@@ -1128,7 +1123,7 @@ def parse_cert__enddate(
     cert_pem_filepath: Optional[str] = None,
 ) -> "datetime.datetime":
     """
-    This routine will use crypto/certbot if available.
+    This routine will use cryptography if available.
     If not, openssl is used via subprocesses
 
     :param cert_pem: PEM encoded Certificate
@@ -1168,7 +1163,7 @@ def parse_cert__startdate(
     cert_pem_filepath: Optional[str] = None,
 ) -> "datetime.datetime":
     """
-    This routine will use crypto/certbot if available.
+    This routine will use cryptography if available.
     If not, openssl is used via subprocesses
 
     :param cert_pem: PEM encoded Certificate
@@ -1315,7 +1310,7 @@ def parse_cert(
     cert_pem_filepath: Optional[str] = None,
 ) -> Dict:
     """
-    This routine will use crypto/certbot if available.
+    This routine will use cryptography if available.
     If not, openssl is used via subprocesses
 
     :param cert_pem: PEM encoded Certificate
@@ -1624,7 +1619,7 @@ def parse_csr(
     csr_pem_filepath: Optional[str] = None,
 ) -> Dict:
     """
-    This routine will use crypto/certbot if available.
+    This routine will use cryptography if available.
     If not, openssl is used via subprocesses
 
     :param str csr_pem: CSR in PEM encoding
@@ -1824,7 +1819,7 @@ def parse_key(
     """
     !!!: This is a debugging display function. The output is not guaranteed across installations.
 
-    This routine will use crypto/certbot if available.
+    This routine will use cryptography if available.
     If not, openssl is used via subprocesses
 
     :param str key_pem: Key in PEM encoding
@@ -1942,13 +1937,13 @@ def new_account_key(
     :returns: AccountKey in PEM format
     :rtype: str
     """
-    if key_technology_id == KeyTechnologyEnum.RSA:
+    if key_technology_id in (KeyTechnologyEnum.RSA, KeyTechnology.RSA):
         if rsa_bits not in ALLOWED_BITS_RSA:
             raise ValueError(
                 "LetsEncrypt only supports RSA keys with bits: %s" % ALLOWED_BITS_RSA
             )
         return new_key_rsa(bits=rsa_bits)
-    elif key_technology_id == KeyTechnologyEnum.EC:
+    elif key_technology_id in (KeyTechnologyEnum.EC, KeyTechnology.EC):
         if ec_curve not in ALLOWED_CURVES_ECDSA:
             raise ValueError(
                 "LetsEncrypt only supports EC with curves: %s" % ALLOWED_CURVES_ECDSA
@@ -1970,10 +1965,10 @@ def new_private_key(
     :returns: PrivateKey in PEM format
     :rtype: str
     """
-    if key_technology_id == KeyTechnologyEnum.RSA:
+    if key_technology_id in (KeyTechnologyEnum.RSA, KeyTechnology.RSA):
         kwargs_rsa = {"bits": rsa_bits} if rsa_bits else {}
         return new_key_rsa(**kwargs_rsa)
-    elif key_technology_id == KeyTechnologyEnum.EC:
+    elif key_technology_id in (KeyTechnologyEnum.EC, KeyTechnology.EC):
         kwargs_ec = {"curve": ec_curve} if ec_curve else {}
         return new_key_ec(**kwargs_ec)
     else:
@@ -1984,7 +1979,7 @@ def new_key_ec(
     curve: Union[Literal["P-256"], Literal["P-384"]] = "P-256",
 ) -> str:
     """
-    This routine will use crypto/certbot if available.
+    This routine will use cryptography if available.
     If not, openssl is used via subprocesses
 
     :param str curve: Which EC curve to use
@@ -2062,7 +2057,7 @@ def new_key_rsa(
     bits: Union[Literal[2048], Literal[3072], Literal[4096]] = 4096,
 ) -> str:
     """
-    This routine will use crypto/certbot if available.
+    This routine will use cryptography if available.
     If not, openssl is used via subprocesses
 
     :param int bits: number of bits. default 4096
@@ -2130,7 +2125,7 @@ def cert_and_chain_from_fullchain(
         (LeafCertificate, ChainedIntermediates)
     :rtype: tuple
 
-    This routine will use crypto/certbot if available.
+    This routine will use cryptography if available.
     If not, openssl is used via subprocesses
 
     Portions of this are a reimplentation of certbot's code
@@ -2492,18 +2487,35 @@ def account_key__parse(
     :returns: jwk, thumbprint, alg
     :rtype: list
 
-    This routine will use crypto/certbot if available.
+    This routine will use cryptography if available.
     If not, openssl is used via subprocesses
 
     This includes code from acme-tiny [https://github.com/diafygi/acme-tiny]
     acme-tiny is released under the MIT license and Copyright (c) 2015 Daniel Roesler
     """
     log.info("account_key__parse >")
-    alg = "RS256"
+    _key_technology = parse_key__technology(key_pem=key_pem, key_pem_filepath=key_pem_filepath)
+    if _key_technology == "RSA":
+        alg = "RS256"
+    elif _key_technology == "EC":
+        alg = "ES256"
+    else:
+        raise ValueError("invalid key_technology")
     if conditionals.josepy:
-        _jwk = conditionals.josepy.JWKRSA.load(key_pem.encode("utf8"))
-        jwk = _jwk.public_key().fields_to_partial_json()
-        jwk["kty"] = "RSA"
+        if _key_technology == "RSA":
+            _jwk = conditionals.josepy.JWKRSA.load(key_pem.encode("utf8"))
+            jwk = _jwk.public_key().fields_to_partial_json()
+            jwk["kty"] = "RSA"
+        elif _key_technology == "EC":
+            _jwk = conditionals.josepy.JWKEC.load(key_pem.encode("utf8"))
+            jwk = _jwk.public_key().fields_to_partial_json()
+            jwk["kty"] = "EC"
+            if jwk["crv"] == "P-256":
+                alg = "ES256"
+            elif jwk["crv"] == "P-384":
+                alg = "ES384"
+            else:
+                raise ValueError("unknown curve")
         thumbprint = jose_b64(_jwk.thumbprint())
         return jwk, thumbprint, alg
     log.debug(".account_key__parse > openssl fallback")
@@ -2512,39 +2524,73 @@ def account_key__parse(
 
     _tmpfile = None
     try:
-        if key_pem_filepath is None:
-            _tmpfile = new_pem_tempfile(key_pem)
-            key_pem_filepath = _tmpfile.name
-        with psutil.Popen(
-            [
-                openssl_path,
-                "rsa",
-                "-in",
-                key_pem_filepath,
-                "-noout",
-                "-text",
-            ],
-            stdin=subprocess.PIPE,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-        ) as proc:
-            data_bytes, err = proc.communicate()
-            data_str = data_bytes.decode("utf8")
-            assert data_str
-        pub_pattern = r"modulus:[\s]+?00:([a-f0-9\:\s]+?)\npublicExponent: ([0-9]+)"
-        _matched = re.search(pub_pattern, data_str, re.MULTILINE | re.DOTALL)
-        assert _matched
-        pub_hex, pub_exp = _matched.groups()
-        pub_exp = "{0:x}".format(int(pub_exp))
-        pub_exp = "0{0}".format(pub_exp) if len(pub_exp) % 2 else pub_exp
-        jwk = {
-            "e": jose_b64(binascii.unhexlify(pub_exp.encode("utf-8"))),
-            "kty": "RSA",
-            "n": jose_b64(
-                binascii.unhexlify(re.sub(r"(\s|:)", "", pub_hex).encode("utf-8"))
-            ),
-        }
-        _accountkey_json = json.dumps(jwk, sort_keys=True, separators=(",", ":"))
+        if _key_technology == "RSA":
+            if key_pem_filepath is None:
+                _tmpfile = new_pem_tempfile(key_pem)
+                key_pem_filepath = _tmpfile.name
+            with psutil.Popen(
+                [
+                    openssl_path,
+                    "rsa",
+                    "-in",
+                    key_pem_filepath,
+                    "-noout",
+                    "-text",
+                ],
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+            ) as proc:
+                data_bytes, err = proc.communicate()
+                data_str = data_bytes.decode("utf8")
+                assert data_str
+            pub_pattern = r"modulus:[\s]+?00:([a-f0-9\:\s]+?)\npublicExponent: ([0-9]+)"
+            _matched = re.search(pub_pattern, data_str, re.MULTILINE | re.DOTALL)
+            assert _matched
+            pub_hex, pub_exp = _matched.groups()
+            pub_exp = "{0:x}".format(int(pub_exp))
+            pub_exp = "0{0}".format(pub_exp) if len(pub_exp) % 2 else pub_exp
+            jwk = {
+                "e": jose_b64(binascii.unhexlify(pub_exp.encode("utf-8"))),
+                "kty": "RSA",
+                "n": jose_b64(
+                    binascii.unhexlify(re.sub(r"(\s|:)", "", pub_hex).encode("utf-8"))
+                ),
+            }
+            _accountkey_json = json.dumps(jwk, sort_keys=True, separators=(",", ":"))
+        elif _key_technology == "EC":
+            if key_pem_filepath is None:
+                _tmpfile = new_pem_tempfile(key_pem)
+                key_pem_filepath = _tmpfile.name
+            with psutil.Popen(
+                [
+                    openssl_path,
+                    "ec",
+                    "-in",
+                    key_pem_filepath,
+                    "-noout",
+                    "-text",
+                ],
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+            ) as proc:
+                data_bytes, err = proc.communicate()
+                data_str = data_bytes.decode("utf8")
+                assert data_str
+            pub_pattern = r"pub:[\s]+?00:([a-f0-9\:\s]+?)\nASN1 OID:[\s]+([\w\-]+)\nNIST CURVE:[\s]+([\w\-]+)\n"
+            _matched = re.search(pub_pattern, data_str, re.MULTILINE | re.DOTALL)
+            assert _matched
+            pub_hex, ans1, nist = _matched.groups()
+            if nist == "P-256":
+                alg = "EC256"
+            elif nist == "P-384":
+                alg = "EC384"
+            else:
+                raise ValueError("unknown curve")
+            raise ValueError("TODO")
+        else:
+            raise ValueError("invalid key_technology")
         thumbprint = jose_b64(hashlib.sha256(_accountkey_json.encode("utf8")).digest())
         return jwk, thumbprint, alg
     finally:
@@ -2558,7 +2604,7 @@ def account_key__sign(
     key_pem_filepath: Optional[str] = None,
 ) -> bytes:
     """
-    This routine will use crypto/certbot if available.
+    This routine will use cryptography if available.
     If not, openssl is used via subprocesses
 
     :param key_pem: (required) the RSA Key in PEM format
