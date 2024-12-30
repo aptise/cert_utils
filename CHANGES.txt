@@ -1,3 +1,8 @@
+0.3.0
+    * new_account_key supports LetsEncrypt updates to EC
+    * ALLOWED_CURVES_ECDSA is now a list of strings
+    * new_ec_key named argument is now curve(str)
+
 0.2.0
     * replaced pyopenssl with cryptography.
       pyopenssl was originally used because certbot required it and this package

@@ -1,4 +1,5 @@
 # stdlib
+from enum import Enum
 from typing import Dict
 from typing import List
 from typing import Optional
@@ -63,6 +64,12 @@ class _mixin_mapping(object):
         return cls._mapping_reverse[mapping_text]
 
 
+# see https://community.letsencrypt.org/t/issuing-for-common-rsa-key-sizes-only/133839
+# see https://letsencrypt.org/docs/integration-guide/
+ALLOWED_BITS_RSA = [2048, 3072, 4096]
+ALLOWED_CURVES_ECDSA = ["P-256", "P-384"]
+
+
 class KeyTechnology(_mixin_mapping):
     """
     What kind of Certificate/Key is this?
@@ -87,6 +94,12 @@ class KeyTechnology(_mixin_mapping):
     _DEFAULT_AcmeAccount_id: int
     _DEFAULT_GlobalKey_id: int
     _options_AcmeAccount_private_key_technology: List[str]
+
+
+class KeyTechnologyEnum(Enum):
+    # this is used for typing
+    RSA = KeyTechnology.RSA
+    EC = KeyTechnology.EC
 
 
 # Assign

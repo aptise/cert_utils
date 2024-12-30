@@ -14,6 +14,7 @@ vs
 X509v3 Authority Key Identifier:
     69:88:5B:6B:87:46:40:41:E1:B3:7B:84:7B:A0:AE:2C:DE:01:C8:D4
 """
+
 # stdlib
 from datetime import datetime
 from typing import Literal

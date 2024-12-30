@@ -12,6 +12,7 @@ import tempfile
 from typing import Any
 from typing import Dict
 from typing import List
+from typing import Literal
 from typing import Optional
 from typing import Tuple
 from typing import TYPE_CHECKING
@@ -46,8 +47,10 @@ from .errors import OpenSslError_InvalidCertificate
 from .errors import OpenSslError_InvalidCSR
 from .errors import OpenSslError_InvalidKey
 from .errors import OpenSslError_VersionTooLow
-from .errors import ToDo
+from .model import ALLOWED_BITS_RSA
+from .model import ALLOWED_CURVES_ECDSA
 from .model import KeyTechnology
+from .model import KeyTechnologyEnum
 from .utils import _cert_pubkey_technology__text
 from .utils import _csr_pubkey_technology__text
 from .utils import authority_key_identifier_from_text
@@ -171,14 +174,6 @@ def update_from_appsettings(appsettings: Dict[str, Any]) -> None:
     if _changed_openssl:
         check_openssl_version(replace=True)
 
-
-# ==============================================================================
-
-
-# see https://community.letsencrypt.org/t/issuing-for-common-rsa-key-sizes-only/133839
-# see https://letsencrypt.org/docs/integration-guide/
-ALLOWED_BITS_RSA = [2048, 3072, 4096]
-ALLOWED_BITS_ECDSA = [256, 384]
 
 # ==============================================================================
 
@@ -1546,7 +1541,11 @@ def parse_csr__key_technology(
         if not csr:
             csr = conditionals.cryptography.x509.load_pem_x509_csr(csr_pem.encode())
         assert csr is not None  # nest under `if TYPE_CHECKING` not needed
-        return _cryptography__public_key_technology(csr.public_key())
+        csr_pubkey = csr.public_key()
+        assert isinstance(
+            csr_pubkey, (conditionals.EllipticCurvePublicKey, conditionals.RSAPublicKey)
+        )
+        return _cryptography__public_key_technology(csr_pubkey)
     log.debug(".parse_csr__key_technology > openssl fallback")
     # `openssl req -in MYCERT -noout -text`
     if not csr_pem_filepath:
@@ -1930,61 +1929,74 @@ def parse_key(
 
 
 def new_account_key(
-    key_technology_id: int = KeyTechnology.RSA,
-    rsa_bits: int = 2048,
+    key_technology_id: Literal[
+        KeyTechnologyEnum.RSA, KeyTechnologyEnum.EC
+    ] = KeyTechnologyEnum.RSA,
+    rsa_bits: Optional[Literal[2048, 3072, 4096]] = 2048,
+    ec_curve: Optional[Literal["P-256", "P-384"]] = "P-256",
 ) -> str:
     """
     :param int key_technology_id: Key Technology type. Default: KeyTechnology.RSA
     :param int rsa_bits: number of bits. default 2048
+    :param istrnt ec_curve: default "P-256"
     :returns: AccountKey in PEM format
     :rtype: str
     """
-    if rsa_bits not in ALLOWED_BITS_RSA:
-        raise ValueError(
-            "LetsEncrypt only supports RSA keys with bits: %s" % ALLOWED_BITS_RSA
-        )
-    if key_technology_id != KeyTechnology.RSA:
-        raise ValueError("invalid `key_technology_id`")
-    return new_key_rsa(bits=rsa_bits)
-
-
-def new_private_key(
-    key_technology_id: int,
-    rsa_bits: Optional[int] = None,
-    ec_bits: Optional[int] = None,
-) -> str:
-    """
-    :param int key_technology_id: Key Technology type. Default: None
-    :param int rsa_bits: number of bits. default None
-    :param int ec_bits: number of bits. default None
-    :returns: PrivateKey in PEM format
-    :rtype: str
-    """
     if key_technology_id == KeyTechnology.RSA:
-        kwargs = {"bits": rsa_bits} if rsa_bits else {}
-        return new_key_rsa(**kwargs)
+        if rsa_bits not in ALLOWED_BITS_RSA:
+            raise ValueError(
+                "LetsEncrypt only supports RSA keys with bits: %s" % ALLOWED_BITS_RSA
+            )
+        return new_key_rsa(bits=rsa_bits)
     elif key_technology_id == KeyTechnology.EC:
-        kwargs = {"bits": ec_bits} if ec_bits else {}
-        return new_key_ec(**kwargs)
+        if ec_curve not in ALLOWED_CURVES_ECDSA:
+            raise ValueError(
+                "LetsEncrypt only supports EC with curves: %s" % ALLOWED_CURVES_ECDSA
+            )
+        return new_key_ec(curve=ec_curve)
     else:
         raise ValueError("invalid `key_technology_id`")
 
 
-def new_key_ec(bits: int = 384) -> str:
+def new_private_key(
+    key_technology_id: Literal[KeyTechnologyEnum.RSA, KeyTechnologyEnum.EC],
+    rsa_bits: Optional[Union[Literal[2048], Literal[3072], Literal[4096]]] = 2048,
+    ec_curve: Optional[Union[Literal["P-256"], Literal["P-384"]]] = "P-384",
+) -> str:
+    """
+    :param int key_technology_id: Key Technology type. Default: None
+    :param int rsa_bits: number of bits. default None
+    :param str ec_curve: ec curve. default P-256
+    :returns: PrivateKey in PEM format
+    :rtype: str
+    """
+    if key_technology_id == KeyTechnology.RSA:
+        kwargs_rsa = {"bits": rsa_bits} if rsa_bits else {}
+        return new_key_rsa(**kwargs_rsa)
+    elif key_technology_id == KeyTechnology.EC:
+        kwargs_ec = {"curve": ec_curve} if ec_curve else {}
+        return new_key_ec(**kwargs_ec)
+    else:
+        raise ValueError("invalid `key_technology_id`")
+
+
+def new_key_ec(
+    curve: Union[Literal["P-256"], Literal["P-384"]] = "P-256",
+) -> str:
     """
     This routine will use crypto/certbot if available.
     If not, openssl is used via subprocesses
 
-    :param int bits: number of bits. default 384
+    :param str curve: Which EC curve to use
     :returns: ECDSA Key in PEM format
     :rtype: str
     """
     log.info("new_key_ec >")
-    log.debug(".new_key_ec > bits = %s", bits)
-    if bits not in ALLOWED_BITS_ECDSA:
+    log.debug(".new_key_ec > curve = %s", curve)
+    if curve not in ALLOWED_CURVES_ECDSA:
         raise ValueError(
-            "LetsEncrypt only supports ECDSA keys with bits: %s; not %s"
-            % (ALLOWED_BITS_ECDSA, bits)
+            "LetsEncrypt only supports ECDSA keys with curves: %s; not %s"
+            % (ALLOWED_CURVES_ECDSA, curve)
         )
 
     if conditionals.cryptography:
@@ -1992,11 +2004,11 @@ def new_key_ec(bits: int = 384) -> str:
             assert conditionals.crypto_ec is not None
             assert conditionals.crypto_serialization is not None
         # see https://github.com/pyca/pyopenssl/issues/291
-        if 256 == bits:
+        if curve == "P-256":
             key = conditionals.crypto_ec.generate_private_key(
                 conditionals.crypto_ec.SECP256R1()
             )
-        elif 384 == bits:
+        elif curve == "P-384":
             key = conditionals.crypto_ec.generate_private_key(
                 conditionals.crypto_ec.SECP384R1()
             )
@@ -2012,18 +2024,20 @@ def new_key_ec(bits: int = 384) -> str:
 
     log.debug(".new_key_ec > openssl fallback")
     # openssl ecparam -list_curves
-    curve = None
-    if 256 == bits:
-        curve = "secp256k1"
-    elif 384 == bits:
-        curve = "secp384r1"
+    _openssl_curve: str
+    if curve == "P-256":
+        _openssl_curve = "secp256k1"
+    elif curve == "P-384":
+        _openssl_curve = "secp384r1"
+    else:
+        raise ValueError("invalid curve")
     # openssl ecparam -name prime256v1 -genkey -noout -out private-key.pem
     # -noout will suppress printing the EC Param (see https://security.stackexchange.com/questions/29778/why-does-openssl-writes-ec-parameters-when-generating-private-key)
     if openssl_version is None:
         check_openssl_version()
 
     with psutil.Popen(
-        [openssl_path, "ecparam", "-name", curve, "-genkey", "-noout"],
+        [openssl_path, "ecparam", "-name", _openssl_curve, "-genkey", "-noout"],
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
     ) as proc:
@@ -2044,7 +2058,9 @@ def new_key_ec(bits: int = 384) -> str:
     return key_pem_str
 
 
-def new_key_rsa(bits: int = 4096) -> str:
+def new_key_rsa(
+    bits: Union[Literal[2048], Literal[3072], Literal[4096]] = 4096,
+) -> str:
     """
     This routine will use crypto/certbot if available.
     If not, openssl is used via subprocesses

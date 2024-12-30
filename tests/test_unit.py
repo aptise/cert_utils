@@ -1351,20 +1351,20 @@ class UnitTest_CertUtils(unittest.TestCase, _Mixin_fallback_possible, _Mixin_fil
                         logged.output,
                     )
 
-    def test__private_key__new(self):
+    def test__new_account_key(self):
         """
         python -m unittest tests.test_unit.UnitTest_CertUtils.test__private_key__new
         """
         _combinations = (
-            (model.KeyTechnology.RSA, 2048, None),
-            (model.KeyTechnology.RSA, 3072, None),
-            (model.KeyTechnology.RSA, 4096, None),
-            (model.KeyTechnology.EC, None, 256),
-            (model.KeyTechnology.EC, None, 384),
+            (model.KeyTechnologyEnum.RSA, 2048, None),
+            (model.KeyTechnologyEnum.RSA, 3072, None),
+            (model.KeyTechnologyEnum.RSA, 4096, None),
+            (model.KeyTechnologyEnum.EC, None, "P-256"),
+            (model.KeyTechnologyEnum.EC, None, "P-384"),
         )
         for _combo in _combinations:
-            key_pem = cert_utils.new_private_key(
-                _combo[0], rsa_bits=_combo[1], ec_bits=_combo[2]
+            key_pem = cert_utils.new_account_key(
+                _combo[0], rsa_bits=_combo[1], ec_curve=_combo[2]
             )
             if _combo[0] == model.KeyTechnology.RSA:
                 # crypto: -----BEGIN PRIVATE KEY-----
@@ -1376,7 +1376,37 @@ class UnitTest_CertUtils(unittest.TestCase, _Mixin_fallback_possible, _Mixin_fil
                         "-----BEGIN PRIVATE KEY-----",
                     ),
                 )
-            elif _combo[0] == model.KeyTechnology.RSA:
+            elif _combo[0] == model.KeyTechnology.EC:
+                self.assertEqual(
+                    "-----BEGIN EC PRIVATE KEY-----", key_pem.split("\n")[0]
+                )
+
+    def test__private_key__new(self):
+        """
+        python -m unittest tests.test_unit.UnitTest_CertUtils.test__private_key__new
+        """
+        _combinations = (
+            (model.KeyTechnologyEnum.RSA, 2048, None),
+            (model.KeyTechnologyEnum.RSA, 3072, None),
+            (model.KeyTechnologyEnum.RSA, 4096, None),
+            (model.KeyTechnologyEnum.EC, None, "P-256"),
+            (model.KeyTechnologyEnum.EC, None, "P-384"),
+        )
+        for _combo in _combinations:
+            key_pem = cert_utils.new_private_key(
+                _combo[0], rsa_bits=_combo[1], ec_curve=_combo[2]
+            )
+            if _combo[0] == model.KeyTechnology.RSA:
+                # crypto: -----BEGIN PRIVATE KEY-----
+                # openssl fallback: -----BEGIN RSA PRIVATE KEY-----
+                self.assertIn(
+                    key_pem.split("\n")[0],
+                    (
+                        "-----BEGIN RSA PRIVATE KEY-----",
+                        "-----BEGIN PRIVATE KEY-----",
+                    ),
+                )
+            elif _combo[0] == model.KeyTechnology.EC:
                 self.assertEqual(
                     "-----BEGIN EC PRIVATE KEY-----", key_pem.split("\n")[0]
                 )
@@ -1401,16 +1431,16 @@ class UnitTest_CertUtils(unittest.TestCase, _Mixin_fallback_possible, _Mixin_fil
                 )
 
         # test valid bits
-        key_pem = cert_utils.new_key_ec(bits=256)
+        key_pem = cert_utils.new_key_ec(curve="P-256")
         self.assertIn("-----BEGIN EC PRIVATE KEY-----", key_pem)
-        key_pem = cert_utils.new_key_ec(bits=384)
+        key_pem = cert_utils.new_key_ec(curve="P-384")
         self.assertIn("-----BEGIN EC PRIVATE KEY-----", key_pem)
 
         # test invalid bits
         with self.assertRaises(ValueError) as cm:
-            key_pem = cert_utils.new_key_ec(bits=1)
+            key_pem = cert_utils.new_key_ec(curve="A")  # type: ignore[arg-type]
         self.assertIn(
-            "LetsEncrypt only supports ECDSA keys with bits:", cm.exception.args[0]
+            "LetsEncrypt only supports ECDSA keys with curves:", cm.exception.args[0]
         )
 
     def test_new_key_rsa(self):
@@ -1456,7 +1486,7 @@ class UnitTest_CertUtils(unittest.TestCase, _Mixin_fallback_possible, _Mixin_fil
 
         # test invalid bits
         with self.assertRaises(ValueError) as cm:
-            key_pem = cert_utils.new_key_rsa(bits=1)
+            key_pem = cert_utils.new_key_rsa(bits=1)  # type: ignore[arg-type]
         self.assertIn(
             "LetsEncrypt only supports RSA keys with bits:", cm.exception.args[0]
         )
