@@ -17,7 +17,6 @@ X509v3 Authority Key Identifier:
 
 # stdlib
 from datetime import datetime
-from typing import Literal
 from typing import Union
 
 # pypi
@@ -25,6 +24,7 @@ from cryptography import x509
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import ec
+from typing_extensions import Literal
 
 
 def generate_cert(

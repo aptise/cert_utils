@@ -12,7 +12,6 @@ import tempfile
 from typing import Any
 from typing import Dict
 from typing import List
-from typing import Literal
 from typing import Optional
 from typing import Tuple
 from typing import TYPE_CHECKING
@@ -21,6 +20,7 @@ from typing import Union
 # pypi
 from dateutil import parser as dateutil_parser
 import psutil
+from typing_extensions import Literal
 
 # localapp
 from . import conditionals
