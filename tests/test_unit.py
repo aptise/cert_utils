@@ -88,10 +88,25 @@ class UnitTest_CertUtils(unittest.TestCase, _Mixin_fallback_possible, _Mixin_fil
 
     _account_sets: Dict = {
         "001": {
+            "keytype": "RSA",
             "letsencrypt": True,
             "pem": True,
             "signature.input": "example.sample",
             "signature.output": "hN3bre1YpxSGbvKmx8zK9_o0yaxtDblDfS3Q3CsjAas9wUVIHk7NqxXH0HeEeZG_7T0AHH6HTfxMbucXK_dLog_g9AxQYFsRBc8587C8Z5rWF2YDCoo0W7JB7VOoLEHGfe7JRXeqgA9QSnci0wMFlKXC_6MbKxql8QtswOdvtFM85qcJsMCOSu2Xf6HLIAYFhdBJH-DvQGzE4ctOKAYCmDyXs42DBUU4CU0cNXj8TsN0cFRXvInvSqDsiPNSjyV32WC4clPHX69KEbs5Wr0WV2diHR-Q6w0QUljWZEDpcl8mb86LZwBqoUTHX2xstQI77sLcg7YhDfaIPrCjYJcNZw",
+        },
+        "002": {
+            "keytype": "RSA",
+            "letsencrypt": False,
+            "pem": True,
+            "signature.input": "example.sample",
+            "signature.output": "eEwkfxlNp9qvpX1Mm_erpBwCj9BjqWqZj1PX7Qucw1CkUqfNVJokgas0MpsmBASjN2yX93TnFtgOXG81_vaitAGifcZlPEbFstQ1LLyUtKC2arbNiVBkHAzseCsU5MnUC6WWFonsPUJ_Lr5xHYkfd2vGfOs8_e-CPAOVHmv7LJQjNGovV0MbInlCbHY9P3d9OHA-hN-tOABke5kyO1lSiX3fifAcRGnLlJqz5Dumb9K80_oySzEPio4Ad1ktufwJP9l-MA4FaUI7lOkNbTq_he1SuIG8Mjw9hfx9I4YoGk9eqPdcWwBZc5hwErqtqfPOCI8Qcu84ipFU-9Z9Q7waOIMtWl8Sj4pJfGGkiCITEcrWpupWdHlv33s2rwTWFo6ZXyYuMiTddcSJIPhFmAsD74MKxFUBgSViCHNjisjqyCSzA2geAcWsXOAwtokTp62wEv5tlW9ZhhifD-VqucipFwCTuTkaJLKonMPX0DNikRYYKgonKaf7h8-eMZxebI-z0RxO57e4vHpR__3-bXcXl_Pfvf_iYipuluwrt1MoDod4_ahLnvVNIBvnXdhvBhKHsxHPOOya399BHKSeCllsUyNlBHay2i4ibP8efWEhW1emz21nu4isLxvFqeFjJaqeuFZmlFskMjHUbkvDSOq1BTafk3yI3mTFRFqDL7GbxrA",
+        },
+        "003": {
+            "keytype": "EC",
+            "letsencrypt": False,
+            "pem": True,
+            "signature.input": "example.sample",
+            "signature.output": "MGUCMQCo82gcmd7B9SsMyW9VE7YRSpmw23s3_cGY5GNkHbtSsfEJ7LbnT715iDZNCG4sjOUCMAd4OqpbuAA2G5rkZRWvimGG-Ub9syYZ42dX1rV-r00I6BaL2AhZLPp9amZvFu32mg",
         },
     }
     _cert_sets: Dict = {
@@ -1330,15 +1345,22 @@ class UnitTest_CertUtils(unittest.TestCase, _Mixin_fallback_possible, _Mixin_fil
             key_pem_filepath = self._filepath_testfile(key_pem_filename)
             key_pem = self._filedata_testfile(key_pem_filepath)
 
+            keytype = self._account_sets[account_set]["keytype"]
             input = self._account_sets[account_set]["signature.input"]
-            expected = self._account_sets[account_set]["signature.output"]
+            expected = self._account_sets[account_set].get("signature.output")
 
             with self.assertLogs("cert_utils", level="DEBUG") as logged:
                 _signature = cert_utils.account_key__sign(
                     input, key_pem=key_pem, key_pem_filepath=key_pem_filepath
                 )
                 signature = cert_utils.jose_b64(_signature)
-                self.assertEqual(signature, expected)
+
+                if keytype == "RSA":
+                    self.assertEqual(signature, expected)
+                elif keytype == "EC":
+                    pass
+                else:
+                    raise ValueError("unknown keytype")
 
                 if self._fallback_global or self._fallback_cryptography:
                     self.assertIn(
@@ -1349,6 +1371,14 @@ class UnitTest_CertUtils(unittest.TestCase, _Mixin_fallback_possible, _Mixin_fil
                     self.assertNotIn(
                         "DEBUG:cert_utils:.account_key__sign > openssl fallback",
                         logged.output,
+                    )
+                    # ALL must verify
+                    # note we track the `_signature`
+                    verified = cert_utils.account_key__verify(
+                        _signature,
+                        input,
+                        key_pem=key_pem,
+                        key_pem_filepath=key_pem_filepath,
                     )
 
     def test__new_account_key(self):

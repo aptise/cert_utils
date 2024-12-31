@@ -953,7 +953,6 @@ def modulus_md5_key(
     """
     # ???: Should this raise an Exception instead of returning `None`?
     log.info("modulus_md5_key >")
-    # cryptography *should* be installed as a dependency of openssl, but who knows!
     if conditionals.cryptography:
         if TYPE_CHECKING:
             assert conditionals.crypto_rsa is not None
@@ -1016,7 +1015,6 @@ def modulus_md5_csr(
     # TODO: Support EC Key Modulus Variant - https://github.com/aptise/cert_utils/issues/15
     # ???: Should this raise an Exception instead of returning `None`?
     log.info("modulus_md5_csr >")
-    # cryptography *should* be installed as a dependency of openssl, but who knows!
     if conditionals.cryptography:
         csr = conditionals.cryptography.x509.load_pem_x509_csr(csr_pem.encode())
         _pubkey = csr.public_key()
@@ -1076,7 +1074,6 @@ def modulus_md5_cert(
         md5(openssl x509 -noout -modulus -in {FILEPATH})
     """
     log.info("modulus_md5_cert >")
-    # cryptography *should* be installed as a dependency of openssl, but who knows!
     if conditionals.cryptography:
         cert = conditionals.cryptography.x509.load_pem_x509_certificate(
             cert_pem.encode()
@@ -1221,7 +1218,6 @@ def parse_cert__spki_sha256(
         :function :_openssl_spki_hash_cert
     """
     log.info("parse_cert__spki_sha256 >")
-    # cryptography *should* be installed as a dependency of openssl, but who knows!
     if conditionals.cryptography:
         if not cryptography_cert:
             cryptography_cert = (
@@ -1336,7 +1332,6 @@ def parse_cert(
         "serial": None,
     }
 
-    # cryptography *should* be installed as a dependency of openssl, but who knows!
     if conditionals.cryptography:
         if TYPE_CHECKING:
             assert conditionals.crypto_hashes is not None
@@ -1582,7 +1577,6 @@ def parse_csr__spki_sha256(
         :_see:_openssl_spki_hash_csr
     """
     log.info("parse_csr__spki_sha256 >")
-    # cryptography *should* be installed as a dependency of openssl, but who knows!
     if conditionals.cryptography:
         if not csr:
             csr = conditionals.cryptography.x509.load_pem_x509_csr(csr_pem.encode())
@@ -1636,7 +1630,6 @@ def parse_csr(
         "subject": None,
     }
 
-    # cryptography *should* be installed as a dependency of openssl, but who knows!
     if conditionals.cryptography:
         csr = conditionals.cryptography.x509.load_pem_x509_csr(csr_pem.encode())
         # _subject = csr.subject.get_attributes_for_oid(cryptography.x509.oid.NameOID.COMMON_NAME)
@@ -1721,7 +1714,6 @@ def parse_key__spki_sha256(
         :_see:_openssl_spki_hash_pkey
     """
     log.info("parse_key__spki_sha256 >")
-    # cryptography *should* be installed as a dependency of openssl, but who knows!
     if conditionals.cryptography:
         if TYPE_CHECKING:
             assert conditionals.crypto_serialization is not None
@@ -1836,7 +1828,6 @@ def parse_key(
         "key_technology": None,
         "spki_sha256": None,
     }
-    # cryptography *should* be installed as a dependency of openssl, but who knows!
     if conditionals.cryptography:
         if TYPE_CHECKING:
             assert conditionals.crypto_ec is not None
@@ -2494,7 +2485,9 @@ def account_key__parse(
     acme-tiny is released under the MIT license and Copyright (c) 2015 Daniel Roesler
     """
     log.info("account_key__parse >")
-    _key_technology = parse_key__technology(key_pem=key_pem, key_pem_filepath=key_pem_filepath)
+    _key_technology = parse_key__technology(
+        key_pem=key_pem, key_pem_filepath=key_pem_filepath
+    )
     if _key_technology == "RSA":
         alg = "RS256"
     elif _key_technology == "EC":
@@ -2510,12 +2503,21 @@ def account_key__parse(
             _jwk = conditionals.josepy.JWKEC.load(key_pem.encode("utf8"))
             jwk = _jwk.public_key().fields_to_partial_json()
             jwk["kty"] = "EC"
+            """
+            jwk will be something like:
+            
+                {'crv': 'P-256',
+                 'x': '...',
+                 'y': '...'}
+            # is this needed?
             if jwk["crv"] == "P-256":
                 alg = "ES256"
             elif jwk["crv"] == "P-384":
                 alg = "ES384"
             else:
                 raise ValueError("unknown curve")
+            """
+
         thumbprint = jose_b64(_jwk.thumbprint())
         return jwk, thumbprint, alg
     log.debug(".account_key__parse > openssl fallback")
@@ -2616,10 +2618,11 @@ def account_key__sign(
     log.info("account_key__sign >")
     if not isinstance(data, bytes):
         data = data.encode()
-    # cryptography *should* be installed as a dependency of openssl, but who knows!
     if conditionals.cryptography:
         if TYPE_CHECKING:
+            assert conditionals.crypto_ec is not None
             assert conditionals.crypto_hashes is not None
+            assert conditionals.crypto_rsa is not None
             assert conditionals.crypto_serialization is not None
         log.debug(".account_key__sign > cryptography")
         pkey = conditionals.crypto_serialization.load_pem_private_key(
@@ -2628,11 +2631,20 @@ def account_key__sign(
         # possible loads are "Union[DSAPrivateKey, DSAPublicKey, RSAPrivateKey, RSAPublicKey]"
         # but only RSAPublicKey is used or will work
         # TODO: check to ensure key type is RSAPublicKey
-        signature = pkey.sign(  # type: ignore[union-attr, call-arg]
-            data,
-            conditionals.cryptography.hazmat.primitives.asymmetric.padding.PKCS1v15(),  # type: ignore[arg-type]
-            conditionals.crypto_hashes.SHA256(),
-        )
+
+        if isinstance(pkey, conditionals.crypto_ec.EllipticCurvePrivateKey):
+            signature = pkey.sign(  # type: ignore[union-attr, call-arg]
+                data,
+                conditionals.crypto_ec.ECDSA(conditionals.crypto_hashes.SHA256()),
+            )
+        elif isinstance(pkey, conditionals.crypto_rsa.RSAPrivateKey):
+            signature = pkey.sign(  # type: ignore[union-attr, call-arg]
+                data,
+                conditionals.cryptography.hazmat.primitives.asymmetric.padding.PKCS1v15(),  # type: ignore[arg-type]
+                conditionals.crypto_hashes.SHA256(),
+            )
+        else:
+            raise ValueError("unsupported private key type")
         return signature
     log.debug(".account_key__sign > openssl fallback")
     if openssl_version is None:
@@ -2656,6 +2668,57 @@ def account_key__sign(
     finally:
         if _tmpfile:
             _tmpfile.close()
+
+
+def account_key__verify(
+    signature,
+    data,
+    key_pem: str,
+    key_pem_filepath: Optional[str] = None,
+) -> bytes:
+    """
+    This routine will use cryptography if available.
+    If not, openssl is used via subprocesses
+
+    :param key_pem: (required) the RSA Key in PEM format
+    :param key_pem_filepath: Optional filepath to a PEM encoded RSA account key file.
+                             Only used for commandline OpenSSL fallback operations.
+    :returns: result
+    :rtype: bool
+    """
+    log.info("account_key__verify >")
+    if not isinstance(signature, bytes):
+        signature = signature.encode()
+    if not isinstance(data, bytes):
+        data = data.encode()
+    if conditionals.cryptography:
+        if TYPE_CHECKING:
+            assert conditionals.crypto_ec is not None
+            assert conditionals.crypto_hashes is not None
+            assert conditionals.crypto_rsa is not None
+            assert conditionals.crypto_serialization is not None
+        log.debug(".account_key__verify > cryptography")
+        pkey = conditionals.crypto_serialization.load_pem_private_key(
+            key_pem.encode(), None
+        )
+        if isinstance(pkey, conditionals.crypto_ec.EllipticCurvePrivateKey):
+            result = pkey.public_key().verify(
+                signature,
+                data,
+                conditionals.crypto_ec.ECDSA(conditionals.crypto_hashes.SHA256()),
+            )
+        elif isinstance(pkey, conditionals.crypto_rsa.RSAPrivateKey):
+            result = pkey.public_key().verify(
+                signature,
+                data,
+                conditionals.cryptography.hazmat.primitives.asymmetric.padding.PKCS1v15(),  # type: ignore[arg-type]
+                conditionals.crypto_hashes.SHA256(),
+            )
+        else:
+            raise ValueError("unsupported private key type")
+        return result
+    log.debug(".account_key__verify > openssl fallback")
+    raise ValueError("not supported yet")
 
 
 def ari__encode_serial_no(serial_no: int) -> str:
