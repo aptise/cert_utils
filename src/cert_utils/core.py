@@ -2604,6 +2604,7 @@ def account_key__sign(
     data,
     key_pem: str,
     key_pem_filepath: Optional[str] = None,
+    standardize_signature: Optional[bool] = True,
 ) -> bytes:
     """
     This routine will use cryptography if available.
@@ -2612,18 +2613,20 @@ def account_key__sign(
     :param key_pem: (required) the RSA Key in PEM format
     :param key_pem_filepath: Optional filepath to a PEM encoded RSA account key file.
                              Only used for commandline OpenSSL fallback operations.
+    :standardize_signature: Bool. Default `True`.  Will reformat signatures if needed
     :returns: signature
     :rtype: bytes
     """
     log.info("account_key__sign >")
     if not isinstance(data, bytes):
         data = data.encode()
-    if conditionals.cryptography:
+    if conditionals.cryptography and conditionals.josepy:
         if TYPE_CHECKING:
             assert conditionals.crypto_ec is not None
             assert conditionals.crypto_hashes is not None
             assert conditionals.crypto_rsa is not None
             assert conditionals.crypto_serialization is not None
+            assert conditionals.crypto_utils is not None
         log.debug(".account_key__sign > cryptography")
         pkey = conditionals.crypto_serialization.load_pem_private_key(
             key_pem.encode(), None
@@ -2637,6 +2640,15 @@ def account_key__sign(
                 data,
                 conditionals.crypto_ec.ECDSA(conditionals.crypto_hashes.SHA256()),
             )
+            if standardize_signature:
+                # https://community.letsencrypt.org/t/debugging-pebble-ec-account-keys/231109/3
+                dr, ds = conditionals.crypto_utils.decode_dss_signature(signature)
+                length = conditionals.josepy.jwk.JWKEC.expected_length_for_curve(
+                    pkey.curve
+                )
+                signature = dr.to_bytes(length=length, byteorder="big") + ds.to_bytes(
+                    length=length, byteorder="big"
+                )
         elif isinstance(pkey, conditionals.crypto_rsa.RSAPrivateKey):
             signature = pkey.sign(  # type: ignore[union-attr, call-arg]
                 data,
@@ -2675,6 +2687,7 @@ def account_key__verify(
     data,
     key_pem: str,
     key_pem_filepath: Optional[str] = None,
+    standardize_signature: Optional[bool] = True,
 ) -> bytes:
     """
     This routine will use cryptography if available.
@@ -2683,6 +2696,7 @@ def account_key__verify(
     :param key_pem: (required) the RSA Key in PEM format
     :param key_pem_filepath: Optional filepath to a PEM encoded RSA account key file.
                              Only used for commandline OpenSSL fallback operations.
+    :param standardize_signature: bool. Default `True`. Was the signature standardized?
     :returns: result
     :rtype: bool
     """
@@ -2691,17 +2705,32 @@ def account_key__verify(
         signature = signature.encode()
     if not isinstance(data, bytes):
         data = data.encode()
-    if conditionals.cryptography:
+    if conditionals.cryptography and conditionals.josepy:
         if TYPE_CHECKING:
             assert conditionals.crypto_ec is not None
             assert conditionals.crypto_hashes is not None
             assert conditionals.crypto_rsa is not None
             assert conditionals.crypto_serialization is not None
+            assert conditionals.crypto_utils is not None
         log.debug(".account_key__verify > cryptography")
         pkey = conditionals.crypto_serialization.load_pem_private_key(
             key_pem.encode(), None
         )
         if isinstance(pkey, conditionals.crypto_ec.EllipticCurvePrivateKey):
+            if standardize_signature:
+                # https://community.letsencrypt.org/t/debugging-pebble-ec-account-keys/231109/3
+                # https://github.com/certbot/josepy/blob/2731969a8460a3ae0dcbcdc65be772385eb4a89e/src/josepy/jwa.py#L168
+                rlen = conditionals.josepy.jwk.JWKEC.expected_length_for_curve(
+                    pkey.curve
+                )
+                if len(signature) != 2 * rlen:
+                    # Format error - rfc7518 - 3.4 | MUST NOT be shortened to omit any leading zero octets
+                    raise ValueError("invalid signature")
+                asn1sig = conditionals.crypto_utils.encode_dss_signature(
+                    int.from_bytes(signature[0:rlen], byteorder="big"),
+                    int.from_bytes(signature[rlen:], byteorder="big"),
+                )
+                signature = asn1sig
             result = pkey.public_key().verify(
                 signature,
                 data,

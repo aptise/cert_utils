@@ -3,6 +3,9 @@
     * ALLOWED_CURVES_ECDSA is now a list of strings
     * new_ec_key named argument is now curve(str)
     * functions now require KeyTechnologyEnum, not KeyTechnology for key_technology_id
+    * added account_key__verify
+    * extended account_key__sign to accept `standardize_signature`; default True
+      for converting the EC signature to the encoding ACME requires
 
 0.2.0
     * replaced pyopenssl with cryptography.

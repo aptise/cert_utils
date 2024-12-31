@@ -1374,6 +1374,7 @@ class UnitTest_CertUtils(unittest.TestCase, _Mixin_fallback_possible, _Mixin_fil
                     )
                     # ALL must verify
                     # note we track the `_signature`
+                    # We can't do this on openssl only yet, if ever
                     verified = cert_utils.account_key__verify(
                         _signature,
                         input,
