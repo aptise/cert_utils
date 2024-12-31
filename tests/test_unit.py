@@ -1362,7 +1362,7 @@ class UnitTest_CertUtils(unittest.TestCase, _Mixin_fallback_possible, _Mixin_fil
                 else:
                     raise ValueError("unknown keytype")
 
-                if self._fallback_global or self._fallback_cryptography:
+                if self._fallback_global or self._fallback_cryptography or self._fallback_josepy:
                     self.assertIn(
                         "DEBUG:cert_utils:.account_key__sign > openssl fallback",
                         logged.output,
