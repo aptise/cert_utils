@@ -78,28 +78,32 @@ if TYPE_CHECKING:
     from cryptography.hazmat.primitives.asymmetric.rsa import RSAPrivateKey
     from cryptography.hazmat.primitives.asymmetric.rsa import RSAPublicKey
     from cryptography.hazmat.primitives.asymmetric.ec import EllipticCurvePublicKey
+    from cryptography.hazmat.primitives.asymmetric.ec import EllipticCurvePrivateKey
     from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
     from cryptography.hazmat.primitives.asymmetric.ed448 import Ed448PublicKey
     from cryptography.hazmat.primitives.asymmetric.x25519 import X25519PublicKey
     from cryptography.hazmat.primitives.asymmetric.x448 import X448PublicKey
 
     _TYPES_CRYPTOGRAPHY_KEYS = Union[
-        DSAPrivateKey, DSAPublicKey, RSAPrivateKey, RSAPublicKey
+        EllipticCurvePrivateKey,
+        EllipticCurvePublicKey,
+        RSAPrivateKey,
+        RSAPublicKey,
     ]
     _TYPES_CRYPTOGRAPHY_PRIVATEKEY = Union[
-        DSAPrivateKey,
+        EllipticCurvePrivateKey,
         RSAPrivateKey,
     ]
     _TYPES_CRYPTOGRAPHY_PUBLICKEY = Union[
-        DSAPublicKey,
+        EllipticCurvePublicKey,
         RSAPublicKey,
     ]
     _TYPES_CRYPTOGRAPHY_PUBLICKEY_EXTENDED = Union[
         DSAPublicKey,
-        RSAPublicKey,
         EllipticCurvePublicKey,
         Ed25519PublicKey,
         Ed448PublicKey,
+        RSAPublicKey,
         X25519PublicKey,
         X448PublicKey,
     ]
@@ -2580,17 +2584,31 @@ def account_key__parse(
                 data_bytes, err = proc.communicate()
                 data_str = data_bytes.decode("utf8")
                 assert data_str
-            pub_pattern = r"pub:[\s]+?00:([a-f0-9\:\s]+?)\nASN1 OID:[\s]+([\w\-]+)\nNIST CURVE:[\s]+([\w\-]+)\n"
+            pub_pattern = r"pub:[\s]+?([a-f0-9\:\s]+?)\nASN1 OID:[\s]+([\w\-]+)\nNIST CURVE:[\s]+([\w\-]+)\n"
             _matched = re.search(pub_pattern, data_str, re.MULTILINE | re.DOTALL)
             assert _matched
             pub_hex, ans1, nist = _matched.groups()
+            pub_hex = "".join([i.strip() for i in pub_hex.split("\n")])
             if nist == "P-256":
                 alg = "EC256"
             elif nist == "P-384":
                 alg = "EC384"
             else:
                 raise ValueError("unknown curve")
-            raise ValueError("TODO")
+
+            _pub_hex = pub_hex.replace(":", "")
+            # this is a compressed key and we should never see it in this context
+            assert len(_pub_hex) > 66
+            # Uncompressed key
+            x = int(_pub_hex[:64], 16)
+            y = int(_pub_hex[64:], 16)
+            jwk = {
+                "kty": "EC",
+                "crv": nist,
+                "x": x,
+                "y": y,
+            }
+            _accountkey_json = json.dumps(jwk, sort_keys=True, separators=(",", ":"))
         else:
             raise ValueError("invalid key_technology")
         thumbprint = jose_b64(hashlib.sha256(_accountkey_json.encode("utf8")).digest())
