@@ -2016,7 +2016,7 @@ def new_key_ec(
     # openssl ecparam -list_curves
     _openssl_curve: str
     if curve == "P-256":
-        _openssl_curve = "secp256k1"
+        _openssl_curve = "secp256r1"
     elif curve == "P-384":
         _openssl_curve = "secp384r1"
     else:
@@ -2591,7 +2591,7 @@ def account_key__parse(
             pub_hex, ans1, nist = _matched.groups()
             pub_hex = "".join([i.strip() for i in pub_hex.split("\n")])
             if nist is None:
-                if ans1.lower() == "secp256k1":
+                if ans1.lower() == "secp256r1":
                     nist = "P-256"
                 elif ans1.lower() == "secp384r1":
                     nist = "P-384"

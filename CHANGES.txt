@@ -6,6 +6,7 @@
     * added account_key__verify
     * extended account_key__sign to accept `standardize_signature`; default True
       for converting the EC signature to the encoding ACME requires
+    * corrected use of `secp256k1` to `secp256r1`
 
 0.2.0
     * replaced pyopenssl with cryptography.
