@@ -680,10 +680,10 @@ def validate_key(
                 key_pem.encode(), None
             )
             if isinstance(key, conditionals.crypto_rsa.RSAPrivateKey):
-                return ("RSA", (key.key_size,))
+                return ("RSA", (key.key_size,),)
             elif isinstance(key, conditionals.crypto_ec.EllipticCurvePrivateKey):
                 curve_name = curve_to_nist(key.curve.name)
-                return ("EC", (curve_name,))
+                return ("EC", (curve_name,),)
             return None
         except Exception as exc:
             raise OpenSslError_InvalidKey(exc)
