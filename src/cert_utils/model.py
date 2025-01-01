@@ -13,12 +13,6 @@ from . import core
 # ==============================================================================
 
 
-class NewKeyArgs(TypedDict, total=False):
-    key_technology_id: Literal[KeyTechnologyEnum.RSA, KeyTechnologyEnum.EC]
-    rsa_bits: Optional[Literal[2048, 3072, 4096]]
-    ec_curve: Optional[Literal["P-256", "P-384"]]
-
-
 class AccountKeyData(object):
     """
     An object encapsulating Account Key data
@@ -106,8 +100,8 @@ class KeyTechnology(_mixin_mapping):
     }
 
     @classmethod
-    def to_new_args(cls, id_) -> NewKeyArgs:
-        kwargs: NewKeyArgs = {}
+    def to_new_args(cls, id_) -> "NewKeyArgs":
+        kwargs: "NewKeyArgs" = {}
         if id_ in (cls.RSA, cls.RSA_2048, cls.RSA_3072, cls.RSA_4096):
             kwargs["key_technology_id"] = KeyTechnologyEnum.RSA
             if id_ == cls.RSA_2048:
@@ -137,3 +131,9 @@ class KeyTechnologyEnum(Enum):
     RSA_4096 = KeyTechnology.RSA_4096
     EC_P256 = KeyTechnology.EC_P256
     EC_P384 = KeyTechnology.EC_P384
+
+
+class NewKeyArgs(TypedDict, total=False):
+    key_technology_id: Literal[KeyTechnologyEnum.RSA, KeyTechnologyEnum.EC]
+    rsa_bits: Optional[Literal[2048, 3072, 4096]]
+    ec_curve: Optional[Literal["P-256", "P-384"]]
