@@ -112,14 +112,14 @@ CSR_SETS = {
 KEY_SETS: Dict = {
     "key_technology-rsa/acme_account_1.key": {
         "key_technology": "RSA",
-        "key_technology_data": ("RSA", (4096)),
+        "key_technology_data": ("RSA", (4096,)),
         "modulus_md5": "ceec56ad4caba2cd70ee90c7d80fbb74",
         "spki_sha256": "E70DCB45009DF3F79FC708B46888609E34A3D8D19AEAFA566389718A29140782",
         "spki_sha256.b64": "5w3LRQCd8/efxwi0aIhgnjSj2NGa6vpWY4lxiikUB4I=",
     },
     "key_technology-ec/ec384-1-key.pem": {
         "key_technology": "EC",
-        "key_technology_data": ("EC", ("P-384")),
+        "key_technology_data": ("EC", ("P-384",)),
         "modulus_md5": None,
         "spki_sha256": "E739FB0081868C97B8AC0D3773680974E9FCECBFA1FC8B80AFDDBE42F30D1D9D",
         "spki_sha256.b64": "5zn7AIGGjJe4rA03c2gJdOn87L+h/IuAr92+QvMNHZ0=",
