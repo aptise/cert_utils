@@ -12,7 +12,6 @@ import tempfile
 from typing import Any
 from typing import Dict
 from typing import List
-from typing import Literal
 from typing import Optional
 from typing import Tuple
 from typing import TYPE_CHECKING
@@ -637,7 +636,7 @@ def parse_csr_domains(
 def validate_key(
     key_pem: str,
     key_pem_filepath: Optional[str] = None,
-) -> Optional[Tuple[str, Tuple]]:
+) -> Optional[Tuple[str, Tuple[Union[str, int]]]]:
     """
     raises an Exception if invalid
     returns the key_technology if valid
@@ -682,10 +681,10 @@ def validate_key(
                 key_pem.encode(), None
             )
             if isinstance(key, conditionals.crypto_rsa.RSAPrivateKey):
-                return ("RSA", (key.key_size))
+                return ("RSA", (key.key_size,))
             elif isinstance(key, conditionals.crypto_ec.EllipticCurvePrivateKey):
                 curve_name = curve_to_nist(key.curve.name)
-                return ("EC", (curve_name))
+                return ("EC", (curve_name,))
             return None
         except Exception as exc:
             raise OpenSslError_InvalidKey(exc)
@@ -1573,13 +1572,16 @@ def parse_csr__key_technology(
     """
     log.info("parse_csr__key_technology >")
     if conditionals.cryptography:
+        if TYPE_CHECKING:
+            assert conditionals.EllipticCurvePublicKey is not None
+            assert conditionals.RSAPublicKey is not None
         if not csr:
             csr = conditionals.cryptography.x509.load_pem_x509_csr(csr_pem.encode())
         assert csr is not None  # nest under `if TYPE_CHECKING` not needed
         csr_pubkey = csr.public_key()
         assert isinstance(
-            csr_pubkey, (conditionals.EllipticCurvePublicKey, conditionals.RSAPublicKey)
-        )
+            csr_pubkey, conditionals.EllipticCurvePublicKey
+        ) or isinstance(csr_pubkey, conditionals.RSAPublicKey)
         return _cryptography__public_key_technology(csr_pubkey)
     log.debug(".parse_csr__key_technology > openssl fallback")
     # `openssl req -in MYCERT -noout -text`
@@ -1866,7 +1868,7 @@ def parse_key(
     :rtype: dict
     """
     log.info("parse_key >")
-    rval: Dict[str, Union[None, str]] = {
+    rval: Dict[str, Union[None, str, Tuple]] = {
         "check": None,
         "text": None,
         "modulus_md5": None,
