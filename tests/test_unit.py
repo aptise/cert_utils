@@ -447,11 +447,11 @@ class UnitTest_CertUtils(unittest.TestCase, _Mixin_fallback_possible, _Mixin_fil
             key_pem_filepath = self._filepath_testfile(key_filename)
             key_pem = self._filedata_testfile(key_filename)
             with self.assertLogs("cert_utils", level="DEBUG") as logged:
-                key_technology = cert_utils.validate_key(
+                key_technology_data = cert_utils.validate_key(
                     key_pem=key_pem, key_pem_filepath=key_pem_filepath
                 )
                 self.assertEqual(
-                    key_technology, KEY_SETS[key_filename]["key_technology"]
+                    key_technology_data, KEY_SETS[key_filename]["key_technology_data"]
                 )
                 if self._fallback_global or self._fallback_cryptography:
                     self.assertIn(
@@ -1362,7 +1362,11 @@ class UnitTest_CertUtils(unittest.TestCase, _Mixin_fallback_possible, _Mixin_fil
                 else:
                     raise ValueError("unknown keytype")
 
-                if self._fallback_global or self._fallback_cryptography or self._fallback_josepy:
+                if (
+                    self._fallback_global
+                    or self._fallback_cryptography
+                    or self._fallback_josepy
+                ):
                     self.assertIn(
                         "DEBUG:cert_utils:.account_key__sign > openssl fallback",
                         logged.output,

@@ -129,6 +129,14 @@ def convert_binary_to_hex(input: bytes) -> str:
     return _as_hex_str
 
 
+def curve_to_nist(curve_name: str) -> str:
+    if curve_name == "secp256r1":
+        return "P-256"
+    elif curve_name == "secp384r1":
+        return "P-384"
+    raise ValueError("Unknown curve: %s" % curve_name)
+
+
 def domains_from_list(domain_names: Iterable[str]) -> List[str]:
     """
     Turns a list of strings into a standardized list of domain names.

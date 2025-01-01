@@ -12,6 +12,7 @@ import tempfile
 from typing import Any
 from typing import Dict
 from typing import List
+from typing import Literal
 from typing import Optional
 from typing import Tuple
 from typing import TYPE_CHECKING
@@ -56,6 +57,7 @@ from .utils import _csr_pubkey_technology__text
 from .utils import authority_key_identifier_from_text
 from .utils import cleanup_pem_text
 from .utils import convert_binary_to_hex
+from .utils import curve_to_nist
 from .utils import issuer_uri_from_text
 from .utils import jose_b64
 from .utils import new_pem_tempfile
@@ -366,7 +368,8 @@ def make_csr(
             )
 
         csr = builder.sign(private_key, conditionals.crypto_hashes.SHA256())
-        return csr.public_bytes(conditionals.crypto_serialization.Encoding.PEM)
+        pem_bytes = csr.public_bytes(conditionals.crypto_serialization.Encoding.PEM)
+        return pem_bytes.decode()
 
     log.debug(".make_csr > openssl fallback")
     if key_pem_filepath is None:
@@ -634,7 +637,7 @@ def parse_csr_domains(
 def validate_key(
     key_pem: str,
     key_pem_filepath: Optional[str] = None,
-) -> Optional[str]:
+) -> Optional[Tuple[str, Tuple]]:
     """
     raises an Exception if invalid
     returns the key_technology if valid
@@ -649,7 +652,12 @@ def validate_key(
     :param key_pem_filepath: Optional filepath to the PEM encoded PrivateKey.
                              Only used for commandline OpenSSL fallback operations.
     :type key_pem_filepath: str
-    :returns: If the key is valid, it will return the Key's technology (EC, RSA).
+    :returns: If the key is valid, it will return a Tuple wherein
+        - The first element is the Key's technology (EC, RSA)
+        - The second element is a Tuple with the key's type.
+            (RSA, (bits, ))
+            (EC, (curve_name, ))
+
       If the key is not valid, an exception will be raised.
     :rtype: str
 
@@ -657,6 +665,10 @@ def validate_key(
 
         openssl EC -in {FILEPATH}
         openssl RSA -in {FILEPATH}
+
+    CHANGED
+        prior to v1.0.0, this only returned the key's technology (EC, RSA)
+
     """
     log.info("validate_key >")
     if conditionals.cryptography:
@@ -670,9 +682,10 @@ def validate_key(
                 key_pem.encode(), None
             )
             if isinstance(key, conditionals.crypto_rsa.RSAPrivateKey):
-                return "RSA"
+                return ("RSA", (key.key_size))
             elif isinstance(key, conditionals.crypto_ec.EllipticCurvePrivateKey):
-                return "EC"
+                curve_name = curve_to_nist(key.curve.name)
+                return ("EC", (curve_name))
             return None
         except Exception as exc:
             raise OpenSslError_InvalidKey(exc)
@@ -683,12 +696,12 @@ def validate_key(
     if openssl_version is None:
         check_openssl_version()
 
-    def _check_fallback(_technology: str):
+    def _check_fallback(_technology: Literal["rsa", "ec"]):
         log.debug(".validate_key > openssl fallback: _check_fallback[%s]", _technology)
         # openssl rsa -in {KEY} -check
         try:
             with psutil.Popen(
-                [openssl_path, _technology, "-in", key_pem_filepath],
+                [openssl_path, _technology, "-in", key_pem_filepath, "-noout", "-text"],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
             ) as proc:
@@ -696,14 +709,42 @@ def validate_key(
                 if not data_bytes:
                     raise OpenSslError_InvalidKey(err)
                 data_str = data_bytes.decode("utf8")
-                return data_str
+
+                if _technology == "rsa":
+                    _rsa_pattern = r"Private-Key:\s+\((\d+) bit, 2 primes\)\s"
+                    _matched = re.search(
+                        _rsa_pattern, data_str, re.MULTILINE | re.DOTALL
+                    )
+                    if _matched:
+                        _bits = int(_matched.groups()[0])
+                        return _bits
+                    raise OpenSslError_InvalidKey("trouble parsing")
+                elif _technology == "ec":
+                    _ec_pattern_a = r"ANS1 OID:\s+([\w]+)\s"
+                    _matched = re.search(
+                        _ec_pattern_a, data_str, re.MULTILINE | re.DOTALL
+                    )
+                    if _matched:
+                        _curve = _matched.groups()[0]
+                        return _curve
+                    _ec_pattern_b = r"NIST CURVE:\s+(P\-[\d]+)\s"
+                    _matched = re.search(
+                        _ec_pattern_b, data_str, re.MULTILINE | re.DOTALL
+                    )
+                    if _matched:
+                        _curve = _matched.groups()[0]
+                        return _curve
+                    raise OpenSslError_InvalidKey("trouble parsing")
+
         except OpenSslError_InvalidKey as exc:  # noqa: F841
             return None
 
-    if _check_fallback("rsa"):
-        return "RSA"
-    elif _check_fallback("ec"):
-        return "EC"
+    _rsa_bits = _check_fallback("rsa")
+    if _rsa_bits:
+        return ("RSA", (_rsa_bits))
+    _ec_curve = _check_fallback("ec")
+    if _ec_curve:
+        return ("EC", (_ec_curve))
 
     raise OpenSslError_InvalidKey()
 

@@ -75,25 +75,26 @@ class KeyTechnology(_mixin_mapping):
     What kind of Certificate/Key is this?
     """
 
+    # General Types
     RSA = 1
-    EC = 2  # ECDSA
-    # DSA = 3
+    EC = 2
+
+    # Specifics
+    RSA_2048 = 11
+    RSA_3072 = 12
+    RSA_4096 = 13
+    EC_P256 = 24
+    EC_P384 = 25
 
     _mapping = {
         1: "RSA",
         2: "EC",
-        # 3: "DSA",
+        11: "RSA_2048",
+        12: "RSA_3072",
+        13: "RSA_4096",
+        24: "EC_P256",
+        25: "EC_P384",
     }
-
-    _options_AcmeAccount_private_key_technology_id = (
-        1,
-        2,
-    )
-    _DEFAULT_AcmeAccount: str = "RSA"
-    _DEFAULT_GlobalKey: str = "RSA"
-    _DEFAULT_AcmeAccount_id: int
-    _DEFAULT_GlobalKey_id: int
-    _options_AcmeAccount_private_key_technology: List[str]
 
 
 class KeyTechnologyEnum(Enum):
@@ -101,16 +102,8 @@ class KeyTechnologyEnum(Enum):
     RSA = KeyTechnology.RSA
     EC = KeyTechnology.EC
 
-
-# Assign
-
-KeyTechnology._options_AcmeAccount_private_key_technology = [
-    KeyTechnology._mapping[_id]
-    for _id in KeyTechnology._options_AcmeAccount_private_key_technology_id
-]
-KeyTechnology._DEFAULT_AcmeAccount_id = KeyTechnology.from_string(
-    KeyTechnology._DEFAULT_AcmeAccount
-)
-KeyTechnology._DEFAULT_GlobalKey_id = KeyTechnology.from_string(
-    KeyTechnology._DEFAULT_GlobalKey
-)
+    RSA_2048 = KeyTechnology.RSA_2048
+    RSA_3072 = KeyTechnology.RSA_3072
+    RSA_4096 = KeyTechnology.RSA_4096
+    EC_P256 = KeyTechnology.EC_P256
+    EC_P384 = KeyTechnology.EC_P384
