@@ -74,7 +74,6 @@ if TYPE_CHECKING:
     from cryptography.x509 import Certificate
     from cryptography.x509 import CertificateSigningRequest
     from cryptography.hazmat.primitives.hashes import HashAlgorithm
-    from cryptography.hazmat.primitives.asymmetric.dsa import DSAPrivateKey
     from cryptography.hazmat.primitives.asymmetric.dsa import DSAPublicKey
     from cryptography.hazmat.primitives.asymmetric.rsa import RSAPrivateKey
     from cryptography.hazmat.primitives.asymmetric.rsa import RSAPublicKey
@@ -2552,7 +2551,6 @@ def account_key__parse(
             jwk["kty"] = "EC"
             """
             jwk will be something like:
-            
                 {'crv': 'P-256',
                  'x': '...',
                  'y': '...'}

@@ -1,13 +1,22 @@
 # stdlib
 from enum import Enum
 from typing import Dict
-from typing import List
 from typing import Optional
+
+# pypi
+from typing_extensions import Literal
+from typing_extensions import TypedDict
 
 # locals
 from . import core
 
 # ==============================================================================
+
+
+class NewKeyArgs(TypedDict, total=False):
+    key_technology_id: Literal[KeyTechnologyEnum.RSA, KeyTechnologyEnum.EC]
+    rsa_bits: Optional[Literal[2048, 3072, 4096]]
+    ec_curve: Optional[Literal["P-256", "P-384"]]
 
 
 class AccountKeyData(object):
@@ -95,6 +104,27 @@ class KeyTechnology(_mixin_mapping):
         24: "EC_P256",
         25: "EC_P384",
     }
+
+    @classmethod
+    def to_new_args(cls, id_) -> NewKeyArgs:
+        kwargs: NewKeyArgs = {}
+        if id_ in (cls.RSA, cls.RSA_2048, cls.RSA_3072, cls.RSA_4096):
+            kwargs["key_technology_id"] = KeyTechnologyEnum.RSA
+            if id_ == cls.RSA_2048:
+                kwargs["rsa_bits"] = 2048
+            elif id_ == cls.RSA_3072:
+                kwargs["rsa_bits"] = 3072
+            elif id_ == cls.RSA_4096:
+                kwargs["rsa_bits"] = 4096
+        elif id_ in (cls.EC, cls.EC_P256, cls.EC_P384):
+            kwargs["key_technology_id"] = KeyTechnologyEnum.EC
+            if id_ == cls.EC_P256:
+                kwargs["ec_curve"] = "P-256"
+            elif id_ == cls.EC_P384:
+                kwargs["ec_curve"] = "P-384"
+        else:
+            raise ValueError("unknown id: %s" % id_)
+        return kwargs
 
 
 class KeyTechnologyEnum(Enum):
