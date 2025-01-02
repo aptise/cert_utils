@@ -64,6 +64,7 @@ from .utils import RE_openssl_x509_subject
 from .utils import san_domains_from_text
 from .utils import serial_from_text
 from .utils import split_pem_chain
+from .utils import TECHNOLOGY_RETURN_VALUES
 
 # from .utils import new_der_tempfile
 
@@ -635,7 +636,7 @@ def parse_csr_domains(
 def validate_key(
     key_pem: str,
     key_pem_filepath: Optional[str] = None,
-) -> Optional[Tuple[str, Tuple[Union[str, int]]]]:
+) -> Optional[TECHNOLOGY_RETURN_VALUES]:
     """
     raises an Exception if invalid
     returns the key_technology if valid
@@ -1062,10 +1063,12 @@ def modulus_md5_csr(
         csr = conditionals.cryptography.x509.load_pem_x509_csr(csr_pem.encode())
         _pubkey = csr.public_key()
         _keytype = _cryptography__public_key_technology(_pubkey)
-        if _keytype == "RSA":
+        assert _keytype
+        _keytype_basic = _keytype[0]
+        if _keytype_basic == "RSA":
             modn = _pubkey.public_numbers().n  # type: ignore[union-attr]
             data_str = "{:X}".format(modn)
-        elif _keytype == "EC":
+        elif _keytype_basic == "EC":
             return None
         else:
             return None
@@ -1122,7 +1125,10 @@ def modulus_md5_cert(
             cert_pem.encode()
         )
         _pubkey = cert.public_key()
-        if _cryptography__public_key_technology(_pubkey) == "RSA":
+        _keytype = _cryptography__public_key_technology(_pubkey)
+        assert _keytype
+        _keytype_basic = _keytype[0]
+        if _keytype_basic == "RSA":
             modn = _pubkey.public_numbers().n  # type: ignore[union-attr]
             data_str = "{:X}".format(modn)
         else:
@@ -1242,7 +1248,7 @@ def parse_cert__spki_sha256(
     cert_pem: str,
     cert_pem_filepath: Optional[str] = None,
     cryptography_cert: Optional["Certificate"] = None,
-    key_technology: Optional[str] = None,
+    key_technology_basic: Optional[str] = None,
     as_b64: Optional[bool] = None,
 ) -> str:
     """
@@ -1251,7 +1257,7 @@ def parse_cert__spki_sha256(
                                   Only used for commandline OpenSSL fallback operations.
     :param cryptography_cert: optional hint to aid in crypto commands
     :type cryptography_cert: `OpenSSL.crypto.load_certificate(...).to_cryptography()``
-    :param str key_technology: optional hint to aid in openssl fallback
+    :param str key_technology_basic: optional hint to aid in openssl fallback
     :param bool as_b64: encode with b64?
     :returns: spki sha256
     :rtype: str
@@ -1280,14 +1286,15 @@ def parse_cert__spki_sha256(
         raise FallbackError_FilepathRequired("Must submit `cert_pem_filepath`.")
     tmpfile_pem = None
     try:
-        if key_technology is None:
+        if key_technology_basic is None:
             key_technology = parse_cert__key_technology(
                 cert_pem=cert_pem, cert_pem_filepath=cert_pem_filepath
             )
             if not key_technology:
                 raise ValueError("Could not parse key_technology for backup")
+            key_technology_basic = key_technology[0]
         spki_sha256 = _openssl_spki_hash_cert(
-            key_technology=key_technology,
+            key_technology_basic=key_technology_basic,
             cert_pem_filepath=cert_pem_filepath,
             as_b64=as_b64,
         )
@@ -1302,7 +1309,7 @@ def parse_cert__spki_sha256(
 def parse_cert__key_technology(
     cert_pem: str,
     cert_pem_filepath: Optional[str] = None,
-) -> Optional[str]:
+) -> Optional[TECHNOLOGY_RETURN_VALUES]:
     """
     :param cert_pem: PEM encoded Certificate
     :type cert_pem: str
@@ -1310,7 +1317,7 @@ def parse_cert__key_technology(
                               Only used for commandline OpenSSL fallback operations.
     :type cert_pem_filepath: str
     :returns: key technology type
-    :rtype: str
+    :rtype: TECHNOLOGY_RETURN_VALUES
 
     The OpenSSL Equivalent / Fallback is::
     Regex the output of::
@@ -1361,7 +1368,10 @@ def parse_cert(
     :rtype: dict
     """
     log.info("parse_cert >")
-    rval: Dict[str, Union[None, str, int, "datetime.datetime", List[str]]] = {
+    rval: Dict[
+        str,
+        Union[None, str, int, "datetime.datetime", List[str], TECHNOLOGY_RETURN_VALUES],
+    ] = {
         "issuer": None,
         "subject": None,
         "enddate": None,
@@ -1482,13 +1492,13 @@ def parse_cert(
         rval["fingerprint_sha1"] = fingerprint_cert(
             cert_pem=cert_pem, cert_pem_filepath=cert_pem_filepath, algorithm="sha1"
         )
-        rval["spki_sha256"] = parse_cert__spki_sha256(
-            cert_pem=cert_pem,
-            cert_pem_filepath=cert_pem_filepath,
-            key_technology=_key_technology,
-            as_b64=False,
-        )
-
+        if _key_technology:
+            rval["spki_sha256"] = parse_cert__spki_sha256(
+                cert_pem=cert_pem,
+                cert_pem_filepath=cert_pem_filepath,
+                key_technology_basic=_key_technology[0],
+                as_b64=False,
+            )
         try:
             _text = cert_ext__pem_filepath(cert_pem_filepath, "serial")
             serial_no = serial_from_text(_text)
@@ -1552,7 +1562,7 @@ def parse_csr__key_technology(
     csr_pem: str,
     csr_pem_filepath: Optional[str] = None,
     csr: Optional["CertificateSigningRequest"] = None,
-) -> Optional[str]:
+) -> Optional[TECHNOLOGY_RETURN_VALUES]:
     """
     :param csr_pem: PEM encoded CSR
     :type csr_pem: str
@@ -1605,7 +1615,7 @@ def parse_csr__spki_sha256(
     csr_pem: str,
     csr_pem_filepath: Optional[str] = None,
     csr: Optional["CertificateSigningRequest"] = None,
-    key_technology: Optional[str] = None,
+    key_technology_basic: Optional[str] = None,
     as_b64: Optional[bool] = None,
 ) -> str:
     """
@@ -1613,7 +1623,7 @@ def parse_csr__spki_sha256(
     :param str csr_pem_filepath: Optional filepath to PEM encoded CSR.
                                  Only used for commandline OpenSSL fallback operations.
     :param object csr: optional hint to aid in crypto commands
-    :param str key_technology: optional hint to aid in openssl fallback
+    :param str key_technology_basic: optional hint to aid in openssl fallback
     :param bool as_b64: encode with b64?
     :returns: spki sha256
     :rtype: str
@@ -1635,14 +1645,15 @@ def parse_csr__spki_sha256(
         raise FallbackError_FilepathRequired("Must submit `csr_pem_filepath`.")
     tmpfile_pem = None
     try:
-        if key_technology is None:
-            key_technology = parse_csr__key_technology(
+        if key_technology_basic is None:
+            _key_technology = parse_csr__key_technology(
                 csr_pem=csr_pem, csr_pem_filepath=csr_pem_filepath
             )
-            if not key_technology:
+            if not _key_technology:
                 raise ValueError("Could not parse key_technology for backup")
+            key_technology_basic = _key_technology[0]
         spki_sha256 = _openssl_spki_hash_csr(
-            key_technology=key_technology,
+            key_technology_basic=key_technology_basic,
             csr_pem_filepath=csr_pem_filepath,
             as_b64=as_b64,
         )
@@ -1669,7 +1680,7 @@ def parse_csr(
     :rtype: dict
     """
     log.info("parse_csr >")
-    rval: Dict[str, Union[None, List, str]] = {
+    rval: Dict[str, Union[None, List, str, TECHNOLOGY_RETURN_VALUES]] = {
         "key_technology": None,
         "spki_sha256": None,
         "SubjectAlternativeName": [],
@@ -1713,12 +1724,13 @@ def parse_csr(
         rval["key_technology"] = _key_technology = parse_csr__key_technology(
             csr_pem=csr_pem, csr_pem_filepath=csr_pem_filepath
         )
-        rval["spki_sha256"] = parse_csr__spki_sha256(
-            csr_pem=csr_pem,
-            csr_pem_filepath=csr_pem_filepath,
-            key_technology=_key_technology,
-            as_b64=False,
-        )
+        if _key_technology:
+            rval["spki_sha256"] = parse_csr__spki_sha256(
+                csr_pem=csr_pem,
+                csr_pem_filepath=csr_pem_filepath,
+                key_technology_basic=_key_technology[0],
+                as_b64=False,
+            )
         with psutil.Popen(
             [openssl_path, "req", "-text", "-noout", "-in", csr_pem_filepath],
             stdout=subprocess.PIPE,
@@ -1740,7 +1752,7 @@ def parse_key__spki_sha256(
     key_pem: str,
     key_pem_filepath: Optional[str] = None,
     publickey: Optional["_TYPES_CRYPTOGRAPHY_KEYS"] = None,
-    key_technology: Optional[str] = None,
+    key_technology_basic: Optional[str] = None,
     as_b64: Optional[bool] = None,
 ) -> str:
     """
@@ -1750,7 +1762,7 @@ def parse_key__spki_sha256(
     :param cryptography_publickey: optional hint to aid in crypto commands
     :type cryptography_publickey: cryptography.hazmat.backends.openssl.rsa._RSAPublicKey
         openssl_crypto.load_privatekey(...).to_cryptography_key().public_key()
-    :param str key_technology: optional hint to aid in openssl fallback
+    :param str key_technology_basic: optional hint to aid in openssl fallback
     :param bool as_b64: encode with b64?
     :returns: spki sha256
     :rtype: str
@@ -1776,12 +1788,12 @@ def parse_key__spki_sha256(
         raise FallbackError_FilepathRequired("Must submit `key_pem_filepath`.")
     tmpfile_pem = None
     try:
-        if key_technology is None:
-            key_technology = parse_key__technology(
+        if key_technology_basic is None:
+            key_technology_basic = parse_key__technology_basic(
                 key_pem=key_pem, key_pem_filepath=key_pem_filepath
             )
         spki_sha256 = _openssl_spki_hash_pkey(
-            key_technology=key_technology,
+            key_technology_basic=key_technology_basic,
             key_pem_filepath=key_pem_filepath,
             as_b64=as_b64,
         )
@@ -1793,11 +1805,11 @@ def parse_key__spki_sha256(
             tmpfile_pem.close()
 
 
-def parse_key__technology(
+def parse_key__technology_basic(
     key_pem: str,
     key_pem_filepath: Optional[str] = None,
     privatekey: Optional["_TYPES_CRYPTOGRAPHY_PRIVATEKEY"] = None,
-) -> str:
+) -> Literal["EC", "RSA"]:
     """
     :param str key_pem: Key in PEM form
     :param str key_pem_filepath: Optional filepath to PEM.
@@ -1806,7 +1818,7 @@ def parse_key__technology(
     :returns: key technology
     :rtype: str
     """
-    log.info("parse_key__technology >")
+    log.info("parse_key__technology_basic >")
     if conditionals.cryptography:
         if TYPE_CHECKING:
             assert conditionals.crypto_ec is not None
@@ -1818,11 +1830,14 @@ def parse_key__technology(
             )
         assert privatekey is not None  # nest under `if TYPE_CHECKING` not needed
         if isinstance(privatekey, conditionals.crypto_rsa.RSAPrivateKey):
+            # return ("RSA", (privatekey.key_size,))
             return "RSA"
         elif isinstance(privatekey, conditionals.crypto_ec.EllipticCurvePrivateKey):
+            # curve_name = curve_to_nist(privatekey.curve.name)
+            # return ("EC", (curve_name,))
             return "EC"
         raise OpenSslError_InvalidKey("I don't know what kind of key this is")
-    log.debug(".parse_key__technology > openssl fallback")
+    log.debug(".parse_key__technology_basic > openssl fallback")
     tmpfile_pem = None
     try:
         if not key_pem_filepath:
@@ -1838,6 +1853,7 @@ def parse_key__technology(
                 _checked = key_single_op__pem_filepath(  # noqa: F841
                     "EC", key_pem_filepath, "-check"
                 )
+                # TODO - parse curve
                 return "EC"
             except OpenSslError_VersionTooLow as exc2:  # noqa: F841
                 # TODO: make this conditional
@@ -1868,10 +1884,10 @@ def parse_key(
     """
     log.info("parse_key >")
     rval: Dict[str, Union[None, str, Tuple]] = {
-        "check": None,
+        "key_technology": None,
         "text": None,
         "modulus_md5": None,
-        "key_technology": None,
+        "key_technology_basic": None,
         "spki_sha256": None,
     }
     if conditionals.cryptography:
@@ -1881,15 +1897,15 @@ def parse_key(
             assert conditionals.crypto_serialization is not None
         try:
             # note: we don't need to provide key_pem_filepath because we already rely on openssl
-            rval["check"] = validate_key(key_pem=key_pem)
+            rval["key_technology"] = validate_key(key_pem=key_pem)
         except Exception as exc:
-            rval["check"] = str(exc)
+            rval["key_technology"] = str(exc)
         privkey = conditionals.crypto_serialization.load_pem_private_key(
             key_pem.encode(), password=None
         )
         publickey = privkey.public_key()  # type: ignore[union-attr]
         if isinstance(privkey, conditionals.crypto_rsa.RSAPrivateKey):
-            rval["key_technology"] = "RSA"
+            rval["key_technology_basic"] = "RSA"
             try:
                 modn = publickey.public_numbers().n  # type: ignore[union-attr]
                 modn = "{:X}".format(modn)
@@ -1898,7 +1914,7 @@ def parse_key(
             except Exception as exc:
                 rval["XX-modulus_md5"] = str(exc)
         elif isinstance(privkey, conditionals.crypto_ec.EllipticCurvePrivateKey):
-            rval["key_technology"] = "EC"
+            rval["key_technology_basic"] = "EC"
             # TODO: Support EC Key Modulus Variant - https://github.com/aptise/cert_utils/issues/15
             # legacy ONLY works on RSA keys
             # might just rely on spki_sha256
@@ -1920,34 +1936,39 @@ def parse_key(
             tmpfile_pem = new_pem_tempfile(key_pem)
             key_pem_filepath = tmpfile_pem.name
         try:
-            rval["key_technology"] = _key_technology = parse_key__technology(
-                key_pem=key_pem, key_pem_filepath=key_pem_filepath
+            rval["key_technology_basic"] = _key_technology_basic = (
+                parse_key__technology_basic(
+                    key_pem=key_pem, key_pem_filepath=key_pem_filepath
+                )
             )
         except OpenSslError_VersionTooLow as exc2:  # noqa: F841
             # TODO: make this conditional
             # i doubt many people have old versions but who knows?
             raise
         try:
-            rval["check"] = key_single_op__pem_filepath(
-                _key_technology, key_pem_filepath, "-check"
+            # rval["check"] = key_single_op__pem_filepath(
+            #    _key_technology_basic, key_pem_filepath, "-check"
+            # )
+            rval["key_technology"] = validate_key(
+                key_pem=key_pem, key_pem_filepath=key_pem_filepath
             )
         except Exception as exc1:
             rval["XX-check"] = str(exc1)
         rval["text"] = key_single_op__pem_filepath(
-            _key_technology, key_pem_filepath, "-text"
+            _key_technology_basic, key_pem_filepath, "-text"
         )
-        if _key_technology in ("RSA", "EC"):
+        if _key_technology_basic in ("RSA", "EC"):
             # rval["spki_sha256"] = _openssl_spki_hash_pkey(key_technology=_key_technology, key_pem_filepath=key_pem_filepath, as_b64=False)
             rval["spki_sha256"] = parse_key__spki_sha256(
                 key_pem=key_pem,
                 key_pem_filepath=key_pem_filepath,
-                key_technology=_key_technology,
+                key_technology_basic=_key_technology_basic,
                 as_b64=False,
             )
 
-        if _key_technology == "RSA":
+        if _key_technology_basic == "RSA":
             _modulus = key_single_op__pem_filepath(
-                _key_technology, key_pem_filepath, "-modulus"
+                _key_technology_basic, key_pem_filepath, "-modulus"
             )
             _modulus = _cleanup_openssl_modulus(_modulus)
             _modulus_bytes = _modulus.encode()
@@ -2531,21 +2552,21 @@ def account_key__parse(
     acme-tiny is released under the MIT license and Copyright (c) 2015 Daniel Roesler
     """
     log.info("account_key__parse >")
-    _key_technology = parse_key__technology(
+    _key_technology_basic = parse_key__technology_basic(
         key_pem=key_pem, key_pem_filepath=key_pem_filepath
     )
-    if _key_technology == "RSA":
+    if _key_technology_basic == "RSA":
         alg = "RS256"
-    elif _key_technology == "EC":
+    elif _key_technology_basic == "EC":
         alg = "ES256"
     else:
         raise ValueError("invalid key_technology")
     if conditionals.josepy:
-        if _key_technology == "RSA":
+        if _key_technology_basic == "RSA":
             _jwk = conditionals.josepy.JWKRSA.load(key_pem.encode("utf8"))
             jwk = _jwk.public_key().fields_to_partial_json()
             jwk["kty"] = "RSA"
-        elif _key_technology == "EC":
+        elif _key_technology_basic == "EC":
             _jwk = conditionals.josepy.JWKEC.load(key_pem.encode("utf8"))
             jwk = _jwk.public_key().fields_to_partial_json()
             jwk["kty"] = "EC"
@@ -2571,7 +2592,7 @@ def account_key__parse(
 
     _tmpfile = None
     try:
-        if _key_technology == "RSA":
+        if _key_technology_basic == "RSA":
             if key_pem_filepath is None:
                 _tmpfile = new_pem_tempfile(key_pem)
                 key_pem_filepath = _tmpfile.name
@@ -2605,7 +2626,7 @@ def account_key__parse(
                 ),
             }
             _accountkey_json = json.dumps(jwk, sort_keys=True, separators=(",", ":"))
-        elif _key_technology == "EC":
+        elif _key_technology_basic == "EC":
             if key_pem_filepath is None:
                 _tmpfile = new_pem_tempfile(key_pem)
                 key_pem_filepath = _tmpfile.name

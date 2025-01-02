@@ -10,7 +10,8 @@ import cert_utils
 
 CERT_CA_SETS: Dict = {
     "letsencrypt-certs/trustid-x3-root.pem": {
-        "key_technology": "RSA",
+        "key_technology_basic": "RSA",
+        "key_technology": ("RSA", (2048,)),
         "modulus_md5": "35f72cb35ea691144ffc2798db20ccfd",
         "spki_sha256": "563B3CAF8CFEF34C2335CAF560A7A95906E8488462EB75AC59784830DF9E5B2B",
         "spki_sha256.b64": "Vjs8r4z+80wjNcr1YKepWQboSIRi63WsWXhIMN+eWys=",
@@ -23,7 +24,8 @@ CERT_CA_SETS: Dict = {
         "authority_key_identifier": None,
     },
     "letsencrypt-certs/isrgrootx1.pem": {
-        "key_technology": "RSA",
+        "key_technology_basic": "RSA",
+        "key_technology": ("RSA", (4096,)),
         "modulus_md5": "9454972e3730ac131def33e045ab19df",
         "spki_sha256": "0B9FA5A59EED715C26C1020C711B4F6EC42D58B0015E14337A39DAD301C5AFC3",
         "spki_sha256.b64": "C5+lpZ7tcVwmwQIMcRtPbsQtWLABXhQzejna0wHFr8M=",
@@ -36,7 +38,8 @@ CERT_CA_SETS: Dict = {
         "authority_key_identifier": None,
     },
     "letsencrypt-certs/isrg-root-x1-cross-signed.pem": {
-        "key_technology": "RSA",
+        "key_technology_basic": "RSA",
+        "key_technology": ("RSA", (4096,)),
         "modulus_md5": "9454972e3730ac131def33e045ab19df",
         "spki_sha256": "0B9FA5A59EED715C26C1020C711B4F6EC42D58B0015E14337A39DAD301C5AFC3",
         "spki_sha256.b64": "C5+lpZ7tcVwmwQIMcRtPbsQtWLABXhQzejna0wHFr8M=",
@@ -49,7 +52,8 @@ CERT_CA_SETS: Dict = {
         "authority_key_identifier": "C4A7B1A47B2C71FADBE14B9075FFC41560858910",
     },
     "letsencrypt-certs/isrg-root-x2.pem": {
-        "key_technology": "EC",
+        "key_technology_basic": "EC",
+        "key_technology": ("EC", ("P-384",)),
         "modulus_md5": None,
         "spki_sha256": "762195C225586EE6C0237456E2107DC54F1EFC21F61A792EBD515913CCE68332",
         "spki_sha256.b64": "diGVwiVYbubAI3RW4hB9xU8e/CH2GnkuvVFZE8zmgzI=",
@@ -62,7 +66,8 @@ CERT_CA_SETS: Dict = {
         "authority_key_identifier": None,
     },
     "letsencrypt-certs/isrg-root-x2-cross-signed.pem": {
-        "key_technology": "EC",
+        "key_technology_basic": "EC",
+        "key_technology": ("EC", ("P-384",)),
         "modulus_md5": None,
         "spki_sha256": "762195C225586EE6C0237456E2107DC54F1EFC21F61A792EBD515913CCE68332",
         "spki_sha256.b64": "diGVwiVYbubAI3RW4hB9xU8e/CH2GnkuvVFZE8zmgzI=",
@@ -75,7 +80,8 @@ CERT_CA_SETS: Dict = {
         "authority_key_identifier": "79B459E67BB6E5E40173800888C81A58F6E99B6E",
     },
     "letsencrypt-certs/lets-encrypt-r3-cross-signed.pem": {
-        "key_technology": "RSA",
+        "key_technology_basic": "RSA",
+        "key_technology": ("RSA", (2048,)),
         "spki_sha256": "8D02536C887482BC34FF54E41D2BA659BF85B341A0A20AFADB5813DCFBCF286D",
         "spki_sha256.b64": "jQJTbIh0grw0/1TkHSumWb+Fs0Ggogr621gT3PvPKG0=",
         "modulus_md5": "7d877784604ba0a5e400e5da7ec048e4",
@@ -94,7 +100,7 @@ CSR_SETS = {
     "key_technology-ec/ec384-1.csr": {
         "key_private": {
             "file": "key_technology-ec/ec384-1-key.pem",
-            "key_technology": "EC",
+            "key_technology_basic": "EC",
             "modulus_md5": None,
         },
         "modulus_md5": "e69f1df0d5a5c7c63e81a83c4f5411a7",
@@ -102,7 +108,7 @@ CSR_SETS = {
     "key_technology-rsa/selfsigned_1-server.csr": {
         "key_private": {
             "file": "key_technology-rsa/selfsigned_1-server.csr",
-            "key_technology": "RSA",
+            "key_technology_basic": "RSA",
             "modulus_md5": "e0d99ec6424d5182755315d56398f658",
         },
         "modulus_md5": "e0d99ec6424d5182755315d56398f658",
@@ -111,15 +117,15 @@ CSR_SETS = {
 
 KEY_SETS: Dict = {
     "key_technology-rsa/acme_account_1.key": {
-        "key_technology": "RSA",
-        "key_technology_data": ("RSA", (4096,)),
+        "key_technology_basic": "RSA",
+        "key_technology": ("RSA", (4096,)),
         "modulus_md5": "ceec56ad4caba2cd70ee90c7d80fbb74",
         "spki_sha256": "E70DCB45009DF3F79FC708B46888609E34A3D8D19AEAFA566389718A29140782",
         "spki_sha256.b64": "5w3LRQCd8/efxwi0aIhgnjSj2NGa6vpWY4lxiikUB4I=",
     },
     "key_technology-ec/ec384-1-key.pem": {
-        "key_technology": "EC",
-        "key_technology_data": ("EC", ("P-384",)),
+        "key_technology_basic": "EC",
+        "key_technology": ("EC", ("P-384",)),
         "modulus_md5": None,
         "spki_sha256": "E739FB0081868C97B8AC0D3773680974E9FCECBFA1FC8B80AFDDBE42F30D1D9D",
         "spki_sha256.b64": "5zn7AIGGjJe4rA03c2gJdOn87L+h/IuAr92+QvMNHZ0=",

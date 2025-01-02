@@ -149,7 +149,8 @@ class UnitTest_CertUtils(unittest.TestCase, _Mixin_fallback_possible, _Mixin_fil
             },
             "cert.authority_key_identifier": "D159010094B0A62ADBABE54B2321CA1B6EBA93E7",
             "cert.issuer_uri": None,
-            "key_technology": "RSA",
+            "key_technology_basic": "RSA",
+            "key_technology": ("RSA", (4096,)),
             "pubkey_modulus_md5": "052dec9ebfb5036c7aa6dd61888765b6",
             "spki_sha256": "34E67CC615761CBADAF430B2E02E0EC39C99EEFC73CCE469B18AE54A37EF6942",
             "spki_sha256.b64": "NOZ8xhV2HLra9DCy4C4Ow5yZ7vxzzORpsYrlSjfvaUI=",
@@ -163,7 +164,8 @@ class UnitTest_CertUtils(unittest.TestCase, _Mixin_fallback_possible, _Mixin_fil
             "csr.domains.subject": "example.com",
             "csr.domains.san": [],
             "cert": False,
-            "key_technology": "RSA",
+            "key_technology_basic": "RSA",
+            "key_technology": ("RSA", (1024,)),
             "pubkey_modulus_md5": "c25a298dc7de8f855453a6ed8be8bb5f",
             "spki_sha256": "C1FF7146EE861479AE997617CB994424905F9441C6D9E669A9A6CC520445C663",
             "spki_sha256.b64": "wf9xRu6GFHmumXYXy5lEJJBflEHG2eZpqabMUgRFxmM=",
@@ -193,7 +195,8 @@ class UnitTest_CertUtils(unittest.TestCase, _Mixin_fallback_possible, _Mixin_fil
             },
             "cert.authority_key_identifier": "D159010094B0A62ADBABE54B2321CA1B6EBA93E7",
             "cert.issuer_uri": None,
-            "key_technology": "RSA",
+            "key_technology_basic": "RSA",
+            "key_technology": ("RSA", (1024,)),
             "pubkey_modulus_md5": "f625ac6f399f90867cbf6a4e5dd8fc9e",
             "spki_sha256": "043AF1B9CC1AF925C132E19574FB7B251F727D55E185D9882B7A72F11F82AD97",
             "spki_sha256.b64": "BDrxucwa+SXBMuGVdPt7JR9yfVXhhdmIK3py8R+CrZc=",
@@ -238,7 +241,8 @@ class UnitTest_CertUtils(unittest.TestCase, _Mixin_fallback_possible, _Mixin_fil
             "cert.authority_key_identifier": "D159010094B0A62ADBABE54B2321CA1B6EBA93E7",
             "cert.issuer_uri": None,
             "pubkey_modulus_md5": "797ba616e62dedcb014a7a37bcde3fdf",
-            "key_technology": "RSA",
+            "key_technology_basic": "RSA",
+            "key_technology": ("RSA", (1024,)),
             "spki_sha256": "04825ACA7FDE791C3FFDAC73B8F52575EA598753D0F9E995187E856E34633922",
             "spki_sha256.b64": "BIJayn/eeRw//axzuPUldepZh1PQ+emVGH6FbjRjOSI=",
         },
@@ -258,7 +262,8 @@ class UnitTest_CertUtils(unittest.TestCase, _Mixin_fallback_possible, _Mixin_fil
                 "d.example.com",
             ],
             "cert": False,
-            "key_technology": "RSA",
+            "key_technology_basic": "RSA",
+            "key_technology": ("RSA", (1024,)),
             "pubkey_modulus_md5": "f4614ec52f34066ce074798cdc494d74",
             "spki_sha256": "BED992DAD570A4984EA47BE1C92F091839888BC3482D9206F891C4A8239AD2AB",
             "spki_sha256.b64": "vtmS2tVwpJhOpHvhyS8JGDmIi8NILZIG+JHEqCOa0qs=",
@@ -278,7 +283,8 @@ class UnitTest_CertUtils(unittest.TestCase, _Mixin_fallback_possible, _Mixin_fil
             "csr.domains.san": [],
             "cert": False,
             "pubkey_modulus_md5": "None",
-            "key_technology": "EC",
+            "key_technology_basic": "EC",
+            "key_technology": ("EC", ("P-384",)),
             "spki_sha256": "E739FB0081868C97B8AC0D3773680974E9FCECBFA1FC8B80AFDDBE42F30D1D9D",
             "spki_sha256.b64": "5zn7AIGGjJe4rA03c2gJdOn87L+h/IuAr92+QvMNHZ0=",
         }
@@ -447,11 +453,11 @@ class UnitTest_CertUtils(unittest.TestCase, _Mixin_fallback_possible, _Mixin_fil
             key_pem_filepath = self._filepath_testfile(key_filename)
             key_pem = self._filedata_testfile(key_filename)
             with self.assertLogs("cert_utils", level="DEBUG") as logged:
-                key_technology_data = cert_utils.validate_key(
+                key_technology = cert_utils.validate_key(
                     key_pem=key_pem, key_pem_filepath=key_pem_filepath
                 )
                 self.assertEqual(
-                    key_technology_data, KEY_SETS[key_filename]["key_technology_data"]
+                    key_technology, KEY_SETS[key_filename]["key_technology"]
                 )
                 if self._fallback_global or self._fallback_cryptography:
                     self.assertIn(
@@ -784,11 +790,11 @@ class UnitTest_CertUtils(unittest.TestCase, _Mixin_fallback_possible, _Mixin_fil
                 cert_pem=cert_pem, cert_pem_filepath=cert_pem_filepath
             )
             for field in (
-                "key_technology",
                 "issuer",
                 "subject",
                 "issuer_uri",
                 "authority_key_identifier",
+                "key_technology",
             ):
                 self.assertEqual(rval[field], CERT_CA_SETS[cert_filename][field])
             self.assertEqual(
@@ -975,7 +981,7 @@ class UnitTest_CertUtils(unittest.TestCase, _Mixin_fallback_possible, _Mixin_fil
 
             * cert_utils.parse_key
             * cert_utils.parse_key__spki_sha256
-            * cert_utils.parse_key__technology
+            * cert_utils.parse_key__technology_basic
         """
 
         for cert_set in sorted(self._cert_sets.keys()):
@@ -990,6 +996,10 @@ class UnitTest_CertUtils(unittest.TestCase, _Mixin_fallback_possible, _Mixin_fil
                 )
                 self.assertEqual(
                     rval["key_technology"], self._cert_sets[cert_set]["key_technology"]
+                )
+                self.assertEqual(
+                    rval["key_technology_basic"],
+                    self._cert_sets[cert_set]["key_technology_basic"],
                 )
                 self.assertEqual(
                     rval["modulus_md5"], self._cert_sets[cert_set]["pubkey_modulus_md5"]
@@ -1031,22 +1041,23 @@ class UnitTest_CertUtils(unittest.TestCase, _Mixin_fallback_possible, _Mixin_fil
                         logged.output,
                     )
 
-            # `cert_utils.parse_key__technology`
+            # `cert_utils.parse_key__technology_basic`
             with self.assertLogs("cert_utils", level="DEBUG") as logged:
-                key_technology = cert_utils.parse_key__technology(
+                key_technology_basic = cert_utils.parse_key__technology_basic(
                     key_pem=key_pem, key_pem_filepath=key_pem_filepath
                 )
                 self.assertEqual(
-                    key_technology, self._cert_sets[cert_set]["key_technology"]
+                    key_technology_basic,
+                    self._cert_sets[cert_set]["key_technology_basic"],
                 )
                 if self._fallback_global or self._fallback_cryptography:
                     self.assertIn(
-                        "DEBUG:cert_utils:.parse_key__technology > openssl fallback",
+                        "DEBUG:cert_utils:.parse_key__technology_basic > openssl fallback",
                         logged.output,
                     )
                 else:
                     self.assertNotIn(
-                        "DEBUG:cert_utils:.parse_key__technology > openssl fallback",
+                        "DEBUG:cert_utils:.parse_key__technology_basic > openssl fallback",
                         logged.output,
                     )
 
@@ -1075,11 +1086,13 @@ class UnitTest_CertUtils(unittest.TestCase, _Mixin_fallback_possible, _Mixin_fil
             )
             self.assertEqual(spki_sha256_b64, KEY_SETS[key_filename]["spki_sha256.b64"])
 
-            # `cert_utils.parse_key__technology`
-            key_technology = cert_utils.parse_key__technology(
+            # `cert_utils.parse_key__technology_basic`
+            key_technology_basic = cert_utils.parse_key__technology_basic(
                 key_pem=key_pem, key_pem_filepath=key_pem_filepath
             )
-            self.assertEqual(key_technology, KEY_SETS[key_filename]["key_technology"])
+            self.assertEqual(
+                key_technology_basic, KEY_SETS[key_filename]["key_technology_basic"]
+            )
 
     def test__cert_and_chain_from_fullchain(self):
         """

@@ -9,6 +9,7 @@ import tempfile
 from typing import Iterable
 from typing import List
 from typing import Optional
+from typing import Tuple
 from typing import Union
 
 # ==============================================================================
@@ -70,15 +71,27 @@ RE_openssl_x509_serial = re.compile(r"Serial Number: ?(\d+)")
 RE_openssl_x509_keytype_rsa = re.compile(
     r"Subject Public Key Info:\n"
     r"\s+Public Key Algorithm: rsaEncryption\n"
-    r"\s+(RSA )?Public(\ |\-)Key:",
+    r"\s+(?:RSA )?Public[\-\ ]?Key: \((\d+) bits?\)",
     re.MULTILINE,
 )
 RE_openssl_x509_keytype_ec = re.compile(
     r"Subject Public Key Info:\n"
     r"\s+Public Key Algorithm: id-ecPublicKey\n"
-    r"\s+(EC )?Public(\ |\-)Key:",
+    r"\s+(?:EC )?Public[\-\ ]?Key: \((\d+) bits?\)\n"
+    r"\s+pub:\n"
+    r"[\s\d\w\:]+"
+    r"(?:"
+    r"(?:\s+ASN1 OID: ([\w]+)\n)"
+    r"|"
+    r"(?:\s+NIST CURVE: ([\-\w]+)\n)"
+    r")",
     re.MULTILINE,
 )
+
+
+# (RSA, (4096,))
+# (EC, ("P-384",))
+TECHNOLOGY_RETURN_VALUES = Tuple[str, Tuple[Union[str, int]]]
 
 
 # ------------------------------------------------------------------------------
@@ -313,22 +326,38 @@ def issuer_uri_from_text(text: str) -> Optional[str]:
     return None
 
 
-def _cert_pubkey_technology__text(cert_text: str) -> Optional[str]:
+def _x509_pubkey_technology__text(cert_text: str) -> Optional[TECHNOLOGY_RETURN_VALUES]:
+    m = RE_openssl_x509_keytype_rsa.search(cert_text)
+    if m:
+        v = m.groups()
+        return ("RSA", (int(v[0]),))
+    m = RE_openssl_x509_keytype_ec.search(cert_text)
+    if m:
+        v = m.groups()
+        c = None
+        if v[2]:
+            c = v[2]
+        elif v[0]:
+            c = "P-%s" % v[0]
+        else:
+            # TODO? better parsing
+            return None
+        return ("EC", (c,))
+    return None
+
+
+def _cert_pubkey_technology__text(cert_text: str) -> Optional[TECHNOLOGY_RETURN_VALUES]:
     """
     :param cert_text: string extracted from a x509 document
     :type cert_text: str
     :returns: Pubkey type: "RSA" or "EC"
-    :rtype: str
+    :rtype: strfRE_openssl_x509_keytype_rsa
     """
     # `cert_text` is the output of of `openssl x509 -noout -text -in MYCERT `
-    if RE_openssl_x509_keytype_rsa.search(cert_text):
-        return "RSA"
-    elif RE_openssl_x509_keytype_ec.search(cert_text):
-        return "EC"
-    return None
+    return _x509_pubkey_technology__text(cert_text)
 
 
-def _csr_pubkey_technology__text(csr_text: str) -> Optional[str]:
+def _csr_pubkey_technology__text(csr_text: str) -> Optional[TECHNOLOGY_RETURN_VALUES]:
     """
     :param csr_text: string extracted from a CSR document
     :type csr_text: str
@@ -336,8 +365,4 @@ def _csr_pubkey_technology__text(csr_text: str) -> Optional[str]:
     :rtype: str
     """
     # `csr_text` is the output of of `openssl req -noout -text -in MYCERT`
-    if RE_openssl_x509_keytype_rsa.search(csr_text):
-        return "RSA"
-    elif RE_openssl_x509_keytype_ec.search(csr_text):
-        return "EC"
-    return None
+    return _x509_pubkey_technology__text(csr_text)

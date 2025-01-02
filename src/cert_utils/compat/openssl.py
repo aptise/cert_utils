@@ -144,13 +144,13 @@ def _openssl_cert__normalize_pem(cert_pem: str) -> str:
 
 
 def _openssl_spki_hash_cert(
-    key_technology: str = "",
+    key_technology_basic: str = "",
     cert_pem_filepath: str = "",
     as_b64: Optional[bool] = None,
 ) -> str:
     """
-    :param key_technology: Is the key an "EC" or "RSA" key?
-    :type key_technology: str
+    :param key_technology_basic: Is the key an "EC" or "RSA" key?
+    :type key_technology_basic: str
     :param cert_pem_filepath: REQUIRED filepath to PEM Certificate.
                               Used for commandline OpenSSL fallback operations.
     :type cert_pem_filepath: str
@@ -162,13 +162,13 @@ def _openssl_spki_hash_cert(
     The OpenSSL Equivalent / Fallback is::
 
         openssl x509 -pubkey -noout -in {CERT_FILEPATH} | \
-        openssl {key_technology} -pubout -outform DER -pubin | \
+        openssl {key_technology_basic} -pubout -outform DER -pubin | \
         openssl dgst -sha256 -binary | \
         openssl enc -base64
     """
-    if key_technology not in ("EC", "RSA"):
-        raise ValueError("must submit `key_technology`")
-    key_technology = key_technology.lower()
+    if key_technology_basic not in ("EC", "RSA"):
+        raise ValueError("must submit `key_technology_basic`")
+    key_technology_basic = key_technology_basic.lower()
     if not cert_pem_filepath:
         raise FallbackError_FilepathRequired("Must submit `cert_pem_filepath`.")
     if core.openssl_version is None:
@@ -195,7 +195,7 @@ def _openssl_spki_hash_cert(
         p2 = psutil.Popen(
             [
                 core.openssl_path,
-                key_technology,
+                key_technology_basic,
                 "-pubin",
                 "-pubout",
                 "-outform",
@@ -261,13 +261,13 @@ def _openssl_spki_hash_cert(
 
 
 def _openssl_spki_hash_csr(
-    key_technology: str = "",
+    key_technology_basic: str = "",
     csr_pem_filepath: str = "",
     as_b64: Optional[bool] = None,
 ) -> str:
     """
-    :param key_technology: Is the key an "EC" or "RSA" key?
-    :type key_technology: str
+    :param key_technology_basic: Is the key an "EC" or "RSA" key?
+    :type key_technology_basic: str
     :param csr_pem_filepath: REQUIRED filepath to PEM CSR.
                              Used for commandline OpenSSL fallback operations.
     :type csr_pem_filepath: str
@@ -279,13 +279,13 @@ def _openssl_spki_hash_csr(
     The OpenSSL Equivalent / Fallback is::
 
         openssl REQ -pubkey -noout -in {CSR_FILEPATH} | \
-        openssl {key_technology} -pubout -outform DER -pubin | \
+        openssl {key_technology_basic} -pubout -outform DER -pubin | \
         openssl dgst -sha256 -binary | \
         openssl enc -base64
     """
-    if key_technology not in ("EC", "RSA"):
-        raise ValueError("must submit `key_technology`")
-    key_technology = key_technology.lower()
+    if key_technology_basic not in ("EC", "RSA"):
+        raise ValueError("must submit `key_technology_basic`")
+    key_technology_basic = key_technology_basic.lower()
     if not csr_pem_filepath:
         raise FallbackError_FilepathRequired("Must submit `csr_pem_filepath`.")
     if core.openssl_version is None:
@@ -312,7 +312,7 @@ def _openssl_spki_hash_csr(
         p2 = psutil.Popen(
             [
                 core.openssl_path,
-                key_technology,
+                key_technology_basic,
                 "-pubin",
                 "-pubout",
                 "-outform",
@@ -377,13 +377,13 @@ def _openssl_spki_hash_csr(
 
 
 def _openssl_spki_hash_pkey(
-    key_technology: str = "",
+    key_technology_basic: str = "",
     key_pem_filepath: str = "",
     as_b64: Optional[bool] = None,
 ) -> str:
     """
-    :param key_technology: Is the key an "EC" or "RSA" key?
-    :type key_technology: str
+    :param key_technology_basic: Is the key an "EC" or "RSA" key?
+    :type key_technology_basic: str
     :param key_pem_filepath: REQUIRED filepath to PEM encoded PrivateKey.
                              Used for commandline OpenSSL fallback operations.
     :type key_pem_filepath: str
@@ -398,9 +398,9 @@ def _openssl_spki_hash_pkey(
         openssl dgst -sha256 -binary | \
         openssl enc -base64
     """
-    if key_technology not in ("EC", "RSA"):
-        raise ValueError("must submit `key_technology`")
-    key_technology = key_technology.lower()
+    if key_technology_basic not in ("EC", "RSA"):
+        raise ValueError("must submit `key_technology_basic`")
+    key_technology_basic = key_technology_basic.lower()
     if not key_pem_filepath:
         raise FallbackError_FilepathRequired("Must submit `key_pem_filepath`.")
     if core.openssl_version is None:
@@ -414,7 +414,7 @@ def _openssl_spki_hash_pkey(
         p1 = psutil.Popen(
             [
                 core.openssl_path,
-                key_technology,
+                key_technology_basic,
                 "-pubout",
                 "-outform",
                 "DER",
