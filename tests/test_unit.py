@@ -1732,6 +1732,7 @@ class UnitTest_utils(unittest.TestCase):
             "example.com",
             "foo.example.com",
             "test-1.example.com",
+            "*.example.com",
         )
         for d in domains:
             # validate domains expects a list
@@ -1751,6 +1752,9 @@ class UnitTest_utils(unittest.TestCase):
             "example.com.",
             ".example.com.",
             "test_1.example.com",
+            "*.*.example.com",
+            "*.example.*.com",
+            "example.*.com",
         )
         for d in domains:
             # validate domains expects a list

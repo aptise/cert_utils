@@ -35,7 +35,7 @@ CERT_PEM_REGEX = re.compile(
 
 # technically we could end in a dot (\.?)
 RE_domain = re.compile(
-    r"""^(?:[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?\.)+(?:[A-Z]{2,6}|[A-Z0-9-]{2,}(?<!-))$""",
+    r"""^(?:\*\.)?(?:[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?\.)+(?:[A-Z]{2,6}|[A-Z0-9-]{2,}(?<!-))$""",
     re.I,
 )
 
