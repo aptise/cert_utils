@@ -1,5 +1,6 @@
 # stdlib
 from types import ModuleType
+from typing import Any
 from typing import Optional
 
 # ------------------------------------------------------------------------------
@@ -31,18 +32,22 @@ GOOD:
 
 """
 cryptography: Optional[ModuleType]
+crypto_x509: Optional[ModuleType]
+crypto_hashes: Optional[ModuleType]
+crypto_padding: Optional[ModuleType]
+crypto_serialization: Optional[ModuleType]
 crypto_dsa: Optional[ModuleType]
 crypto_ec: Optional[ModuleType]
 crypto_ed25519: Optional[ModuleType]
 crypto_ed448: Optional[ModuleType]
-crypto_hashes: Optional[ModuleType]
-crypto_padding: Optional[ModuleType]
-crypto_pkcs7: Optional[ModuleType]
 crypto_rsa: Optional[ModuleType]
-crypto_serialization: Optional[ModuleType]
-crypto_x509: Optional[ModuleType]
+crypto_utils: Optional[ModuleType]
+EllipticCurvePublicKey: Optional[Any]
+RSAPublicKey: Optional[Any]
+crypto_pkcs7: Optional[ModuleType]
 josepy: Optional[ModuleType]
 
+# first cryptography
 try:
     import cryptography
     import cryptography.x509 as crypto_x509
@@ -54,20 +59,27 @@ try:
     from cryptography.hazmat.primitives.asymmetric import ed25519 as crypto_ed25519
     from cryptography.hazmat.primitives.asymmetric import ed448 as crypto_ed448
     from cryptography.hazmat.primitives.asymmetric import rsa as crypto_rsa
+    from cryptography.hazmat.primitives.asymmetric import utils as crypto_utils
+    from cryptography.hazmat.primitives.asymmetric.ec import EllipticCurvePublicKey
+    from cryptography.hazmat.primitives.asymmetric.rsa import RSAPublicKey
     from cryptography.hazmat.primitives.serialization import pkcs7 as crypto_pkcs7
 except ImportError:
     cryptography = None
     crypto_x509 = None
+    crypto_hashes = None
+    crypto_padding = None
+    crypto_serialization = None
     crypto_dsa = None
     crypto_ec = None
     crypto_ed25519 = None
     crypto_ed448 = None
-    crypto_hashes = None
-    crypto_padding = None
-    crypto_pkcs7 = None
     crypto_rsa = None
-    crypto_serialization = None
+    crypto_utils = None
+    EllipticCurvePublicKey = None
+    RSAPublicKey = None
+    crypto_pkcs7 = None
 
+# then josepy
 try:
     import josepy
 except ImportError:

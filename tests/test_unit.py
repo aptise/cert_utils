@@ -88,10 +88,25 @@ class UnitTest_CertUtils(unittest.TestCase, _Mixin_fallback_possible, _Mixin_fil
 
     _account_sets: Dict = {
         "001": {
+            "keytype": "RSA",
             "letsencrypt": True,
             "pem": True,
             "signature.input": "example.sample",
             "signature.output": "hN3bre1YpxSGbvKmx8zK9_o0yaxtDblDfS3Q3CsjAas9wUVIHk7NqxXH0HeEeZG_7T0AHH6HTfxMbucXK_dLog_g9AxQYFsRBc8587C8Z5rWF2YDCoo0W7JB7VOoLEHGfe7JRXeqgA9QSnci0wMFlKXC_6MbKxql8QtswOdvtFM85qcJsMCOSu2Xf6HLIAYFhdBJH-DvQGzE4ctOKAYCmDyXs42DBUU4CU0cNXj8TsN0cFRXvInvSqDsiPNSjyV32WC4clPHX69KEbs5Wr0WV2diHR-Q6w0QUljWZEDpcl8mb86LZwBqoUTHX2xstQI77sLcg7YhDfaIPrCjYJcNZw",
+        },
+        "002": {
+            "keytype": "RSA",
+            "letsencrypt": False,
+            "pem": True,
+            "signature.input": "example.sample",
+            "signature.output": "eEwkfxlNp9qvpX1Mm_erpBwCj9BjqWqZj1PX7Qucw1CkUqfNVJokgas0MpsmBASjN2yX93TnFtgOXG81_vaitAGifcZlPEbFstQ1LLyUtKC2arbNiVBkHAzseCsU5MnUC6WWFonsPUJ_Lr5xHYkfd2vGfOs8_e-CPAOVHmv7LJQjNGovV0MbInlCbHY9P3d9OHA-hN-tOABke5kyO1lSiX3fifAcRGnLlJqz5Dumb9K80_oySzEPio4Ad1ktufwJP9l-MA4FaUI7lOkNbTq_he1SuIG8Mjw9hfx9I4YoGk9eqPdcWwBZc5hwErqtqfPOCI8Qcu84ipFU-9Z9Q7waOIMtWl8Sj4pJfGGkiCITEcrWpupWdHlv33s2rwTWFo6ZXyYuMiTddcSJIPhFmAsD74MKxFUBgSViCHNjisjqyCSzA2geAcWsXOAwtokTp62wEv5tlW9ZhhifD-VqucipFwCTuTkaJLKonMPX0DNikRYYKgonKaf7h8-eMZxebI-z0RxO57e4vHpR__3-bXcXl_Pfvf_iYipuluwrt1MoDod4_ahLnvVNIBvnXdhvBhKHsxHPOOya399BHKSeCllsUyNlBHay2i4ibP8efWEhW1emz21nu4isLxvFqeFjJaqeuFZmlFskMjHUbkvDSOq1BTafk3yI3mTFRFqDL7GbxrA",
+        },
+        "003": {
+            "keytype": "EC",
+            "letsencrypt": False,
+            "pem": True,
+            "signature.input": "example.sample",
+            "signature.output": "MGUCMQCo82gcmd7B9SsMyW9VE7YRSpmw23s3_cGY5GNkHbtSsfEJ7LbnT715iDZNCG4sjOUCMAd4OqpbuAA2G5rkZRWvimGG-Ub9syYZ42dX1rV-r00I6BaL2AhZLPp9amZvFu32mg",
         },
     }
     _cert_sets: Dict = {
@@ -134,7 +149,8 @@ class UnitTest_CertUtils(unittest.TestCase, _Mixin_fallback_possible, _Mixin_fil
             },
             "cert.authority_key_identifier": "D159010094B0A62ADBABE54B2321CA1B6EBA93E7",
             "cert.issuer_uri": None,
-            "key_technology": "RSA",
+            "key_technology_basic": "RSA",
+            "key_technology": ("RSA", (4096,)),
             "pubkey_modulus_md5": "052dec9ebfb5036c7aa6dd61888765b6",
             "spki_sha256": "34E67CC615761CBADAF430B2E02E0EC39C99EEFC73CCE469B18AE54A37EF6942",
             "spki_sha256.b64": "NOZ8xhV2HLra9DCy4C4Ow5yZ7vxzzORpsYrlSjfvaUI=",
@@ -148,7 +164,8 @@ class UnitTest_CertUtils(unittest.TestCase, _Mixin_fallback_possible, _Mixin_fil
             "csr.domains.subject": "example.com",
             "csr.domains.san": [],
             "cert": False,
-            "key_technology": "RSA",
+            "key_technology_basic": "RSA",
+            "key_technology": ("RSA", (1024,)),
             "pubkey_modulus_md5": "c25a298dc7de8f855453a6ed8be8bb5f",
             "spki_sha256": "C1FF7146EE861479AE997617CB994424905F9441C6D9E669A9A6CC520445C663",
             "spki_sha256.b64": "wf9xRu6GFHmumXYXy5lEJJBflEHG2eZpqabMUgRFxmM=",
@@ -178,7 +195,8 @@ class UnitTest_CertUtils(unittest.TestCase, _Mixin_fallback_possible, _Mixin_fil
             },
             "cert.authority_key_identifier": "D159010094B0A62ADBABE54B2321CA1B6EBA93E7",
             "cert.issuer_uri": None,
-            "key_technology": "RSA",
+            "key_technology_basic": "RSA",
+            "key_technology": ("RSA", (1024,)),
             "pubkey_modulus_md5": "f625ac6f399f90867cbf6a4e5dd8fc9e",
             "spki_sha256": "043AF1B9CC1AF925C132E19574FB7B251F727D55E185D9882B7A72F11F82AD97",
             "spki_sha256.b64": "BDrxucwa+SXBMuGVdPt7JR9yfVXhhdmIK3py8R+CrZc=",
@@ -223,7 +241,8 @@ class UnitTest_CertUtils(unittest.TestCase, _Mixin_fallback_possible, _Mixin_fil
             "cert.authority_key_identifier": "D159010094B0A62ADBABE54B2321CA1B6EBA93E7",
             "cert.issuer_uri": None,
             "pubkey_modulus_md5": "797ba616e62dedcb014a7a37bcde3fdf",
-            "key_technology": "RSA",
+            "key_technology_basic": "RSA",
+            "key_technology": ("RSA", (1024,)),
             "spki_sha256": "04825ACA7FDE791C3FFDAC73B8F52575EA598753D0F9E995187E856E34633922",
             "spki_sha256.b64": "BIJayn/eeRw//axzuPUldepZh1PQ+emVGH6FbjRjOSI=",
         },
@@ -243,7 +262,8 @@ class UnitTest_CertUtils(unittest.TestCase, _Mixin_fallback_possible, _Mixin_fil
                 "d.example.com",
             ],
             "cert": False,
-            "key_technology": "RSA",
+            "key_technology_basic": "RSA",
+            "key_technology": ("RSA", (1024,)),
             "pubkey_modulus_md5": "f4614ec52f34066ce074798cdc494d74",
             "spki_sha256": "BED992DAD570A4984EA47BE1C92F091839888BC3482D9206F891C4A8239AD2AB",
             "spki_sha256.b64": "vtmS2tVwpJhOpHvhyS8JGDmIi8NILZIG+JHEqCOa0qs=",
@@ -263,7 +283,8 @@ class UnitTest_CertUtils(unittest.TestCase, _Mixin_fallback_possible, _Mixin_fil
             "csr.domains.san": [],
             "cert": False,
             "pubkey_modulus_md5": "None",
-            "key_technology": "EC",
+            "key_technology_basic": "EC",
+            "key_technology": ("EC", ("P-384",)),
             "spki_sha256": "E739FB0081868C97B8AC0D3773680974E9FCECBFA1FC8B80AFDDBE42F30D1D9D",
             "spki_sha256.b64": "5zn7AIGGjJe4rA03c2gJdOn87L+h/IuAr92+QvMNHZ0=",
         }
@@ -769,11 +790,11 @@ class UnitTest_CertUtils(unittest.TestCase, _Mixin_fallback_possible, _Mixin_fil
                 cert_pem=cert_pem, cert_pem_filepath=cert_pem_filepath
             )
             for field in (
-                "key_technology",
                 "issuer",
                 "subject",
                 "issuer_uri",
                 "authority_key_identifier",
+                "key_technology",
             ):
                 self.assertEqual(rval[field], CERT_CA_SETS[cert_filename][field])
             self.assertEqual(
@@ -960,7 +981,7 @@ class UnitTest_CertUtils(unittest.TestCase, _Mixin_fallback_possible, _Mixin_fil
 
             * cert_utils.parse_key
             * cert_utils.parse_key__spki_sha256
-            * cert_utils.parse_key__technology
+            * cert_utils.parse_key__technology_basic
         """
 
         for cert_set in sorted(self._cert_sets.keys()):
@@ -975,6 +996,10 @@ class UnitTest_CertUtils(unittest.TestCase, _Mixin_fallback_possible, _Mixin_fil
                 )
                 self.assertEqual(
                     rval["key_technology"], self._cert_sets[cert_set]["key_technology"]
+                )
+                self.assertEqual(
+                    rval["key_technology_basic"],
+                    self._cert_sets[cert_set]["key_technology_basic"],
                 )
                 self.assertEqual(
                     rval["modulus_md5"], self._cert_sets[cert_set]["pubkey_modulus_md5"]
@@ -1016,22 +1041,23 @@ class UnitTest_CertUtils(unittest.TestCase, _Mixin_fallback_possible, _Mixin_fil
                         logged.output,
                     )
 
-            # `cert_utils.parse_key__technology`
+            # `cert_utils.parse_key__technology_basic`
             with self.assertLogs("cert_utils", level="DEBUG") as logged:
-                key_technology = cert_utils.parse_key__technology(
+                key_technology_basic = cert_utils.parse_key__technology_basic(
                     key_pem=key_pem, key_pem_filepath=key_pem_filepath
                 )
                 self.assertEqual(
-                    key_technology, self._cert_sets[cert_set]["key_technology"]
+                    key_technology_basic,
+                    self._cert_sets[cert_set]["key_technology_basic"],
                 )
                 if self._fallback_global or self._fallback_cryptography:
                     self.assertIn(
-                        "DEBUG:cert_utils:.parse_key__technology > openssl fallback",
+                        "DEBUG:cert_utils:.parse_key__technology_basic > openssl fallback",
                         logged.output,
                     )
                 else:
                     self.assertNotIn(
-                        "DEBUG:cert_utils:.parse_key__technology > openssl fallback",
+                        "DEBUG:cert_utils:.parse_key__technology_basic > openssl fallback",
                         logged.output,
                     )
 
@@ -1060,11 +1086,13 @@ class UnitTest_CertUtils(unittest.TestCase, _Mixin_fallback_possible, _Mixin_fil
             )
             self.assertEqual(spki_sha256_b64, KEY_SETS[key_filename]["spki_sha256.b64"])
 
-            # `cert_utils.parse_key__technology`
-            key_technology = cert_utils.parse_key__technology(
+            # `cert_utils.parse_key__technology_basic`
+            key_technology_basic = cert_utils.parse_key__technology_basic(
                 key_pem=key_pem, key_pem_filepath=key_pem_filepath
             )
-            self.assertEqual(key_technology, KEY_SETS[key_filename]["key_technology"])
+            self.assertEqual(
+                key_technology_basic, KEY_SETS[key_filename]["key_technology_basic"]
+            )
 
     def test__cert_and_chain_from_fullchain(self):
         """
@@ -1330,17 +1358,28 @@ class UnitTest_CertUtils(unittest.TestCase, _Mixin_fallback_possible, _Mixin_fil
             key_pem_filepath = self._filepath_testfile(key_pem_filename)
             key_pem = self._filedata_testfile(key_pem_filepath)
 
+            keytype = self._account_sets[account_set]["keytype"]
             input = self._account_sets[account_set]["signature.input"]
-            expected = self._account_sets[account_set]["signature.output"]
+            expected = self._account_sets[account_set].get("signature.output")
 
             with self.assertLogs("cert_utils", level="DEBUG") as logged:
                 _signature = cert_utils.account_key__sign(
                     input, key_pem=key_pem, key_pem_filepath=key_pem_filepath
                 )
                 signature = cert_utils.jose_b64(_signature)
-                self.assertEqual(signature, expected)
 
-                if self._fallback_global or self._fallback_cryptography:
+                if keytype == "RSA":
+                    self.assertEqual(signature, expected)
+                elif keytype == "EC":
+                    pass
+                else:
+                    raise ValueError("unknown keytype")
+
+                if (
+                    self._fallback_global
+                    or self._fallback_cryptography
+                    or self._fallback_josepy
+                ):
                     self.assertIn(
                         "DEBUG:cert_utils:.account_key__sign > openssl fallback",
                         logged.output,
@@ -1350,23 +1389,32 @@ class UnitTest_CertUtils(unittest.TestCase, _Mixin_fallback_possible, _Mixin_fil
                         "DEBUG:cert_utils:.account_key__sign > openssl fallback",
                         logged.output,
                     )
+                    # ALL must verify
+                    # note we track the `_signature`
+                    # We can't do this on openssl only yet, if ever
+                    verified = cert_utils.account_key__verify(
+                        _signature,
+                        input,
+                        key_pem=key_pem,
+                        key_pem_filepath=key_pem_filepath,
+                    )
 
-    def test__private_key__new(self):
+    def test__new_account_key(self):
         """
-        python -m unittest tests.test_unit.UnitTest_CertUtils.test__private_key__new
+        python -m unittest tests.test_unit.UnitTest_CertUtils.test__new_account_key
         """
         _combinations = (
-            (model.KeyTechnology.RSA, 2048, None),
-            (model.KeyTechnology.RSA, 3072, None),
-            (model.KeyTechnology.RSA, 4096, None),
-            (model.KeyTechnology.EC, None, 256),
-            (model.KeyTechnology.EC, None, 384),
+            (model.KeyTechnologyEnum.RSA, 2048, None),
+            (model.KeyTechnologyEnum.RSA, 3072, None),
+            (model.KeyTechnologyEnum.RSA, 4096, None),
+            (model.KeyTechnologyEnum.EC, None, "P-256"),
+            (model.KeyTechnologyEnum.EC, None, "P-384"),
         )
         for _combo in _combinations:
-            key_pem = cert_utils.new_private_key(
-                _combo[0], rsa_bits=_combo[1], ec_bits=_combo[2]
+            key_pem = cert_utils.new_account_key(
+                _combo[0], rsa_bits=_combo[1], ec_curve=_combo[2]
             )
-            if _combo[0] == model.KeyTechnology.RSA:
+            if _combo[0] == model.KeyTechnologyEnum.RSA:
                 # crypto: -----BEGIN PRIVATE KEY-----
                 # openssl fallback: -----BEGIN RSA PRIVATE KEY-----
                 self.assertIn(
@@ -1376,7 +1424,39 @@ class UnitTest_CertUtils(unittest.TestCase, _Mixin_fallback_possible, _Mixin_fil
                         "-----BEGIN PRIVATE KEY-----",
                     ),
                 )
-            elif _combo[0] == model.KeyTechnology.RSA:
+            elif _combo[0] == model.KeyTechnologyEnum.EC:
+                self.assertEqual(
+                    "-----BEGIN EC PRIVATE KEY-----", key_pem.split("\n")[0]
+                )
+
+            key_parsed = cert_utils.account_key__parse(key_pem=key_pem)
+
+    def test__private_key__new(self):
+        """
+        python -m unittest tests.test_unit.UnitTest_CertUtils.test__private_key__new
+        """
+        _combinations = (
+            (model.KeyTechnologyEnum.RSA, 2048, None),
+            (model.KeyTechnologyEnum.RSA, 3072, None),
+            (model.KeyTechnologyEnum.RSA, 4096, None),
+            (model.KeyTechnologyEnum.EC, None, "P-256"),
+            (model.KeyTechnologyEnum.EC, None, "P-384"),
+        )
+        for _combo in _combinations:
+            key_pem = cert_utils.new_private_key(
+                _combo[0], rsa_bits=_combo[1], ec_curve=_combo[2]
+            )
+            if _combo[0] == model.KeyTechnologyEnum.RSA:
+                # crypto: -----BEGIN PRIVATE KEY-----
+                # openssl fallback: -----BEGIN RSA PRIVATE KEY-----
+                self.assertIn(
+                    key_pem.split("\n")[0],
+                    (
+                        "-----BEGIN RSA PRIVATE KEY-----",
+                        "-----BEGIN PRIVATE KEY-----",
+                    ),
+                )
+            elif _combo[0] == model.KeyTechnologyEnum.EC:
                 self.assertEqual(
                     "-----BEGIN EC PRIVATE KEY-----", key_pem.split("\n")[0]
                 )
@@ -1401,16 +1481,16 @@ class UnitTest_CertUtils(unittest.TestCase, _Mixin_fallback_possible, _Mixin_fil
                 )
 
         # test valid bits
-        key_pem = cert_utils.new_key_ec(bits=256)
+        key_pem = cert_utils.new_key_ec(curve="P-256")
         self.assertIn("-----BEGIN EC PRIVATE KEY-----", key_pem)
-        key_pem = cert_utils.new_key_ec(bits=384)
+        key_pem = cert_utils.new_key_ec(curve="P-384")
         self.assertIn("-----BEGIN EC PRIVATE KEY-----", key_pem)
 
         # test invalid bits
         with self.assertRaises(ValueError) as cm:
-            key_pem = cert_utils.new_key_ec(bits=1)
+            key_pem = cert_utils.new_key_ec(curve="A")  # type: ignore[arg-type]
         self.assertIn(
-            "LetsEncrypt only supports ECDSA keys with bits:", cm.exception.args[0]
+            "LetsEncrypt only supports ECDSA keys with curves:", cm.exception.args[0]
         )
 
     def test_new_key_rsa(self):
@@ -1456,7 +1536,7 @@ class UnitTest_CertUtils(unittest.TestCase, _Mixin_fallback_possible, _Mixin_fil
 
         # test invalid bits
         with self.assertRaises(ValueError) as cm:
-            key_pem = cert_utils.new_key_rsa(bits=1)
+            key_pem = cert_utils.new_key_rsa(bits=1)  # type: ignore[arg-type]
         self.assertIn(
             "LetsEncrypt only supports RSA keys with bits:", cm.exception.args[0]
         )
@@ -1652,6 +1732,7 @@ class UnitTest_utils(unittest.TestCase):
             "example.com",
             "foo.example.com",
             "test-1.example.com",
+            "*.example.com",
         )
         for d in domains:
             # validate domains expects a list
@@ -1671,6 +1752,9 @@ class UnitTest_utils(unittest.TestCase):
             "example.com.",
             ".example.com.",
             "test_1.example.com",
+            "*.*.example.com",
+            "*.example.*.com",
+            "example.*.com",
         )
         for d in domains:
             # validate domains expects a list

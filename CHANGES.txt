@@ -1,3 +1,20 @@
+1.0.0
+    * new_account_key supports LetsEncrypt updates to EC
+    * ALLOWED_CURVES_ECDSA is now a list of strings
+    * new_ec_key named argument is now curve(str)
+    * functions now require KeyTechnologyEnum, not KeyTechnology for key_technology_id
+    * added account_key__verify
+    * extended account_key__sign to accept `standardize_signature`; default True
+      for converting the EC signature to the encoding ACME requires
+    * corrected use of `secp256k1` to `secp256r1`
+    * `key_technology` concept of "RSA" and "EC" has been renamed to `key_technology_basic`
+    * `key_technology` concept is now a tuple of `(key_technology_basic, (data, ))`
+      For a RSA, the payload is:
+            ("rsa", (rsa_bits,))
+      For an EC, the payload is:
+            ("ec", (nist_curve_name,))
+    * validate_domains now accepts a wildcard
+
 0.2.0
     * replaced pyopenssl with cryptography.
       pyopenssl was originally used because certbot required it and this package

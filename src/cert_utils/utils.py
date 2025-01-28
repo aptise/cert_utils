@@ -8,7 +8,7 @@ import re
 import tempfile
 from typing import Iterable
 from typing import List
-from typing import Optional
+from typing import Tuple
 from typing import Union
 
 # ==============================================================================
@@ -35,50 +35,13 @@ CERT_PEM_REGEX = re.compile(
 
 # technically we could end in a dot (\.?)
 RE_domain = re.compile(
-    r"""^(?:[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?\.)+(?:[A-Z]{2,6}|[A-Z0-9-]{2,}(?<!-))$""",
+    r"""^(?:\*\.)?(?:[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?\.)+(?:[A-Z]{2,6}|[A-Z0-9-]{2,}(?<!-))$""",
     re.I,
 )
 
-
-# note the conditional whitespace before/after `CN`
-# this is because of differing openssl versions
-RE_openssl_x509_subject = re.compile(r"Subject:.*? CN ?= ?([^\s,;/]+)")
-RE_openssl_x509_san = re.compile(
-    r"X509v3 Subject Alternative Name: ?\n +([^\n]+)\n?", re.MULTILINE | re.DOTALL
-)
-
-
-# openssl 3 does not have "keyid:" as a prefix
-# a keyid prefix is okay!
-# we do not want the alternates, which are uri+serial; but take that out in results
-RE_openssl_x509_authority_key_identifier = re.compile(
-    r"X509v3 Authority Key Identifier: ?\n +(?:keyid:)?([^\n]+)\n?",
-    re.MULTILINE | re.DOTALL,
-)
-# we have a potential line in there for the OSCP or something else.
-RE_openssl_x509_issuer_uri = re.compile(
-    r"Authority Information Access: ?\n(?:[^\n]*^\n)? +CA Issuers - URI:([^\n]+)\n?",
-    re.MULTILINE | re.DOTALL,
-)
-
-RE_openssl_x509_serial = re.compile(r"Serial Number: ?(\d+)")
-
-
-# depending on openssl version, the "Public key: " text might list the bits
-# it may or may not also have a dash in the phrase "Public Key"
-# it may or may not be prefaced with the PublicKey type
-RE_openssl_x509_keytype_rsa = re.compile(
-    r"Subject Public Key Info:\n"
-    r"\s+Public Key Algorithm: rsaEncryption\n"
-    r"\s+(RSA )?Public(\ |\-)Key:",
-    re.MULTILINE,
-)
-RE_openssl_x509_keytype_ec = re.compile(
-    r"Subject Public Key Info:\n"
-    r"\s+Public Key Algorithm: id-ecPublicKey\n"
-    r"\s+(EC )?Public(\ |\-)Key:",
-    re.MULTILINE,
-)
+# (RSA, (4096,))
+# (EC, ("P-384",))
+TECHNOLOGY_RETURN_VALUES = Tuple[str, Tuple[Union[str, int]]]
 
 
 # ------------------------------------------------------------------------------
@@ -127,6 +90,14 @@ def convert_binary_to_hex(input: bytes) -> str:
     # _as_hex = "79B459E67BB6E5E40173800888C81A58F6E99B6E"
     _as_hex_str = _as_hex.decode("utf8")
     return _as_hex_str
+
+
+def curve_to_nist(curve_name: str) -> str:
+    if curve_name == "secp256r1":
+        return "P-256"
+    elif curve_name == "secp384r1":
+        return "P-384"
+    raise ValueError("Unknown curve: %s" % curve_name)
 
 
 def domains_from_list(domain_names: Iterable[str]) -> List[str]:
@@ -239,97 +210,3 @@ def validate_domains(domain_names: Iterable[str]) -> bool:
 
 
 # ------------------------------------------------------------------------------
-
-
-def san_domains_from_text(text: str) -> List[str]:
-    """
-    Helper function to extract SAN domains from a chunk of text in a x509 object
-
-    :param text: string extracted from a x509 document
-    :type text: str
-    :returns: list of domains
-    :rtype: list
-    """
-    san_domains = set([])
-    _subject_alt_names = RE_openssl_x509_san.search(text)
-    if _subject_alt_names is not None:
-        for _san in _subject_alt_names.group(1).split(", "):
-            if _san.startswith("DNS:"):
-                san_domains.add(_san[4:].lower())
-    return sorted(list(san_domains))
-
-
-def authority_key_identifier_from_text(text: str) -> Optional[str]:
-    """
-    :param text: string extracted from a x509 document
-    :type text: str
-    :returns: authority_key_identifier
-    :rtype: str
-
-    openssl will print a uppercase hex pairs, separated by a colon
-    we should remove the colons
-    """
-    results = RE_openssl_x509_authority_key_identifier.findall(text)
-    if results:
-        authority_key_identifier = results[0]
-        # ensure we have a key_id and not "URI:" or other convention
-        if authority_key_identifier[2] == ":":
-            return authority_key_identifier.replace(":", "")
-    return None
-
-
-def serial_from_text(text: str) -> Optional[int]:
-    """
-    :param text: string extracted from a x509 document
-    :type text: str
-    :returns: serial
-    :rtype: int
-    """
-    results = RE_openssl_x509_serial.findall(text)
-    if results:
-        serial = results[0]
-        return int(serial)
-    return None
-
-
-def issuer_uri_from_text(text: str) -> Optional[str]:
-    """
-    :param text: string extracted from a x509 document
-    :type text: str
-    :returns: issuer_uri
-    :rtype: str
-    """
-    results = RE_openssl_x509_issuer_uri.findall(text)
-    if results:
-        return results[0]
-    return None
-
-
-def _cert_pubkey_technology__text(cert_text: str) -> Optional[str]:
-    """
-    :param cert_text: string extracted from a x509 document
-    :type cert_text: str
-    :returns: Pubkey type: "RSA" or "EC"
-    :rtype: str
-    """
-    # `cert_text` is the output of of `openssl x509 -noout -text -in MYCERT `
-    if RE_openssl_x509_keytype_rsa.search(cert_text):
-        return "RSA"
-    elif RE_openssl_x509_keytype_ec.search(cert_text):
-        return "EC"
-    return None
-
-
-def _csr_pubkey_technology__text(csr_text: str) -> Optional[str]:
-    """
-    :param csr_text: string extracted from a CSR document
-    :type csr_text: str
-    :returns: Pubkey type: "RSA" or "EC"
-    :rtype: str
-    """
-    # `csr_text` is the output of of `openssl req -noout -text -in MYCERT`
-    if RE_openssl_x509_keytype_rsa.search(csr_text):
-        return "RSA"
-    elif RE_openssl_x509_keytype_ec.search(csr_text):
-        return "EC"
-    return None

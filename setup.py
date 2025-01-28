@@ -1,5 +1,6 @@
 """metadata_utils installation script.
 """
+
 import os
 import re
 
@@ -21,7 +22,7 @@ requires = [
     "python-dateutil",
     "psutil>=4.4.0",  # for Python2/3 compat
     "requests",
-    "typing_extensions",
+    "typing_extensions",  # Literal, Required, TypeDict
 ]
 tests_require = [
     "certbot",
@@ -46,7 +47,7 @@ setup(
     author="Jonathan Vanasco",
     author_email="jonathan@findmeon.com",
     zip_safe=False,
-    python_requires=">=3.6",
+    python_requires=">=3.7",
     keywords="web",
     install_requires=requires,
     tests_require=tests_require,

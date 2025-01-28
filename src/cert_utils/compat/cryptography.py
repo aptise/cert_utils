@@ -11,6 +11,8 @@ from typing import Union
 # locals
 from .. import conditionals
 from ..utils import CERT_PEM_REGEX
+from ..utils import curve_to_nist
+from ..utils import TECHNOLOGY_RETURN_VALUES
 
 if TYPE_CHECKING:
     from cryptography.x509 import Certificate
@@ -52,20 +54,24 @@ def _format_cryptography_components(
 
 def _cryptography__public_key_technology(
     publickey: "_TYPES_CRYPTOGRAPHY_PUBLICKEY",
-) -> Optional[str]:
+) -> Optional[TECHNOLOGY_RETURN_VALUES]:
     """
     :param key: key object
     :type key: instance of
-    :returns: type of key: RSA, EC, DSA
-    :rtype: str
+    :returns: If the key is valid, it will return a Tuple wherein
+        - The first element is the Key's technology (EC, RSA)
+        - The second element is a Tuple with the key's type.
+            (RSA, (bits, ))
+            (EC, (curve_name, ))
     """
     if TYPE_CHECKING:
         assert conditionals.crypto_rsa is not None
         assert conditionals.crypto_ec is not None
     if isinstance(publickey, conditionals.crypto_rsa.RSAPublicKey):
-        return "RSA"
+        return ("RSA", (publickey.key_size,))
     elif isinstance(publickey, conditionals.crypto_ec.EllipticCurvePublicKey):
-        return "EC"
+        curve_name = curve_to_nist(publickey.curve.name)
+        return ("EC", (curve_name,))
     return None
 
 

@@ -1,5 +1,6 @@
 # stdlib
 import binascii
+import re
 import subprocess
 from typing import List
 from typing import Optional
@@ -18,8 +19,57 @@ from ..errors import OpenSslError_InvalidCSR
 from ..errors import OpenSslError_InvalidKey
 from ..errors import OpenSslError_VersionTooLow
 from ..utils import new_pem_tempfile
+from ..utils import TECHNOLOGY_RETURN_VALUES
 
 # ==============================================================================
+
+
+# note the conditional whitespace before/after `CN`
+# this is because of differing openssl versions
+RE_openssl_x509_subject = re.compile(r"Subject:.*? CN ?= ?([^\s,;/]+)")
+RE_openssl_x509_san = re.compile(
+    r"X509v3 Subject Alternative Name: ?\n +([^\n]+)\n?", re.MULTILINE | re.DOTALL
+)
+
+
+# openssl 3 does not have "keyid:" as a prefix
+# a keyid prefix is okay!
+# we do not want the alternates, which are uri+serial; but take that out in results
+RE_openssl_x509_authority_key_identifier = re.compile(
+    r"X509v3 Authority Key Identifier: ?\n +(?:keyid:)?([^\n]+)\n?",
+    re.MULTILINE | re.DOTALL,
+)
+# we have a potential line in there for the OSCP or something else.
+RE_openssl_x509_issuer_uri = re.compile(
+    r"Authority Information Access: ?\n(?:[^\n]*^\n)? +CA Issuers - URI:([^\n]+)\n?",
+    re.MULTILINE | re.DOTALL,
+)
+
+RE_openssl_x509_serial = re.compile(r"Serial Number: ?(\d+)")
+
+
+# depending on openssl version, the "Public key: " text might list the bits
+# it may or may not also have a dash in the phrase "Public Key"
+# it may or may not be prefaced with the PublicKey type
+RE_openssl_x509_keytype_rsa = re.compile(
+    r"Subject Public Key Info:\n"
+    r"\s+Public Key Algorithm: rsaEncryption\n"
+    r"\s+(?:RSA )?Public[\-\ ]?Key: \((\d+) bits?\)",
+    re.MULTILINE,
+)
+RE_openssl_x509_keytype_ec = re.compile(
+    r"Subject Public Key Info:\n"
+    r"\s+Public Key Algorithm: id-ecPublicKey\n"
+    r"\s+(?:EC )?Public[\-\ ]?Key: \((\d+) bits?\)\n"
+    r"\s+pub:\n"
+    r"[\s\d\w\:]+"
+    r"(?:"
+    r"(?:\s+ASN1 OID: ([\w]+)\n)"
+    r"|"
+    r"(?:\s+NIST CURVE: ([\-\w]+)\n)"
+    r")",
+    re.MULTILINE,
+)
 
 
 def _cleanup_openssl_modulus(data: str) -> str:
@@ -144,13 +194,13 @@ def _openssl_cert__normalize_pem(cert_pem: str) -> str:
 
 
 def _openssl_spki_hash_cert(
-    key_technology: str = "",
+    key_technology_basic: str = "",
     cert_pem_filepath: str = "",
     as_b64: Optional[bool] = None,
 ) -> str:
     """
-    :param key_technology: Is the key an "EC" or "RSA" key?
-    :type key_technology: str
+    :param key_technology_basic: Is the key an "EC" or "RSA" key?
+    :type key_technology_basic: str
     :param cert_pem_filepath: REQUIRED filepath to PEM Certificate.
                               Used for commandline OpenSSL fallback operations.
     :type cert_pem_filepath: str
@@ -162,13 +212,13 @@ def _openssl_spki_hash_cert(
     The OpenSSL Equivalent / Fallback is::
 
         openssl x509 -pubkey -noout -in {CERT_FILEPATH} | \
-        openssl {key_technology} -pubout -outform DER -pubin | \
+        openssl {key_technology_basic} -pubout -outform DER -pubin | \
         openssl dgst -sha256 -binary | \
         openssl enc -base64
     """
-    if key_technology not in ("EC", "RSA"):
-        raise ValueError("must submit `key_technology`")
-    key_technology = key_technology.lower()
+    if key_technology_basic not in ("EC", "RSA"):
+        raise ValueError("must submit `key_technology_basic`")
+    key_technology_basic = key_technology_basic.lower()
     if not cert_pem_filepath:
         raise FallbackError_FilepathRequired("Must submit `cert_pem_filepath`.")
     if core.openssl_version is None:
@@ -195,7 +245,7 @@ def _openssl_spki_hash_cert(
         p2 = psutil.Popen(
             [
                 core.openssl_path,
-                key_technology,
+                key_technology_basic,
                 "-pubin",
                 "-pubout",
                 "-outform",
@@ -261,13 +311,13 @@ def _openssl_spki_hash_cert(
 
 
 def _openssl_spki_hash_csr(
-    key_technology: str = "",
+    key_technology_basic: str = "",
     csr_pem_filepath: str = "",
     as_b64: Optional[bool] = None,
 ) -> str:
     """
-    :param key_technology: Is the key an "EC" or "RSA" key?
-    :type key_technology: str
+    :param key_technology_basic: Is the key an "EC" or "RSA" key?
+    :type key_technology_basic: str
     :param csr_pem_filepath: REQUIRED filepath to PEM CSR.
                              Used for commandline OpenSSL fallback operations.
     :type csr_pem_filepath: str
@@ -279,13 +329,13 @@ def _openssl_spki_hash_csr(
     The OpenSSL Equivalent / Fallback is::
 
         openssl REQ -pubkey -noout -in {CSR_FILEPATH} | \
-        openssl {key_technology} -pubout -outform DER -pubin | \
+        openssl {key_technology_basic} -pubout -outform DER -pubin | \
         openssl dgst -sha256 -binary | \
         openssl enc -base64
     """
-    if key_technology not in ("EC", "RSA"):
-        raise ValueError("must submit `key_technology`")
-    key_technology = key_technology.lower()
+    if key_technology_basic not in ("EC", "RSA"):
+        raise ValueError("must submit `key_technology_basic`")
+    key_technology_basic = key_technology_basic.lower()
     if not csr_pem_filepath:
         raise FallbackError_FilepathRequired("Must submit `csr_pem_filepath`.")
     if core.openssl_version is None:
@@ -312,7 +362,7 @@ def _openssl_spki_hash_csr(
         p2 = psutil.Popen(
             [
                 core.openssl_path,
-                key_technology,
+                key_technology_basic,
                 "-pubin",
                 "-pubout",
                 "-outform",
@@ -377,13 +427,13 @@ def _openssl_spki_hash_csr(
 
 
 def _openssl_spki_hash_pkey(
-    key_technology: str = "",
+    key_technology_basic: str = "",
     key_pem_filepath: str = "",
     as_b64: Optional[bool] = None,
 ) -> str:
     """
-    :param key_technology: Is the key an "EC" or "RSA" key?
-    :type key_technology: str
+    :param key_technology_basic: Is the key an "EC" or "RSA" key?
+    :type key_technology_basic: str
     :param key_pem_filepath: REQUIRED filepath to PEM encoded PrivateKey.
                              Used for commandline OpenSSL fallback operations.
     :type key_pem_filepath: str
@@ -398,9 +448,9 @@ def _openssl_spki_hash_pkey(
         openssl dgst -sha256 -binary | \
         openssl enc -base64
     """
-    if key_technology not in ("EC", "RSA"):
-        raise ValueError("must submit `key_technology`")
-    key_technology = key_technology.lower()
+    if key_technology_basic not in ("EC", "RSA"):
+        raise ValueError("must submit `key_technology_basic`")
+    key_technology_basic = key_technology_basic.lower()
     if not key_pem_filepath:
         raise FallbackError_FilepathRequired("Must submit `key_pem_filepath`.")
     if core.openssl_version is None:
@@ -414,7 +464,7 @@ def _openssl_spki_hash_pkey(
         p1 = psutil.Popen(
             [
                 core.openssl_path,
-                key_technology,
+                key_technology_basic,
                 "-pubout",
                 "-outform",
                 "DER",
@@ -699,3 +749,109 @@ def key_single_op__pem_filepath(
         data_str = data_bytes.decode("utf8")
         data_str = data_str.strip()
     return data_str
+
+
+def san_domains_from_text(text: str) -> List[str]:
+    """
+    Helper function to extract SAN domains from a chunk of text in a x509 object
+
+    :param text: string extracted from a x509 document
+    :type text: str
+    :returns: list of domains
+    :rtype: list
+    """
+    san_domains = set([])
+    _subject_alt_names = RE_openssl_x509_san.search(text)
+    if _subject_alt_names is not None:
+        for _san in _subject_alt_names.group(1).split(", "):
+            if _san.startswith("DNS:"):
+                san_domains.add(_san[4:].lower())
+    return sorted(list(san_domains))
+
+
+def authority_key_identifier_from_text(text: str) -> Optional[str]:
+    """
+    :param text: string extracted from a x509 document
+    :type text: str
+    :returns: authority_key_identifier
+    :rtype: str
+
+    openssl will print a uppercase hex pairs, separated by a colon
+    we should remove the colons
+    """
+    results = RE_openssl_x509_authority_key_identifier.findall(text)
+    if results:
+        authority_key_identifier = results[0]
+        # ensure we have a key_id and not "URI:" or other convention
+        if authority_key_identifier[2] == ":":
+            return authority_key_identifier.replace(":", "")
+    return None
+
+
+def serial_from_text(text: str) -> Optional[int]:
+    """
+    :param text: string extracted from a x509 document
+    :type text: str
+    :returns: serial
+    :rtype: int
+    """
+    results = RE_openssl_x509_serial.findall(text)
+    if results:
+        serial = results[0]
+        return int(serial)
+    return None
+
+
+def issuer_uri_from_text(text: str) -> Optional[str]:
+    """
+    :param text: string extracted from a x509 document
+    :type text: str
+    :returns: issuer_uri
+    :rtype: str
+    """
+    results = RE_openssl_x509_issuer_uri.findall(text)
+    if results:
+        return results[0]
+    return None
+
+
+def _x509_pubkey_technology__text(cert_text: str) -> Optional[TECHNOLOGY_RETURN_VALUES]:
+    m = RE_openssl_x509_keytype_rsa.search(cert_text)
+    if m:
+        v = m.groups()
+        return ("RSA", (int(v[0]),))
+    m = RE_openssl_x509_keytype_ec.search(cert_text)
+    if m:
+        v = m.groups()
+        c = None
+        if v[2]:
+            c = v[2]
+        elif v[0]:
+            c = "P-%s" % v[0]
+        else:
+            # TODO? better parsing
+            return None
+        return ("EC", (c,))
+    return None
+
+
+def _cert_pubkey_technology__text(cert_text: str) -> Optional[TECHNOLOGY_RETURN_VALUES]:
+    """
+    :param cert_text: string extracted from a x509 document
+    :type cert_text: str
+    :returns: Pubkey type: "RSA" or "EC"
+    :rtype: strfRE_openssl_x509_keytype_rsa
+    """
+    # `cert_text` is the output of of `openssl x509 -noout -text -in MYCERT `
+    return _x509_pubkey_technology__text(cert_text)
+
+
+def _csr_pubkey_technology__text(csr_text: str) -> Optional[TECHNOLOGY_RETURN_VALUES]:
+    """
+    :param csr_text: string extracted from a CSR document
+    :type csr_text: str
+    :returns: Pubkey type: "RSA" or "EC"
+    :rtype: str
+    """
+    # `csr_text` is the output of of `openssl req -noout -text -in MYCERT`
+    return _x509_pubkey_technology__text(csr_text)
