@@ -47,7 +47,7 @@ setup(
     author="Jonathan Vanasco",
     author_email="jonathan@findmeon.com",
     zip_safe=False,
-    python_requires=">=3.6",
+    python_requires=">=3.7",
     keywords="web",
     install_requires=requires,
     tests_require=tests_require,
