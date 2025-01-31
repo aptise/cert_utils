@@ -671,7 +671,6 @@ def validate_key(
     """
     log.info("validate_key >")
     if conditionals.cryptography:
-        log.debug(".validate_key > cryptography")
         if TYPE_CHECKING:
             assert conditionals.crypto_serialization is not None
             assert conditionals.crypto_rsa is not None
@@ -2320,7 +2319,7 @@ def ensure_chain(
         openssl does not care about the order of intermediates, so this should
         be iteratively built up like the pure-python example
     """
-    log.debug(".ensure_chain >")
+    log.info("ensure_chain >")
     if fullchain_pem:
         if chain_pem or cert_pem:
             raise ValueError(
@@ -2439,7 +2438,7 @@ def ensure_chain_order(
 
         /usr/local/bin/openssl verify -purpose sslserver -partial_chain -trusted {ROOT.pem} {CHAINREVERSED.pem}
     """
-    log.debug(".ensure_chain_order >")
+    log.debug("ensure_chain_order >")
     if cert_pem:
         chain_certs.append(cert_pem)
     if len(chain_certs) < 2:
@@ -2712,7 +2711,6 @@ def account_key__sign(
             assert conditionals.crypto_rsa is not None
             assert conditionals.crypto_serialization is not None
             assert conditionals.crypto_utils is not None
-        log.debug(".account_key__sign > cryptography")
         pkey = conditionals.crypto_serialization.load_pem_private_key(
             key_pem.encode(), None
         )
@@ -2797,7 +2795,6 @@ def account_key__verify(
             assert conditionals.crypto_rsa is not None
             assert conditionals.crypto_serialization is not None
             assert conditionals.crypto_utils is not None
-        log.debug(".account_key__verify > cryptography")
         pkey = conditionals.crypto_serialization.load_pem_private_key(
             key_pem.encode(), None
         )
@@ -2911,7 +2908,6 @@ def ari_construct_identifier(
     log.info("ari_construct_identifier >")
 
     if conditionals.cryptography:
-        log.debug(".ari_construct_identifier > cryptography")
         try:
             cert = conditionals.cryptography.x509.load_pem_x509_certificate(
                 cert_pem.encode()

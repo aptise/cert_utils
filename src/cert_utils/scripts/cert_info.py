@@ -72,7 +72,7 @@ def get_response_data(resp: Response) -> Optional[PeerData]:
     """
     if not isinstance(resp, requests.Response):
         # raise AllowableError("Not a HTTPResponse")
-        log.debug("Not a supported HTTPResponse | %s", resp)
+        log.info("Not a supported HTTPResponse | %s", resp)
         log.debug("-> received a type of: %s", type(resp))
         return None
 

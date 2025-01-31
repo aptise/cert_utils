@@ -14,9 +14,6 @@ Design
     any necessary tempfies.  This would potentially look cleaner and be more
     maintainable than the current method of using try/except blocks.
     
-    Migrate pyopenssl to cryptography; the pure-python version is easier to
-    work with and is now preferred by Python security experts.
-
 Tests needed for:
     update_from_appsettings
     check_openssl_version

@@ -90,7 +90,7 @@ def ensure_chain(
         openssl does not care about the order of intermediates, so this should
         be iteratively built up like the pure-python example
     """
-    log.debug(".ensure_chain >")
+    log.debug("ensure_chain >")
     if fullchain_pem:
         if chain_pem or cert_pem:
             raise ValueError(
@@ -158,7 +158,7 @@ def ensure_chain_order(
 
         /usr/local/bin/openssl verify -purpose sslserver -partial_chain -trusted {ROOT.pem} {CHAINREVERSED.pem}
     """
-    log.debug(".ensure_chain_order >")
+    log.debug("ensure_chain_order >")
     if cert_pem:
         chain_certs.append(cert_pem)
     if len(chain_certs) < 2:

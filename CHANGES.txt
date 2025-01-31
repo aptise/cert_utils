@@ -1,3 +1,11 @@
+1.0.1
+    * logging cleanup
+    * pinned "josepy<2" in advance of breaking changes;
+      no planned changes should affect this library
+    * updated pre-commit configuration
+        - upgraged black to psf distribution
+        - added flake8
+
 1.0.0
     * new_account_key supports LetsEncrypt updates to EC
     * ALLOWED_CURVES_ECDSA is now a list of strings

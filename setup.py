@@ -27,7 +27,7 @@ requires = [
 tests_require = [
     "certbot",
     "cryptography>=42.0.0",
-    "josepy",
+    "josepy<2",
     "mypy",
     "pytest",
     "types-psutil",
