@@ -86,12 +86,13 @@ except ImportError:
 
 def is_josepy_compatible() -> bool:
     # this code works with josepy 1 & 2
+    import importlib
+    import importlib.metadata
+
     _v = importlib.metadata.version("josepy")
     if int(_v.split(".")[0]) not in (1, 2):
         _force = bool(int(os.environ.get("CERT_UTILS_FORCE_JOSEPY", "0")))
         if not _force:
-            log.critical("josepy might not be compatible; disabling")
-            log.critical("set env `CERT_UTILS_FORCE_JOSEPY=1` to bypass")
             return False
     return True
 
@@ -99,9 +100,10 @@ def is_josepy_compatible() -> bool:
 # then josepy
 try:
     import josepy
-    import importlib.metadata
 
     if not is_josepy_compatible():
+        log.critical("josepy might not be compatible; disabling")
+        log.critical("set env `CERT_UTILS_FORCE_JOSEPY=1` to bypass")
         josepy = None  # noqa: F811
 except ImportError as exc:
     log.critical("josepy ImportError %s", exc)
