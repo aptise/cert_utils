@@ -5,6 +5,8 @@ from types import ModuleType
 from typing import Any
 from typing import Optional
 
+log = logging.getLogger("cert_utils")
+
 # ------------------------------------------------------------------------------
 
 """
@@ -91,9 +93,9 @@ try:
     if int(_v.split(".")[0]) not in (1, 2):
         _force = bool(int(os.environ.get("CERT_UTILS_FORCE_JOSEPY", "0")))
         if not _force:
-            log = logging.getLogger("cert_utils")
             log.critical("josepy might not be compatible; disabling")
             log.critical("set env `CERT_UTILS_FORCE_JOSEPY=1` to bypass")
             josepy = None  # noqa: F811
-except ImportError:
+except ImportError as exc:
+    log.critical("josepy ImportError %s", exc)
     josepy = None
