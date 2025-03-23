@@ -83,11 +83,8 @@ except ImportError:
     RSAPublicKey = None
     crypto_pkcs7 = None
 
-# then josepy
-try:
-    import josepy
-    import importlib.metadata
 
+def is_josepy_compatible()->bool:
     # this code works with josepy 1 & 2
     _v = importlib.metadata.version("josepy")
     if int(_v.split(".")[0]) not in (1, 2):
@@ -95,7 +92,18 @@ try:
         if not _force:
             log.critical("josepy might not be compatible; disabling")
             log.critical("set env `CERT_UTILS_FORCE_JOSEPY=1` to bypass")
-            josepy = None  # noqa: F811
+            return False
+    return True
+
+
+# then josepy
+try:
+    import josepy
+    import importlib.metadata
+    if not is_josepy_compatible():
+        josepy = None  # noqa: F811
 except ImportError as exc:
     log.critical("josepy ImportError %s", exc)
     josepy = None
+
+
