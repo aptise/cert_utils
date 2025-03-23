@@ -1,4 +1,6 @@
 # stdlib
+import logging
+import os
 from types import ModuleType
 from typing import Any
 from typing import Optional
@@ -82,5 +84,16 @@ except ImportError:
 # then josepy
 try:
     import josepy
+    import importlib.metadata
+
+    # this code works with josepy 1 & 2
+    _v = importlib.metadata.version("josepy")
+    if int(_v.split(".")[0]) not in (1, 2):
+        _force = bool(int(os.environ.get("CERT_UTILS_FORCE_JOSEPY", "0")))
+        if not _force:
+            log = logging.getLogger("cert_utils")
+            log.critical("josepy might not be compatible; disabling")
+            log.critical("set env `CERT_UTILS_FORCE_JOSEPY=1` to bypass")
+            josepy = None  # noqa: F811
 except ImportError:
     josepy = None
