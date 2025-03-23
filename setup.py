@@ -3,6 +3,7 @@
 
 import os
 import re
+import sys
 
 from setuptools import find_packages
 from setuptools import setup
@@ -34,6 +35,9 @@ tests_require = [
     "types-python-dateutil",
     "types-requests",
 ]
+
+if sys.version_info <= (3, 7):
+    requires.append("importlib_metadata")
 
 testing_extras = tests_require + []
 

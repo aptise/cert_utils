@@ -1,8 +1,10 @@
 # stdlib
 import logging
 import os
+import sys
 from types import ModuleType
 from typing import Any
+from typing import Callable
 from typing import Optional
 
 log = logging.getLogger("cert_utils")
@@ -86,10 +88,18 @@ except ImportError:
 
 def is_josepy_compatible() -> bool:
     # this code works with josepy 1 & 2
-    import importlib
-    import importlib.metadata
+    f_version: Callable
+    if sys.version_info <= (3, 7):
+        import importlib_metadata
 
-    _v = importlib.metadata.version("josepy")
+        f_version = importlib_metadata.version
+    else:
+        import importlib
+        import importlib.metadata
+
+        f_version = importlib.metadata.version
+
+    _v = f_version("josepy")
     if int(_v.split(".")[0]) not in (1, 2):
         _force = bool(int(os.environ.get("CERT_UTILS_FORCE_JOSEPY", "0")))
         if not _force:
