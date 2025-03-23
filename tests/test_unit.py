@@ -85,6 +85,7 @@ class _Mixin_Missing_josepy(_Mixin_fallback_possible):
 
 class UnitTest_VersionCompat(unittest.TestCase):
     """python -m unittest tests.test_unit.UnitTest_VersionCompat"""
+
     def test__josepy(self):
         self.assertTrue(cert_utils.conditionals.is_josepy_compatible())
 

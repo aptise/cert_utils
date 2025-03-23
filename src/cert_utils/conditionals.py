@@ -84,7 +84,7 @@ except ImportError:
     crypto_pkcs7 = None
 
 
-def is_josepy_compatible()->bool:
+def is_josepy_compatible() -> bool:
     # this code works with josepy 1 & 2
     _v = importlib.metadata.version("josepy")
     if int(_v.split(".")[0]) not in (1, 2):
@@ -100,10 +100,9 @@ def is_josepy_compatible()->bool:
 try:
     import josepy
     import importlib.metadata
+
     if not is_josepy_compatible():
         josepy = None  # noqa: F811
 except ImportError as exc:
     log.critical("josepy ImportError %s", exc)
     josepy = None
-
-
