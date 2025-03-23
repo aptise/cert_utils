@@ -1299,6 +1299,7 @@ class UnitTest_CertUtils(unittest.TestCase, _Mixin_fallback_possible, _Mixin_fil
             # convert
             with self.assertLogs("cert_utils", level="DEBUG") as logged:
                 rval = cert_utils.convert_lejson_to_pem(key_jsons)
+            print(logged.output)
             if (
                 self._fallback_global
                 or self._fallback_cryptography
