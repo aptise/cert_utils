@@ -36,7 +36,8 @@ tests_require = [
     "types-requests",
 ]
 
-if sys.version_info <= (3, 7):
+if sys.version_info < (3, 8):
+    # catch 3.7 and below
     requires.append("importlib_metadata")
 
 testing_extras = tests_require + []

@@ -88,20 +88,9 @@ except ImportError:
 
 def is_josepy_compatible() -> bool:
     # this code works with josepy 1 & 2
-    print(sys.version_info)
-    print(sys.version_info)
-    print(sys.version_info)
-    print(sys.version_info)
-    print(sys.version_info)
-    print(sys.version_info)
-    print(sys.version_info)
-    print(sys.version_info)
-    print(sys.version_info)
-    print(sys.version_info)
-    print(sys.version_info)
-    print(sys.version_info)
     f_version: Callable
-    if sys.version_info <= (3, 7):
+    if sys.version_info < (3, 8):
+        # catch 3.7 and below
         import importlib_metadata
 
         f_version = importlib_metadata.version
