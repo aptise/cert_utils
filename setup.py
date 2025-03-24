@@ -3,6 +3,7 @@
 
 import os
 import re
+import sys
 
 from setuptools import find_packages
 from setuptools import setup
@@ -27,13 +28,17 @@ requires = [
 tests_require = [
     "certbot",
     "cryptography>=42.0.0",
-    "josepy<2",
+    "josepy<3",
     "mypy",
     "pytest",
     "types-psutil",
     "types-python-dateutil",
     "types-requests",
 ]
+
+if sys.version_info < (3, 8):
+    # catch 3.7 and below
+    requires.append("importlib_metadata")
 
 testing_extras = tests_require + []
 
@@ -53,6 +58,7 @@ setup(
     tests_require=tests_require,
     extras_require={
         "testing": testing_extras,
+        "josepy": ["josepy<3"],
     },
     test_suite="tests",
     packages=find_packages(

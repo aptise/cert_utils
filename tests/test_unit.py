@@ -83,6 +83,13 @@ class _Mixin_Missing_josepy(_Mixin_fallback_possible):
 # ------------------------------------------------------------------------------
 
 
+class UnitTest_VersionCompat(unittest.TestCase):
+    """python -m unittest tests.test_unit.UnitTest_VersionCompat"""
+
+    def test__josepy(self):
+        self.assertTrue(cert_utils.conditionals.is_josepy_compatible())
+
+
 class UnitTest_CertUtils(unittest.TestCase, _Mixin_fallback_possible, _Mixin_filedata):
     """python -m unittest tests.test_unit.UnitTest_CertUtils"""
 
@@ -1299,6 +1306,7 @@ class UnitTest_CertUtils(unittest.TestCase, _Mixin_fallback_possible, _Mixin_fil
             # convert
             with self.assertLogs("cert_utils", level="DEBUG") as logged:
                 rval = cert_utils.convert_lejson_to_pem(key_jsons)
+            print(logged.output)
             if (
                 self._fallback_global
                 or self._fallback_cryptography

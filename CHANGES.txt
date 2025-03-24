@@ -1,3 +1,8 @@
+1.0.2
+    * adjustemnts to josepy
+      added "CERT_UTILS_FORCE_JOSEPY" env var
+    
+
 1.0.1
     * logging cleanup
     * pinned "josepy<2" in advance of breaking changes;

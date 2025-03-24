@@ -1,7 +1,13 @@
 # stdlib
+import logging
+import os
+import sys
 from types import ModuleType
 from typing import Any
+from typing import Callable
 from typing import Optional
+
+log = logging.getLogger("cert_utils")
 
 # ------------------------------------------------------------------------------
 
@@ -79,8 +85,37 @@ except ImportError:
     RSAPublicKey = None
     crypto_pkcs7 = None
 
+
+def is_josepy_compatible() -> bool:
+    # this code works with josepy 1 & 2
+    f_version: Callable
+    if sys.version_info < (3, 8):
+        # catch 3.7 and below
+        import importlib_metadata
+
+        f_version = importlib_metadata.version
+    else:
+        import importlib
+        import importlib.metadata
+
+        f_version = importlib.metadata.version
+
+    _v = f_version("josepy")
+    if int(_v.split(".")[0]) not in (1, 2):
+        _force = bool(int(os.environ.get("CERT_UTILS_FORCE_JOSEPY", "0")))
+        if not _force:
+            return False
+    return True
+
+
 # then josepy
 try:
     import josepy
-except ImportError:
+
+    if not is_josepy_compatible():
+        log.critical("josepy might not be compatible; disabling")
+        log.critical("set env `CERT_UTILS_FORCE_JOSEPY=1` to bypass")
+        josepy = None  # noqa: F811
+except ImportError as exc:
+    log.critical("josepy ImportError %s", exc)
     josepy = None
