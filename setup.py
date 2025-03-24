@@ -58,6 +58,7 @@ setup(
     tests_require=tests_require,
     extras_require={
         "testing": testing_extras,
+        "josepy": ["josepy<3"],
     },
     test_suite="tests",
     packages=find_packages(
