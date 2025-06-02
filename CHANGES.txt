@@ -1,7 +1,9 @@
+1.0.3
+    * exception did not properly interpolate variable
+
 1.0.2
     * adjustemnts to josepy
       added "CERT_UTILS_FORCE_JOSEPY" env var
-    
 
 1.0.1
     * logging cleanup
