@@ -205,7 +205,7 @@ def validate_domains(domain_names: Iterable[str]) -> bool:
     """
     for d in domain_names:
         if not RE_domain.match(d):
-            raise ValueError("invalid domain: `%s`", d)
+            raise ValueError("invalid domain: `%s`" % d)
     return True
 
 
