@@ -8,7 +8,8 @@
         - domains_from_list
         - domains_from_string
         - validate_domains
-
+    * updated repo to not allow admins to bypass rules
+    
 1.0.3
     * exception did not properly interpolate variable
 
