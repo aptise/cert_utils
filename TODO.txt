@@ -1,3 +1,10 @@
+Domains and IP Addresses
+    Restrict out reserved namespace?
+    These should not be able to get a cert, even from a private CA
+        ipv6
+            https://www.iana.org/assignments/iana-ipv6-special-registry/iana-ipv6-special-registry.xhtml
+        
+
 Audit `# type: ignore` to handle updated type hints
 
 Test with bad payloads:

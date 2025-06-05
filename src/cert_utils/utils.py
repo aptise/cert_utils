@@ -34,10 +34,66 @@ CERT_PEM_REGEX = re.compile(
 
 
 # technically we could end in a dot (\.?)
-RE_domain = re.compile(
-    r"""^(?:\*\.)?(?:[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?\.)+(?:[A-Z]{2,6}|[A-Z0-9-]{2,}(?<!-))$""",
-    re.I,
+RE_cert_domain = re.compile(
+    r"""
+^
+(?:\*\.)?                       # allow a leading "*.", to denote wildcards
+(?:
+    [A-Z0-9]                    # the first char MUST be a letter or number
+    (?:[A-Z0-9-]{0,61}          # inner chars can have a dash
+    [A-Z0-9]                    # the last char must be a leter or number
+    \.
+)?
+)+                              # one or more components
+(?:
+    [A-Z]{2,6}
+    |
+    [A-Z0-9-]{2,}
+    (?<!-)                      # doesn't end with a dash
 )
+
+$
+""",
+    re.I | re.X,
+)
+
+
+# https://stackoverflow.com/questions/53497/regular-expression-that-matches-valid-ipv6-addresses
+
+# IPv6 RegEx
+RE_ipv6 = re.compile(
+    r"""
+(
+([0-9a-fA-F]{1,4}:){7,7}[0-9a-fA-F]{1,4}|          # 1:2:3:4:5:6:7:8
+([0-9a-fA-F]{1,4}:){1,7}:|                         # 1::                              1:2:3:4:5:6:7::
+([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|         # 1::8             1:2:3:4:5:6::8  1:2:3:4:5:6::8
+([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2}|  # 1::7:8           1:2:3:4:5::7:8  1:2:3:4:5::8
+([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}|  # 1::6:7:8         1:2:3:4::6:7:8  1:2:3:4::8
+([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4}|  # 1::5:6:7:8       1:2:3::5:6:7:8  1:2:3::8
+([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5}|  # 1::4:5:6:7:8     1:2::4:5:6:7:8  1:2::8
+[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})|       # 1::3:4:5:6:7:8   1::3:4:5:6:7:8  1::8
+:((:[0-9a-fA-F]{1,4}){1,7}|:)|                     # ::2:3:4:5:6:7:8  ::2:3:4:5:6:7:8 ::8       ::
+fe80:(:[0-9a-fA-F]{0,4}){0,4}%[0-9a-zA-Z]{1,}|     # fe80::7:8%eth0   fe80::7:8%1     (link-local IPv6 addresses with zone index)
+::(ffff(:0{1,4}){0,1}:){0,1}
+((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}
+(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])|          # ::255.255.255.255   ::ffff:255.255.255.255  ::ffff:0:255.255.255.255  (IPv4-mapped IPv6 addresses and IPv4-translated addresses)
+([0-9a-fA-F]{1,4}:){1,4}:
+((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}
+(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])           # 2001:db8:3:4::192.0.2.33  64:ff9b::192.0.2.33 (IPv4-Embedded IPv6 Address)
+)
+""",
+    re.I | re.X,
+)
+
+
+# IPv4 RegEx
+RE_ipv4 = re.compile(
+    r"""
+((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])
+""",
+    re.I | re.X,
+)
+
 
 # (RSA, (4096,))
 # (EC, ("P-384",))
@@ -100,7 +156,12 @@ def curve_to_nist(curve_name: str) -> str:
     raise ValueError("Unknown curve: %s" % curve_name)
 
 
-def domains_from_list(domain_names: Iterable[str]) -> List[str]:
+def domains_from_list(
+    domain_names: Iterable[str],
+    allow_hostname: bool = True,
+    allow_ipv4: bool = False,
+    allow_ipv6: bool = False,
+) -> List[str]:
     """
     Turns a list of strings into a standardized list of domain names.
 
@@ -109,26 +170,53 @@ def domains_from_list(domain_names: Iterable[str]) -> List[str]:
     This invokes `validate_domains`, which uses a simple regex to validate each domain in the list.
 
     :param domain_names: (required) An iterable list of strings
+    :param allow_hostname: bool, default True
+        added in 1.0.4
+    :param allow_ipv4: bool, default False
+        added in 1.0.4
+    :param allow_ipv6: bool, default False
+        added in 1.0.4
     """
     domain_names = [d for d in [d.strip().lower() for d in domain_names] if d]
     # make the list unique
-    domain_names = list(set(domain_names))
+    domain_names = sorted(list(set(domain_names)))
     # validate the list
-    validate_domains(domain_names)
+    validate_domains(
+        domain_names,
+        allow_hostname=allow_hostname,
+        allow_ipv4=allow_ipv4,
+        allow_ipv6=allow_ipv6,
+    )
     return domain_names
 
 
-def domains_from_string(text: str) -> List[str]:
+def domains_from_string(
+    text: str,
+    allow_hostname: bool = True,
+    allow_ipv4: bool = False,
+    allow_ipv6: bool = False,
+) -> List[str]:
     """
-    :param text: (required) Turns a comma-separated-list of domain names into a list
-
     This invokes `domains_from_list` which invokes `validate_domains`, which uses a simple regex to validate each domain in the list.
 
     This will raise a `ValueError("invalid domain")` on the first invalid domain
+
+    :param text: (required) Turns a comma-separated-list of domain names into a list
+    :param allow_hostname: bool, default True
+        added in 1.0.4
+    :param allow_ipv4: bool, default False
+        added in 1.0.4
+    :param allow_ipv6: bool, default False
+        added in 1.0.4
     """
     # generate list
     domain_names = text.split(",")
-    return domains_from_list(domain_names)
+    return domains_from_list(
+        domain_names,
+        allow_hostname=allow_hostname,
+        allow_ipv4=allow_ipv4,
+        allow_ipv6=allow_ipv6,
+    )
 
 
 def hex_with_colons(as_hex: str) -> str:
@@ -197,15 +285,40 @@ def split_pem_chain(pem_text: str) -> List[str]:
     return certs
 
 
-def validate_domains(domain_names: Iterable[str]) -> bool:
+def validate_domains(
+    domain_names: Iterable[str],
+    allow_hostname: bool = True,
+    allow_ipv4: bool = False,
+    allow_ipv6: bool = False,
+) -> bool:
     """
-    Ensures each items of the iterable `domain_names` matches a regular expression.
+    Ensures each items of the iterable `domain_names` is qualified for inclusion
+    in a x509 certificate.
+
+    This does a rudimentary check against hostnames (default) and optionally
+    ipv4 and ipv6.
 
     :param domain_names: (required) An iterable list of strings
+    :param allow_hostname: bool, default True
+        added in 1.0.4
+    :param allow_ipv4: bool, default False
+        added in 1.0.4
+    :param allow_ipv6: bool, default False
+        added in 1.0.4
     """
     for d in domain_names:
-        if not RE_domain.match(d):
-            raise ValueError("invalid domain: `%s`" % d)
+        if allow_hostname and RE_cert_domain.match(d):
+            if RE_ipv4.match(d):
+                if not allow_ipv4:
+                    raise ValueError("invalid domain: `%s`" % d)
+            continue
+        if allow_ipv4 and RE_ipv4.match(d):
+            continue
+        if allow_ipv6 and RE_ipv6.match(d):
+            # TODO: drop out special prefixes
+            # https://www.iana.org/assignments/iana-ipv6-special-registry/iana-ipv6-special-registry.xhtml
+            continue
+        raise ValueError("invalid domain: `%s`" % d)
     return True
 
 

@@ -1,3 +1,14 @@
+1.0.4
+    The following functions now accept new kwargs:
+    * kwargs:
+        allow_hostname: bool = True
+        allow_ipv4: bool = False
+        allow_ipv6: bool = False
+    * functions
+        - domains_from_list
+        - domains_from_string
+        - validate_domains
+
 1.0.3
     * exception did not properly interpolate variable
 

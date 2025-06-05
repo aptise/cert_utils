@@ -2,6 +2,8 @@
 import json
 import os
 from typing import Dict
+from typing import Iterable
+from typing import List
 import unittest
 
 # pypi
@@ -1714,13 +1716,9 @@ class UnitTest_api(unittest.TestCase):
         self.assertEqual(active, cert_utils.core.openssl_version)
 
         # let's try to replace it
-        cert_utils.core.openssl_version = [
-            0,
-        ]
+        cert_utils.core.openssl_version = [0]
         self.assertEqual(
-            [
-                0,
-            ],
+            [0],
             cert_utils.core.openssl_version,
         )
         new = cert_utils.check_openssl_version(replace=True)
@@ -1729,46 +1727,232 @@ class UnitTest_api(unittest.TestCase):
 
 
 class UnitTest_utils(unittest.TestCase):
-    """python -m unittest tests.test_unit.UnitTest_utils"""
+    """
+    pytest tests/test_unit.py::UnitTest_utils_ips
+    """
 
-    def test_validate_domains__valid(self):
-        """
-        python -m unittest tests.test_unit.UnitTest_utils.test_validate_domains__valid
-        """
-        domains = (
-            "EXAMPLE.com",
-            "example.com",
-            "foo.example.com",
-            "test-1.example.com",
-            "*.example.com",
-        )
-        for d in domains:
+    """
+        domains_from_string
+        domains_from_list
+        validate_domains
+    """
+
+    _DOMAINS__valid = (
+        "EXAMPLE.com",
+        "example.com",
+        "foo.example.com",
+        "test-1.example.com",
+        "*.example.com",
+    )
+
+    _DOMAINS__invalid = (
+        "-EXAMPLE.com",
+        "example.com-",
+        "example.com.",
+        ".example.com.",
+        "test_1.example.com",
+        "*.*.example.com",
+        "*.example.*.com",
+        "example.*.com",
+        "127.0.0.1",
+        "192.168.0.1",
+        "255.255.255.255",
+    )
+
+    _ADDRS_IPV4 = (
+        "192.168.0.1",
+        "127.0.0.1",
+        "255.255.255.255",
+    )
+    _ADDRS_IPV6 = (
+        # search engine result
+        "2001:0db8:85a3:0000:0000:8a2e:0370:7334",
+        "2001:db8:85a3::8a2e:370:7334",
+        # boulder
+        "2001:0db8:0bad:0dab:c0ff:fee0:0007:1337",
+        "2001:0db8:85a3:0000:0000:8a2e:0370:7334",
+        "2001:0db8:85a3:0000:0000:8a2e:0370:7334:9000",
+        "2606:4700:4700::1111",
+        "2606:4700:4700::1111:53",
+        "3fff::",
+    )
+
+    def _mimic_standardize(self, domains: Iterable[str]) -> List[str]:
+        return sorted(list(set([i.lower() for i in domains])))  # standardize and dedupe
+
+    def _mimc_string(self, domains: Iterable[str]) -> str:
+        # return ",".join(domains)
+        # every other element will have whitespace
+        return ",".join(d if idx % 2 else " %s" % d for idx, d in enumerate(domains))
+
+    # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+    def test__validate_domains__ipv4(self):
+        for addr in self._ADDRS_IPV4:
             # validate domains expects a list
-            utils.validate_domains(
-                [
-                    d,
-                ]
-            )
+            utils.validate_domains([addr], allow_ipv4=True)
 
-    def test_validate_domains__invalid(self):
-        """
-        python -m unittest tests.test_unit.UnitTest_utils.test_validate_domains__invalid
-        """
-        domains = (
-            "-EXAMPLE.com",
-            "example.com-",
-            "example.com.",
-            ".example.com.",
-            "test_1.example.com",
-            "*.*.example.com",
-            "*.example.*.com",
-            "example.*.com",
-        )
-        for d in domains:
+    def test__validate_domains__ipv6(self):
+        for addr in self._ADDRS_IPV6:
+            # validate domains expects a list
+            utils.validate_domains([addr], allow_ipv6=True)
+
+    def test__validate_domains__domains(self):
+        for addr in self._DOMAINS__valid:
+            # validate domains expects a list
+            utils.validate_domains([addr])
+
+    def test__validate_domains__all(self):
+        addresses = self._DOMAINS__valid + self._ADDRS_IPV4 + self._ADDRS_IPV6
+        for addr in addresses:
+            # validate domains expects a list
+            utils.validate_domains([addr], allow_ipv4=True, allow_ipv6=True)
+
+    def test__validate_domains__fail__domain(self):
+        for addr in self._DOMAINS__valid:
             # validate domains expects a list
             with self.assertRaises(ValueError) as cm:
-                utils.validate_domains(
-                    [
-                        d,
-                    ]
+                utils.validate_domains([addr], allow_hostname=False)
+
+        for addr in self._DOMAINS__invalid:
+            # validate domains expects a list
+            with self.assertRaises(ValueError) as cm:
+                utils.validate_domains([addr])
+
+    def test__validate_domains__fail__ipv4(self):
+        for addr in self._ADDRS_IPV4:
+            # validate domains expects a list
+            with self.assertRaises(ValueError) as cm:
+                utils.validate_domains([addr])
+            with self.assertRaises(ValueError) as cm:
+                utils.validate_domains([addr], allow_ipv6=True)  # allow ipv6, not ipv4
+
+    def test__validate_domains__fail__ipv6(self):
+        for addr in self._ADDRS_IPV6:
+            # validate domains expects a list
+            with self.assertRaises(ValueError) as cm:
+                utils.validate_domains([addr])
+            with self.assertRaises(ValueError) as cm:
+                utils.validate_domains([addr], allow_ipv4=True)  # allow ipv4, not ipv6
+
+    # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+    def test__domains_from_list__ipv4(self):
+        addresses = self._mimic_standardize(self._ADDRS_IPV4)
+        self.assertEqual(
+            addresses,
+            utils.domains_from_list(self._ADDRS_IPV4, allow_ipv4=True),
+        )
+
+    def test__domains_from_list__ipv6(self):
+        addresses = self._mimic_standardize(self._ADDRS_IPV6)
+        self.assertEqual(
+            addresses,
+            utils.domains_from_list(self._ADDRS_IPV6, allow_ipv6=True),
+        )
+
+    def test__domains_from_list__domains(self):
+        addresses = self._mimic_standardize(self._DOMAINS__valid)
+        self.assertEqual(
+            addresses,
+            utils.domains_from_list(self._DOMAINS__valid),
+        )
+
+    def test__domains_from_list__all(self):
+        addresses = list(self._DOMAINS__valid + self._ADDRS_IPV4 + self._ADDRS_IPV6)
+        addresses = self._mimic_standardize(addresses)
+        self.assertEqual(
+            addresses,
+            sorted(
+                utils.domains_from_list(addresses, allow_ipv4=True, allow_ipv6=True)
+            ),
+        )
+
+    def test__domains_from_list__fail__domain(self):
+        with self.assertRaises(ValueError) as cm:
+            utils.domains_from_list(self._DOMAINS__invalid)
+
+        with self.assertRaises(ValueError) as cm:
+            utils.domains_from_list(self._DOMAINS__valid, allow_hostname=False)
+
+    def test__domains_from_list__fail__ipv4(self):
+        with self.assertRaises(ValueError) as cm:
+            utils.domains_from_list(self._ADDRS_IPV4)
+        with self.assertRaises(ValueError) as cm:
+            utils.domains_from_list(
+                self._ADDRS_IPV4, allow_ipv6=True
+            )  # allow ipv6, not ipv4
+
+    def test__domains_from_list__fail__ipv6(self):
+        with self.assertRaises(ValueError) as cm:
+            utils.domains_from_list(self._ADDRS_IPV6)
+        with self.assertRaises(ValueError) as cm:
+            utils.domains_from_list(
+                self._ADDRS_IPV6, allow_ipv4=True
+            )  # allow ipv4, not ipv6
+
+    # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+    def test__domains_from_string__ipv4(self):
+        addresses = self._mimic_standardize(self._ADDRS_IPV4)
+        addresses_string = self._mimc_string(addresses)
+        self.assertEqual(
+            addresses,
+            utils.domains_from_string(addresses_string, allow_ipv4=True),
+        )
+
+    def test__domains_from_string__ipv6(self):
+        addresses = self._mimic_standardize(self._ADDRS_IPV6)
+        addresses_string = self._mimc_string(addresses)
+        self.assertEqual(
+            addresses,
+            utils.domains_from_string(addresses_string, allow_ipv6=True),
+        )
+
+    def test__domains_from_string__domains(self):
+        addresses = self._mimic_standardize(self._DOMAINS__valid)
+        addresses_string = self._mimc_string(addresses)
+        self.assertEqual(
+            addresses,
+            utils.domains_from_string(addresses_string),
+        )
+
+    def test__domains_from_string__all(self):
+        addresses = list(self._DOMAINS__valid + self._ADDRS_IPV4 + self._ADDRS_IPV6)
+        addresses = self._mimic_standardize(addresses)
+        addresses_string = self._mimc_string(addresses)
+        self.assertEqual(
+            addresses,
+            sorted(
+                utils.domains_from_string(
+                    addresses_string, allow_ipv4=True, allow_ipv6=True
                 )
+            ),
+        )
+
+    def test__domains_from_string__fail__domain(self):
+        addresses_string = self._mimc_string(self._DOMAINS__invalid)
+        with self.assertRaises(ValueError) as cm:
+            utils.domains_from_string(addresses_string)
+
+        addresses_string2 = self._mimc_string(self._DOMAINS__valid)
+        with self.assertRaises(ValueError) as cm:
+            utils.domains_from_string(addresses_string, allow_hostname=False)
+
+    def test__domains_from_string__fail__ipv4(self):
+        addresses_string = self._mimc_string(self._ADDRS_IPV4)
+        with self.assertRaises(ValueError) as cm:
+            utils.domains_from_string(addresses_string)
+        with self.assertRaises(ValueError) as cm:
+            utils.domains_from_string(
+                addresses_string, allow_ipv6=True
+            )  # allow ipv6, not ipv4
+
+    def test__domains_from_string__fail__ipv6(self):
+        addresses_string = self._mimc_string(self._ADDRS_IPV6)
+        with self.assertRaises(ValueError) as cm:
+            utils.domains_from_string(addresses_string)
+        with self.assertRaises(ValueError) as cm:
+            utils.domains_from_string(
+                addresses_string, allow_ipv4=True
+            )  # allow ipv4, not ipv6
