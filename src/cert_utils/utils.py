@@ -11,6 +11,9 @@ from typing import List
 from typing import Tuple
 from typing import Union
 
+# pypi
+from typing_extensions import Literal
+
 # ==============================================================================
 
 _RE_rn = re.compile(r"\r\n")
@@ -228,6 +231,27 @@ def hex_with_colons(as_hex: str) -> str:
     return output
 
 
+def identify_san_type(
+    san: str,
+) -> Literal["hostname", "ipv4", "ipv6"]:
+    """
+    This does a rudimentary check against hostnames (default) and optionally
+    ipv4 and ipv6.
+
+    see also: validate_domains
+    added in 1.0.4
+    """
+    if RE_cert_domain.match(san):
+        if RE_ipv4.match(san):
+            return "ipv4"
+        return "hostname"
+    if RE_ipv4.match(san):
+        return "ipv4"
+    if RE_ipv6.match(san):
+        return "ipv6"
+    raise ValueError("invalid san: `%s`" % san)
+
+
 def jose_b64(b: bytes) -> str:
     # helper function base64 encode for jose spec
     return base64.urlsafe_b64encode(b).decode("utf8").replace("=", "")
@@ -297,6 +321,8 @@ def validate_domains(
 
     This does a rudimentary check against hostnames (default) and optionally
     ipv4 and ipv6.
+
+    see also: identify_san_type
 
     :param domain_names: (required) An iterable list of strings
     :param allow_hostname: bool, default True

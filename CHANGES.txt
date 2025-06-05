@@ -1,13 +1,15 @@
 1.0.4
     The following functions now accept new kwargs:
-    * kwargs:
-        allow_hostname: bool = True
-        allow_ipv4: bool = False
-        allow_ipv6: bool = False
-    * functions
-        - domains_from_list
-        - domains_from_string
-        - validate_domains
+        * kwargs:
+            allow_hostname: bool = True
+            allow_ipv4: bool = False
+            allow_ipv6: bool = False
+        * functions
+            - domains_from_list
+            - domains_from_string
+            - validate_domains
+    * new functions
+        utils.identify_san_type
     * updated repo to not allow admins to bypass rules
     
 1.0.3

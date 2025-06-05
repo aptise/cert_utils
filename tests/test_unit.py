@@ -1745,7 +1745,7 @@ class UnitTest_utils(unittest.TestCase):
         "*.example.com",
     )
 
-    _DOMAINS__invalid = (
+    _HOSTNAMES__invalid = (
         "-EXAMPLE.com",
         "example.com-",
         "example.com.",
@@ -1754,6 +1754,8 @@ class UnitTest_utils(unittest.TestCase):
         "*.*.example.com",
         "*.example.*.com",
         "example.*.com",
+    )
+    _DOMAINS__invalid = _HOSTNAMES__invalid + (
         "127.0.0.1",
         "192.168.0.1",
         "255.255.255.255",
@@ -1956,3 +1958,22 @@ class UnitTest_utils(unittest.TestCase):
             utils.domains_from_string(
                 addresses_string, allow_ipv4=True
             )  # allow ipv4, not ipv6
+
+    # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+    def test__identify_san_type__ipv4(self):
+        for addr in self._ADDRS_IPV4:
+            self.assertEqual("ipv4", utils.identify_san_type(addr))
+
+    def test__identify_san_type__ipv6(self):
+        for addr in self._ADDRS_IPV6:
+            self.assertEqual("ipv6", utils.identify_san_type(addr))
+
+    def test__identify_san_type__domains(self):
+        for addr in self._DOMAINS__valid:
+            self.assertEqual("hostname", utils.identify_san_type(addr))
+
+    def test__identify_san_type__fail__domain(self):
+        for addr in self._HOSTNAMES__invalid:
+            with self.assertRaises(ValueError) as cm:
+                utils.identify_san_type(addr)
