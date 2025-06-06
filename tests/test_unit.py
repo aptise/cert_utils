@@ -1740,6 +1740,11 @@ class UnitTest_utils(unittest.TestCase):
     _DOMAINS__valid = (
         "EXAMPLE.com",
         "example.com",
+        "a.example.com",
+        "0.example.com",
+        "example.us",
+        "a.example.us",
+        "0.example.us",
         "foo.example.com",
         "test-1.example.com",
         "*.example.com",

@@ -43,8 +43,10 @@ RE_cert_domain = re.compile(
 (?:\*\.)?                       # allow a leading "*.", to denote wildcards
 (?:
     [A-Z0-9]                    # the first char MUST be a letter or number
-    (?:[A-Z0-9-]{0,61}          # inner chars can have a dash
-    [A-Z0-9]                    # the last char must be a leter or number
+    (?:
+        (?:[A-Z0-9-]{0,61}          # inner chars can have a dash
+        [A-Z0-9]                    # the last char must be a leter or number
+    )?                          # make this optional, to support 1 letter subdomains
     \.
 )?
 )+                              # one or more components
