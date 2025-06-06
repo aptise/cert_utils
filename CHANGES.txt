@@ -1,3 +1,5 @@
+1.0.5
+    * fixed bug in domain regex that excluded single letter subdomains    
 1.0.4
     The following functions now accept new kwargs:
         * kwargs:
