@@ -1,5 +1,6 @@
 1.0.5
     * fixed bug in domain regex that excluded single letter subdomains    
+    * added empty __init__.py files for setuptools to be happy
 1.0.4
     The following functions now accept new kwargs:
         * kwargs:
