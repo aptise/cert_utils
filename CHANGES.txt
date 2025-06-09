@@ -1,4 +1,16 @@
 1.0.5
+    * the following functions now accept kwarg `ipv6_require_compressed`, a bool.
+      if True (default False), ipv6 values must be compressed.
+            - domains_from_list
+            - domains_from_string
+            - validate_domains
+     The initial behavior of LetsEncrypt will be to require compressed ipv6
+     addresses, though this may change in the future. The LetsEncrypt API will
+     write ipv6 address strings in the compressed format; and the data in
+     certificates will be raw bytes.
+    * new function `validate_ipv6_address`
+
+1.0.5
     * fixed bug in domain regex that excluded single letter subdomains    
     * added empty __init__.py files for setuptools to be happy
 1.0.4

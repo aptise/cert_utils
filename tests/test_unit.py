@@ -4,6 +4,7 @@ import os
 from typing import Dict
 from typing import Iterable
 from typing import List
+from typing import TYPE_CHECKING
 import unittest
 
 # pypi
@@ -1726,7 +1727,7 @@ class UnitTest_api(unittest.TestCase):
         self.assertEqual(new, cert_utils.core.openssl_version)
 
 
-class UnitTest_utils(unittest.TestCase):
+class _UnitTest_utils__CORE(unittest.TestCase):
     """
     pytest tests/test_unit.py::UnitTest_utils_ips
     """
@@ -1784,6 +1785,31 @@ class UnitTest_utils(unittest.TestCase):
         "3fff::",
     )
 
+    _ADDRS_IPV6_advanced = (
+        {
+            "valid": True,
+            "address": "2001:0db8:85a3:0000:0000:8a2e:0370:7334",
+            "compressed": "2001:db8:85a3::8a2e:370:7334",
+            "exceptions": {
+                "validate_ipv6_address|ipv6_require_compressed=True": """invalid domain: `2001:0db8:85a3:0000:0000:8a2e:0370:7334`; ipv6 must be compressed.""",
+                "validate_domains|allow_ipv6=True|ipv6_require_compressed=True": """invalid domain: `2001:0db8:85a3:0000:0000:8a2e:0370:7334`; ipv6 must be compressed.""",
+                "domains_from_list|allow_ipv6=True|ipv6_require_compressed=True": """invalid domain: `2001:0db8:85a3:0000:0000:8a2e:0370:7334`; ipv6 must be compressed.""",
+                "domains_from_string|allow_ipv6=True|ipv6_require_compressed=True": """invalid domain: `2001:0db8:85a3:0000:0000:8a2e:0370:7334`; ipv6 must be compressed.""",
+            },
+        },
+        {
+            "valid": False,
+            "address": "2001:0db8:85a3:0000:0000:8a2e:0370:xxx",
+            "compressed": None,
+            "exceptions": {
+                "validate_ipv6_address": """invalid domain: `2001:0db8:85a3:0000:0000:8a2e:0370:xxx`; ipaddress.AddressValueError("Only hex digits permitted in \'xxx\' in \'2001:0db8:85a3:0000:0000:8a2e:0370:xxx\'").""",
+                "validate_domains|allow_ipv6=True": """invalid domain: `2001:0db8:85a3:0000:0000:8a2e:0370:xxx`""",
+                "domains_from_list|allow_ipv6=True": """invalid domain: `2001:0db8:85a3:0000:0000:8a2e:0370:xxx`""",
+                "domains_from_string|allow_ipv6=True": """invalid domain: `2001:0db8:85a3:0000:0000:8a2e:0370:xxx`""",
+            },
+        },
+    )
+
     def _mimic_standardize(self, domains: Iterable[str]) -> List[str]:
         return sorted(list(set([i.lower() for i in domains])))  # standardize and dedupe
 
@@ -1793,6 +1819,9 @@ class UnitTest_utils(unittest.TestCase):
         return ",".join(d if idx % 2 else " %s" % d for idx, d in enumerate(domains))
 
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+
+class UnitTest_utils(_UnitTest_utils__CORE, unittest.TestCase):
 
     def test__validate_domains__ipv4(self):
         for addr in self._ADDRS_IPV4:
@@ -1982,3 +2011,172 @@ class UnitTest_utils(unittest.TestCase):
         for addr in self._HOSTNAMES__invalid:
             with self.assertRaises(ValueError) as cm:
                 utils.identify_san_type(addr)
+
+
+class UnitTest_utils__ipv6_advanced(_UnitTest_utils__CORE, unittest.TestCase):
+
+    def test__validate_ipv6_address(self):
+        for test_data in self._ADDRS_IPV6_advanced:
+            address = test_data["address"]
+            compressed = test_data["compressed"]
+            if TYPE_CHECKING:
+                assert isinstance(address, str)
+                assert isinstance(compressed, str)
+            if test_data["valid"]:
+                success = utils.validate_ipv6_address(address)
+                if address != compressed:
+                    # ensure compressed is valid
+                    success2 = utils.validate_ipv6_address(compressed)
+                    # ensure uncompressed fails
+                    with self.assertRaises(ValueError) as cm:
+                        failure = utils.validate_ipv6_address(
+                            address,
+                            ipv6_require_compressed=True,
+                        )
+            else:
+                with self.assertRaises(ValueError) as cm:
+                    failure = utils.validate_ipv6_address(address)
+                if TYPE_CHECKING:
+                    assert isinstance(cm.exception.args, list)
+                self.assertEqual(
+                    cm.exception.args[0],
+                    test_data["exceptions"]["validate_ipv6_address"],
+                )
+
+    def test__validate_domains(self):
+        for test_data in self._ADDRS_IPV6_advanced:
+            address = test_data["address"]
+            compressed = test_data["compressed"]
+            if TYPE_CHECKING:
+                assert isinstance(address, str)
+                assert isinstance(compressed, str)
+            if test_data["valid"]:
+                success = utils.validate_domains([address], allow_ipv6=True)
+                if address != compressed:
+                    # ensure compressed is valid
+                    success2 = utils.validate_domains(
+                        [compressed],
+                        allow_ipv6=True,
+                        ipv6_require_compressed=True,
+                    )
+                    # ensure uncompressed fails
+                    with self.assertRaises(ValueError) as cm:
+                        failure = utils.validate_domains(
+                            [address],
+                            allow_ipv6=True,
+                            ipv6_require_compressed=True,
+                        )
+                    if TYPE_CHECKING:
+                        assert isinstance(cm.exception.args, list)
+                    self.assertEqual(
+                        cm.exception.args[0],
+                        test_data["exceptions"][
+                            "validate_domains|allow_ipv6=True|ipv6_require_compressed=True"
+                        ],
+                    )
+            else:
+                with self.assertRaises(ValueError) as cm:
+                    failure = utils.validate_domains(
+                        [address],
+                        allow_ipv6=True,
+                    )
+                if TYPE_CHECKING:
+                    assert isinstance(cm.exception.args, list)
+                self.assertEqual(
+                    cm.exception.args[0],
+                    test_data["exceptions"]["validate_domains|allow_ipv6=True"],
+                )
+
+    def test__domains_from_list(self):
+        for test_data in self._ADDRS_IPV6_advanced:
+            address = test_data["address"]
+            compressed = test_data["compressed"]
+            if TYPE_CHECKING:
+                assert isinstance(address, str)
+                assert isinstance(compressed, str)
+            if test_data["valid"]:
+                success = utils.domains_from_list([address], allow_ipv6=True)
+                self.assertEqual(1, len(success))
+                self.assertIn(address, success)
+                if address != compressed:
+                    # ensure compressed is valid
+                    success2 = utils.domains_from_list(
+                        [compressed],
+                        allow_ipv6=True,
+                        ipv6_require_compressed=True,
+                    )
+                    # ensure uncompressed fails
+                    with self.assertRaises(ValueError) as cm:
+                        failure = utils.domains_from_list(
+                            [address],
+                            allow_ipv6=True,
+                            ipv6_require_compressed=True,
+                        )
+                    if TYPE_CHECKING:
+                        assert isinstance(cm.exception.args, list)
+                    self.assertEqual(
+                        cm.exception.args[0],
+                        test_data["exceptions"][
+                            "domains_from_list|allow_ipv6=True|ipv6_require_compressed=True"
+                        ],
+                    )
+            else:
+                with self.assertRaises(ValueError) as cm:
+                    failure = utils.domains_from_list(
+                        [address],
+                        allow_ipv6=True,
+                    )
+                if TYPE_CHECKING:
+                    assert isinstance(cm.exception.args, list)
+                self.assertEqual(
+                    cm.exception.args[0],
+                    test_data["exceptions"]["domains_from_list|allow_ipv6=True"],
+                )
+
+    def test__domains_from_string(self):
+        for test_data in self._ADDRS_IPV6_advanced:
+            address = test_data["address"]
+            compressed = test_data["compressed"]
+            if TYPE_CHECKING:
+                assert isinstance(address, str)
+                assert isinstance(compressed, str)
+            addresses_string = self._mimc_string([address])
+            compressed_string = self._mimc_string([compressed])
+            if test_data["valid"]:
+                success = utils.domains_from_string(addresses_string, allow_ipv6=True)
+                self.assertEqual(1, len(success))
+                self.assertIn(address, success)
+                if address != compressed:
+                    # ensure compressed is valid
+                    success2 = utils.domains_from_string(
+                        compressed_string,
+                        allow_ipv6=True,
+                        ipv6_require_compressed=True,
+                    )
+                    # ensure uncompressed fails
+                    with self.assertRaises(ValueError) as cm:
+                        failure = utils.domains_from_string(
+                            addresses_string,
+                            allow_ipv6=True,
+                            ipv6_require_compressed=True,
+                        )
+                    if TYPE_CHECKING:
+                        assert isinstance(cm.exception.args, list)
+                    self.assertEqual(
+                        cm.exception.args[0],
+                        test_data["exceptions"][
+                            "domains_from_string|allow_ipv6=True|ipv6_require_compressed=True"
+                        ],
+                    )
+            else:
+                with self.assertRaises(ValueError) as cm:
+                    failure = utils.domains_from_string(
+                        addresses_string,
+                        allow_ipv6=True,
+                    )
+                if TYPE_CHECKING:
+                    assert isinstance(cm.exception.args, list)
+                self.assertEqual(
+                    cm.exception.args[0],
+                    test_data["exceptions"]["domains_from_string|allow_ipv6=True"],
+                )
