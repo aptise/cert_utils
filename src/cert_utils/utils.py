@@ -4,6 +4,7 @@
 import base64
 import binascii
 import hashlib
+import ipaddress
 import re
 import tempfile
 from typing import Iterable
@@ -166,6 +167,7 @@ def domains_from_list(
     allow_hostname: bool = True,
     allow_ipv4: bool = False,
     allow_ipv6: bool = False,
+    ipv6_require_compressed: bool = False,
 ) -> List[str]:
     """
     Turns a list of strings into a standardized list of domain names.
@@ -181,6 +183,8 @@ def domains_from_list(
         added in 1.0.4
     :param allow_ipv6: bool, default False
         added in 1.0.4
+    :param ipv6_require_compressed: bool, default False
+        added in 1.0.5
     """
     domain_names = [d for d in [d.strip().lower() for d in domain_names] if d]
     # make the list unique
@@ -191,6 +195,7 @@ def domains_from_list(
         allow_hostname=allow_hostname,
         allow_ipv4=allow_ipv4,
         allow_ipv6=allow_ipv6,
+        ipv6_require_compressed=ipv6_require_compressed,
     )
     return domain_names
 
@@ -200,6 +205,7 @@ def domains_from_string(
     allow_hostname: bool = True,
     allow_ipv4: bool = False,
     allow_ipv6: bool = False,
+    ipv6_require_compressed: bool = False,
 ) -> List[str]:
     """
     This invokes `domains_from_list` which invokes `validate_domains`, which uses a simple regex to validate each domain in the list.
@@ -213,6 +219,8 @@ def domains_from_string(
         added in 1.0.4
     :param allow_ipv6: bool, default False
         added in 1.0.4
+    :param ipv6_require_compressed: bool, default False
+        added in 1.0.5
     """
     # generate list
     domain_names = text.split(",")
@@ -221,6 +229,7 @@ def domains_from_string(
         allow_hostname=allow_hostname,
         allow_ipv4=allow_ipv4,
         allow_ipv6=allow_ipv6,
+        ipv6_require_compressed=ipv6_require_compressed,
     )
 
 
@@ -316,6 +325,7 @@ def validate_domains(
     allow_hostname: bool = True,
     allow_ipv4: bool = False,
     allow_ipv6: bool = False,
+    ipv6_require_compressed: bool = False,
 ) -> bool:
     """
     Ensures each items of the iterable `domain_names` is qualified for inclusion
@@ -333,6 +343,8 @@ def validate_domains(
         added in 1.0.4
     :param allow_ipv6: bool, default False
         added in 1.0.4
+    :param ipv6_require_compressed: bool, default False
+        added in 1.0.5
     """
     for d in domain_names:
         if allow_hostname and RE_cert_domain.match(d):
@@ -343,11 +355,34 @@ def validate_domains(
         if allow_ipv4 and RE_ipv4.match(d):
             continue
         if allow_ipv6 and RE_ipv6.match(d):
+            # require compressed
+            if ipv6_require_compressed:
+                validate_ipv6_address(d, ipv6_require_compressed=True)
             # TODO: drop out special prefixes
             # https://www.iana.org/assignments/iana-ipv6-special-registry/iana-ipv6-special-registry.xhtml
             continue
         raise ValueError("invalid domain: `%s`" % d)
     return True
+
+
+def validate_ipv6_address(
+    domain_name: str,
+    ipv6_require_compressed: bool = False,
+) -> Literal[True]:
+    try:
+        # _obj = ipaddress.ip_address(domain_name)
+        _obj = ipaddress.IPv6Address(domain_name)
+        if ipv6_require_compressed:
+            if _obj.compressed != domain_name:
+                raise ValueError(
+                    "invalid domain: `%s`; ipv6 must be compressed." % domain_name
+                )
+        return True
+    except ipaddress.AddressValueError as exc:
+        raise ValueError(
+            'invalid domain: `%s`; ipaddress.AddressValueError("%s").'
+            % (domain_name, exc.args[0])
+        )
 
 
 # ------------------------------------------------------------------------------
