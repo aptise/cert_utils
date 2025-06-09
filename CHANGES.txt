@@ -1,4 +1,4 @@
-1.0.5
+1.0.6
     * the following functions now accept kwarg `ipv6_require_compressed`, a bool.
       if True (default False), ipv6 values must be compressed.
             - domains_from_list
