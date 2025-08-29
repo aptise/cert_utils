@@ -141,13 +141,17 @@ Compatibility Info
     via https://letsencrypt.org/docs/certificate-compatibility/
     Last updated: Jan 21, 2021
 
+["cert.fingerprints"]["sha1"] = `openssl x509 -fingerprint -sha1 -noout -in isrg-root-x2.pem`
+
 """
+
 CERT_CA_PAYLOAD = TypedDict(
     "CERT_CA_PAYLOAD",
     {
         "display_name": Required[str],
         "url_pem": Required[str],
         "is_trusted_root": Optional[bool],
+        "is_untrusted_root": Optional[bool],
         "is_self_signed": Optional[bool],
         "signed_by": Required[str],
         "is_active": Required[bool],
@@ -155,7 +159,9 @@ CERT_CA_PAYLOAD = TypedDict(
         "key_technology": Required[str],
         "cert.fingerprints": Optional[Dict[str, str]],
         ".enddate": Optional[Tuple[int, ...]],
-        "compatibility": Optional[Dict[str, str]],
+        "compatibility": Optional[
+            Dict[str, Tuple[str, str, str]]
+        ],  # platform: (min, max, note)
         "alternates": Optional[List[str]],
         "alternate_of": Optional[str],
         "letsencrypt_serial": Optional[str],
@@ -167,7 +173,7 @@ CERT_CA_PAYLOAD = TypedDict(
 )
 
 
-CERT_CAS_DATA: Dict[str, CERT_CA_PAYLOAD] = {
+CERT_CAS_DEPRECATED: Dict[str, CERT_CA_PAYLOAD] = {
     "trustid_root_x3": {
         "display_name": "DST Root CA X3",
         "url_pem": "https://letsencrypt.org/certs/trustid-x3-root.pem",
@@ -181,48 +187,22 @@ CERT_CAS_DATA: Dict[str, CERT_CA_PAYLOAD] = {
         },
         ".enddate": (2021, 9, 30, 14, 1, 15),
         "compatibility": {
-            "Windows": ">= XP SP3",
-            "macOS": "(most versions)",
-            "iOS": "(most versions)",
-            "Android": ">= v2.3.6",
-            "Mozilla Firefox": ">= v2.0",
-            "Ubuntu": ">= precise / 12.04",
-            "Debian": ">= squeee / 6",
-            "Java 8": ">= 8u101",
-            "Java 7": ">= 7u111",
-            "NSS": ">= v3.11.9",
-            "Amazon FireOS (Silk Browser)": "?",
-            "Cyanogen": "> v10",
-            "Jolla Sailfish OS": "> v1.1.2.16",
-            "Kindle": "> v3.4.1",
-            "Blackberry": ">= 10.3.3",
-            "PS4 game console": "with firmware >= 5.00",
-        },
-    },
-    "isrg_root_x1": {
-        "display_name": "ISRG Root X1",
-        "url_pem": "https://letsencrypt.org/certs/isrgrootx1.pem",
-        "is_trusted_root": True,
-        "is_self_signed": True,
-        "signed_by": "isrg_root_x1",
-        "is_active": True,
-        "key_technology": "RSA",
-        "alternates": ["isrg_root_x1_cross"],
-        "cert.fingerprints": {
-            "sha1": "CABD2A79A1076A31F21D253635CB039D4329A5E8",
-        },
-        ".enddate": (2035, 6, 4, 11, 4, 38),
-        "compatibility": {
-            "Windows": ">= XP SP3 (assuming Automatic Root Certificate Update isn't manually disabled)",
-            "macOS": ">= 10.12.1",
-            "iOS": ">= 10 (iOS 9 does not include it)",
-            "Android": ">= 7.1.1",
-            "Mozilla Firefox": ">= 50.0",
-            "Ubuntu": ">= xenial / 16.04 (with updates applied)",
-            "Debian": ">= jessie / 8 (with updates applied)",
-            "Java 8": ">= 8u141",
-            "Java 7": ">= 7u151",
-            "NSS": ">= 3.26",
+            "Windows": (">= XP SP3", None, None),
+            "macOS": ("(most versions)", None, None),
+            "iOS": ("(most versions)", None, None),
+            "Android": (">= v2.3.6", None, None),
+            "Mozilla Firefox": (">= v2.0", None, None),
+            "Ubuntu": (">= precise / 12.04", None, None),
+            "Debian": (">= squeee / 6", None, None),
+            "Java 8": (">= 8u101", None, None),
+            "Java 7": (">= 7u111", None, None),
+            "NSS": (">= v3.11.9", None, None),
+            "Amazon FireOS (Silk Browser)": ("?", None, None),
+            "Cyanogen": ("> v10", None, None),
+            "Jolla Sailfish OS": ("> v1.1.2.16", None, None),
+            "Kindle": ("> v3.4.1", None, None),
+            "Blackberry": (">= 10.3.3", None, None),
+            "PS4 game console": ("with firmware >= 5.00", None, None),
         },
     },
     "isrg_root_x1_cross": {
@@ -235,31 +215,6 @@ CERT_CAS_DATA: Dict[str, CERT_CA_PAYLOAD] = {
         "key_technology": "RSA",
         "signed_by": "trustid_root_x3",
         "alternate_of": "isrg_root_x1",
-    },
-    "isrg_root_x2": {
-        # x2 is self-signed by default, but is available as cross-signed by isrgrootx1
-        "display_name": "ISRG Root X2",
-        "url_pem": "https://letsencrypt.org/certs/isrg-root-x2.pem",
-        "is_trusted_root": True,
-        "is_self_signed": True,
-        "signed_by": "isrg_root_x2",
-        "is_active": True,
-        "key_technology": "EC",  # ECDSA
-        "alternates": ["isrg_root_x2_cross"],
-        "cert.fingerprints": {
-            "sha1": "BDB1B93CD5978D45C6261455F8DB95C75AD153AF",
-        },
-        ".enddate": (2040, 9, 17, 16, 0),
-    },
-    "isrg_root_x2_cross": {
-        # x2 this is cross signed by x1 to act as an intermediate!
-        "display_name": "ISRG Root X2 (Cross-signed by ISRG Root X1)",
-        "url_pem": "https://letsencrypt.org/certs/isrg-root-x2-cross-signed.pem",
-        "is_trusted_root": False,
-        "is_active": False,
-        "key_technology": "RSA",
-        "signed_by": "isrg_root_x1",
-        "alternate_of": "isrg_root_x2",
     },
     "letsencrypt_ocsp_root_x1": {
         "display_name": "Let's Encrypt OSCP Root X1",
@@ -407,6 +362,23 @@ CERT_CAS_DATA: Dict[str, CERT_CA_PAYLOAD] = {
         "signed_by": "isrg_root_x2",
         "letsencrypt_serial": "e2",
     },
+    "staging_letsencrypt_root_x1": {
+        "display_name": "Fake LE Root X1",
+        "url_pem": "https://letsencrypt.org/certs/fakelerootx1.pem",
+        "is_trusted_root": True,  # not really, but we pretend!
+        "is_untrusted_root": True,
+        "is_self_signed": True,
+        "is_active": True,
+        "key_technology": "RSA",
+        "signed_by": "staging_letsencrypt_root_x1",
+    },
+    "staging_letsencrypt_intermediate_x1": {
+        "display_name": "Fake LE Intermediate X1",
+        "url_pem": "https://letsencrypt.org/certs/fakeleintermediatex1.pem",
+        "is_active": True,
+        "key_technology": "RSA",
+        "signed_by": "staging_letsencrypt_root_x1",
+    },
     "e5": {
         "display_name": "Let's Encrypt E5",
         "url_pem": "https://letsencrypt.org/certs/e5.pem",
@@ -442,6 +414,180 @@ CERT_CAS_DATA: Dict[str, CERT_CA_PAYLOAD] = {
         "signed_by": "isrg_root_x1",
         "alternate_of": "e6",
         "letsencrypt_serial": "e6",
+    },
+    "r10": {
+        "display_name": "Let's Encrypt R10",
+        "url_pem": "https://letsencrypt.org/certs/r10.pem",
+        "is_active": True,
+        "key_technology": "RSA",
+        "signed_by": "isrg_root_x1",
+        "letsencrypt_serial": "r10",
+    },
+    "r11": {
+        "display_name": "Let's Encrypt R11",
+        "url_pem": "https://letsencrypt.org/certs/r11.pem",
+        "is_active": True,
+        "key_technology": "RSA",
+        "signed_by": "isrg_root_x1",
+        "letsencrypt_serial": "r11",
+    },
+}
+
+
+CERT_CAS_DATA: Dict[str, CERT_CA_PAYLOAD] = {
+    "isrg_root_x1": {
+        "display_name": "ISRG Root X1",
+        "url_pem": "https://letsencrypt.org/certs/isrgrootx1.pem",
+        "is_trusted_root": True,
+        "is_self_signed": True,
+        "signed_by": "isrg_root_x1",
+        "is_active": True,
+        "key_technology": "RSA",
+        "alternates": ["isrg_root_x1_cross"],
+        "cert.fingerprints": {
+            "sha1": "CABD2A79A1076A31F21D253635CB039D4329A5E8",
+        },
+        ".enddate": (2035, 6, 4, 11, 4, 38),
+        "compatibility": {
+            "Windows": (
+                ">= XP SP3",
+                None,
+                "unless Automatic Root Certificate Updates have been disabled",
+            ),
+            "Windows Server": (
+                ">= 2008",
+                None,
+                "unless Automatic Root Certificate Updates have been disabled",
+            ),
+            "macOS": (">= 10.12.1 Sierra", None, None),
+            "iOS": (">= 10", None, None),
+            "Android": (">= 7.1.1", None, None),
+            "Firefox": (">= 50.0", None, None),
+            "Ubuntu": (">= 12.04 Precise Pangolin ", None, "with updates applied"),
+            "Debian": (">= 8 / Jessie", None, "with updates applied"),
+            "RHEL 6": (">= 6.10", None, "with updates applied"),
+            "RHEL 7": (">= 7.4", None, "with updates applied"),
+            "RHEL 8": (">= 8", None, None),
+            "Java 7": (">= 7u151", None, None),
+            "Java 8": (">= 8u141", None, None),
+            "Java 9": (">= 9", None, None),
+            "NSS": (">= 3.26", None, None),
+            "Chrome": (
+                ">= 105",
+                None,
+                "earlier versions use the operating system trust store",
+            ),
+            "PlayStation PS4": (">= PS4 v8.0.0", None, None),
+        },
+    },
+    "isrg_root_x2": {
+        # x2 is self-signed by default, but is available as cross-signed by isrgrootx1
+        "display_name": "ISRG Root X2",
+        "url_pem": "https://letsencrypt.org/certs/isrg-root-x2.pem",
+        "is_trusted_root": True,
+        "is_self_signed": True,
+        "signed_by": "isrg_root_x2",
+        "is_active": True,
+        "key_technology": "EC",  # ECDSA
+        "alternates": ["isrg_root_x2_cross"],
+        "cert.fingerprints": {
+            "sha1": "BDB1B93CD5978D45C6261455F8DB95C75AD153AF",
+        },
+        ".enddate": (2040, 9, 17, 16, 0),
+        "compatibility": {
+            "Windows": (
+                ">= XP SP3",
+                None,
+                "unless Automatic Root Certificate Updates have been disabled",
+            ),
+            "Windows Server": (
+                ">= 2008",
+                None,
+                "unless Automatic Root Certificate Updates have been disabled",
+            ),
+            "macOS": (">= 13", None, None),
+            "iOS": (">= 16", None, None),
+            "Android": (">= 14", None, None),
+            "Firefox": (">= 97", None, None),
+            "Ubuntu": (">= 18.04 Bionic Beaver ", None, None),
+            "Debian": (">= 12/ Bookworm", None, None),
+            "RHEL 7": (">= 7.9", None, "with updates applied"),
+            "RHEL 8": (">= 8.6", None, "with updates applied"),
+            "RHEL 9": (">= 9.1", None, "with updates applied"),
+            "Java 8": (">= 8u141", None, None),
+            "Java 11": (">= 11.0.22", None, None),
+            "Java 17": (">= 17.0.10", None, None),
+            "Java 21": (">= 21.0.2", None, None),
+            "Java 22": (">= 22", None, None),
+            "NSS": (">= 3.74", None, None),
+            "Chrome": (
+                ">= 105",
+                None,
+                "earlier versions use the operating system trust store",
+            ),
+        },
+    },
+    "isrg_root_x2_cross": {
+        # x2 this is cross signed by x1 to act as an intermediate!
+        "display_name": "ISRG Root X2 (Cross-signed by ISRG Root X1)",
+        "url_pem": "https://letsencrypt.org/certs/isrg-root-x2-cross-signed.pem",
+        "is_trusted_root": False,
+        "is_active": False,
+        "key_technology": "RSA",
+        "signed_by": "isrg_root_x1",
+        "alternate_of": "isrg_root_x2",
+    },
+    "letsencrypt_staging_root_x1": {
+        "display_name": "(STAGING) Pretend Pear X1",
+        "url_pem": "https://letsencrypt.org/certs/staging/letsencrypt-stg-root-x1.pem",
+        "is_trusted_root": True,
+        "is_untrusted_root": True,
+        "is_self_signed": True,
+        "signed_by": "letsencrypt_staging_root_x1",
+        "is_active": True,
+        "key_technology": "EC",  # ECDSA
+        "cert.fingerprints": {
+            "sha1": "66493BA4F36D1731729B1118C7F5E2D540E3F37B",
+        },
+        ".enddate": (2035, 6, 4, 11, 0),
+        "compatibility": {
+            "All": ("<0", ">0", "Untrusted Fake Root"),
+        },
+    },
+    "letsencrypt_staging_root_x2": {
+        "display_name": "(STAGING) Pretend Pear X1",
+        "url_pem": "https://letsencrypt.org/certs/staging/letsencrypt-stg-root-x2.pem",
+        "is_trusted_root": True,
+        "is_untrusted_root": True,
+        "is_self_signed": True,
+        "signed_by": "letsencrypt_staging_root_x2",
+        "is_active": True,
+        "key_technology": "EC",  # ECDSA
+        "cert.fingerprints": {
+            "sha1": "A465AF9AF04F1A86A2701B987B3ED3A75D50ECEA",
+        },
+        ".enddate": (2035, 6, 4, 11, 0),
+        "compatibility": {
+            "All": ("<0", ">0", "Untrusted Fake Root"),
+        },
+    },
+    "letsencrypt_staging_root_x2_signed_by_x2": {
+        "display_name": "(STAGING) Bogus Broccoli X2",
+        "url_pem": "https://letsencrypt.org/certs/staging/letsencrypt-stg-root-x2-signed-by-x1.pem",
+        "is_trusted_root": True,
+        "is_untrusted_root": True,
+        "is_self_signed": False,
+        "signed_by": "letsencrypt_staging_root_x1",
+        "alternate_of": "letsencrypt_staging_root_x2",
+        "is_active": True,
+        "key_technology": "EC",  # ECDSA
+        "cert.fingerprints": {
+            "sha1": "70CB7923F66CB2678B050CEF38D5B4CB28489E88",
+        },
+        ".enddate": (2025, 9, 15, 16, 0),
+        "compatibility": {
+            "All": ("<0", ">0", "Untrusted Fake Root"),
+        },
     },
     "e7": {
         "display_name": "Let's Encrypt E7",
@@ -497,22 +643,6 @@ CERT_CAS_DATA: Dict[str, CERT_CA_PAYLOAD] = {
         "alternate_of": "e9",
         "letsencrypt_serial": "e9",
     },
-    "r10": {
-        "display_name": "Let's Encrypt R10",
-        "url_pem": "https://letsencrypt.org/certs/r10.pem",
-        "is_active": True,
-        "key_technology": "RSA",
-        "signed_by": "isrg_root_x1",
-        "letsencrypt_serial": "r10",
-    },
-    "r11": {
-        "display_name": "Let's Encrypt R11",
-        "url_pem": "https://letsencrypt.org/certs/r11.pem",
-        "is_active": True,
-        "key_technology": "RSA",
-        "signed_by": "isrg_root_x1",
-        "letsencrypt_serial": "r11",
-    },
     "r12": {
         "display_name": "Let's Encrypt R12",
         "url_pem": "https://letsencrypt.org/certs/r12.pem",
@@ -537,29 +667,10 @@ CERT_CAS_DATA: Dict[str, CERT_CA_PAYLOAD] = {
         "signed_by": "isrg_root_x1",
         "letsencrypt_serial": "r14",
     },
-    "staging_letsencrypt_root_x1": {
-        "display_name": "Fake LE Root X1",
-        "url_pem": "https://letsencrypt.org/certs/fakelerootx1.pem",
-        "is_trusted_root": True,  # not really, but we pretend!
-        "is_self_signed": True,
-        "is_active": True,
-        "key_technology": "RSA",
-        "signed_by": "staging_letsencrypt_root_x1",
-    },
-    "staging_letsencrypt_intermediate_x1": {
-        "display_name": "Fake LE Intermediate X1",
-        "url_pem": "https://letsencrypt.org/certs/fakeleintermediatex1.pem",
-        "is_active": True,
-        "key_technology": "RSA",
-        "signed_by": "staging_letsencrypt_root_x1",
-    },
 }
-_CERT_CAS_ORDER = [
+_CERT_CAS_DEPRECATED_ORDER = [
     "trustid_root_x3",
-    "isrg_root_x1",
     "isrg_root_x1_cross",
-    "isrg_root_x2",
-    "isrg_root_x2_cross",
     "letsencrypt_ocsp_root_x1",
     "letsencrypt_intermediate_x1",
     "letsencrypt_intermediate_x1_cross",
@@ -579,25 +690,32 @@ _CERT_CAS_ORDER = [
     "e5_cross",
     "e6",
     "e6_cross",
+    "r10",
+    "r11",
+    "staging_letsencrypt_root_x1",
+    "staging_letsencrypt_intermediate_x1",
+]
+_CERT_CAS_ORDER = [
+    "isrg_root_x1",
+    "isrg_root_x2",
+    "isrg_root_x2_cross",
     "e7",
     "e7_cross",
     "e8",
     "e8_cross",
     "e9",
     "e9_cross",
-    "r10",
-    "r11",
     "r12",
     "r13",
     "r14",
-    "staging_letsencrypt_root_x1",
-    "staging_letsencrypt_intermediate_x1",
+    "letsencrypt_staging_root_x1",
+    "letsencrypt_staging_root_x2",
+    "letsencrypt_staging_root_x2_signed_by_x2",
 ]
 
 
 # what are our default root preferences?
 DEFAULT_CA_PREFERENCES = [
-    "trustid_root_x3",
     "isrg_root_x2",
     "isrg_root_x1",
 ]
