@@ -37,7 +37,7 @@ def generate_cert(
     _authority_cert_issuer = [x509.UniformResourceIdentifier("EXAMPLE.COM")]
     _authority_cert_serial_number = 1
     # okgo
-    private_key = ec.generate_private_key(curve=ec.SECP256R1)
+    private_key = ec.generate_private_key(curve=ec.SECP256R1())
     subject = x509.Name(
         [
             x509.NameAttribute(x509.NameOID.COMMON_NAME, "example.com"),
@@ -97,13 +97,15 @@ def decode_akid(cert_pem: bytes) -> str:
         ext = cert.extensions.get_extension_for_oid(
             x509.oid.ExtensionOID.AUTHORITY_KEY_IDENTIFIER
         )
-        akid = ext.value.key_identifier
+        akid = ext.value.key_identifier  # type: ignore[attr-defined]
     except Exception as exc:
         print("\t", "\t", exc)
     return akid
 
 
-def test_strategy(strategy: str, write_cert: bool = False):
+def test_strategy(
+    strategy: Literal["key_id", "issuer+serial", "all"], write_cert: bool = False
+):
     print("testing:", strategy)
     cert = generate_cert(strategy=strategy)
     if write_cert:

@@ -160,7 +160,7 @@ CERT_CA_PAYLOAD = TypedDict(
         "cert.fingerprints": Optional[Dict[str, str]],
         ".enddate": Optional[Tuple[int, ...]],
         "compatibility": Optional[
-            Dict[str, Tuple[str, str, str]]
+            Dict[str, Tuple[str, Optional[str], Optional[str]]]
         ],  # platform: (min, max, note)
         "alternates": Optional[List[str]],
         "alternate_of": Optional[str],

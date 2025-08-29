@@ -4,12 +4,15 @@ import os
 from typing import Dict
 from typing import Iterable
 from typing import List
+from typing import Optional
+from typing import Tuple
 from typing import TYPE_CHECKING
 import unittest
 
 # pypi
 import cryptography
 import josepy
+from typing_extensions import Literal
 
 # local
 import cert_utils
@@ -27,6 +30,15 @@ from ._utils import TEST_FILES
 EXTENDED_TESTS = bool(int(os.getenv("CERT_UTILS_EXTENDED_TESTS", "0")))
 
 # ------------------------------------------------------------------------------
+
+TYPE_KEY_TESTING_COMBINATIONS = Tuple[
+    Tuple[
+        Literal[model.KeyTechnologyEnum.RSA, model.KeyTechnologyEnum.EC],
+        Optional[int],
+        Optional[str],
+    ],
+    ...,
+]
 
 # these mixins are used to simulate behavior as if we are missing libraries
 
@@ -46,13 +58,13 @@ class _MixinNoCrypto_Global(_Mixin_fallback_possible):
 
     def setUp(self):
         # print("_MixinNoCrypto_Global.setUp")
-        global cert_utils
+        # global cert_utils
         cert_utils.conditionals.cryptography = None
         cert_utils.conditionals.josepy = None
 
     def tearDown(self):
         # print("_MixinNoCrypto_Global.tearDown")
-        global cert_utils
+        # global cert_utils
         cert_utils.conditionals.cryptography = cryptography
         cert_utils.conditionals.josepy = josepy
 
@@ -62,11 +74,11 @@ class _Mixin_Missing_cryptography(_Mixin_fallback_possible):
     _fallback_cryptography = True
 
     def setUp(self):
-        global cert_utils
+        # global cert_utils
         cert_utils.conditionals.cryptography = None
 
     def tearDown(self):
-        global cert_utils
+        # global cert_utils
         cert_utils.conditionals.cryptography = cryptography
 
 
@@ -75,11 +87,11 @@ class _Mixin_Missing_josepy(_Mixin_fallback_possible):
     _fallback_josepy = True
 
     def setUp(self):
-        global cert_utils
+        # global cert_utils
         cert_utils.conditionals.josepy = None
 
     def tearDown(self):
-        global cert_utils
+        # global cert_utils
         cert_utils.conditionals.josepy = josepy
 
 
@@ -1414,7 +1426,7 @@ class UnitTest_CertUtils(unittest.TestCase, _Mixin_fallback_possible, _Mixin_fil
         """
         python -m unittest tests.test_unit.UnitTest_CertUtils.test__new_account_key
         """
-        _combinations = (
+        _combinations: TYPE_KEY_TESTING_COMBINATIONS = (
             (model.KeyTechnologyEnum.RSA, 2048, None),
             (model.KeyTechnologyEnum.RSA, 3072, None),
             (model.KeyTechnologyEnum.RSA, 4096, None),
@@ -1423,7 +1435,9 @@ class UnitTest_CertUtils(unittest.TestCase, _Mixin_fallback_possible, _Mixin_fil
         )
         for _combo in _combinations:
             key_pem = cert_utils.new_account_key(
-                _combo[0], rsa_bits=_combo[1], ec_curve=_combo[2]
+                _combo[0],
+                rsa_bits=_combo[1],  # type: ignore[arg-type]
+                ec_curve=_combo[2],  # type: ignore[arg-type]
             )
             if _combo[0] == model.KeyTechnologyEnum.RSA:
                 # crypto: -----BEGIN PRIVATE KEY-----
@@ -1446,7 +1460,7 @@ class UnitTest_CertUtils(unittest.TestCase, _Mixin_fallback_possible, _Mixin_fil
         """
         python -m unittest tests.test_unit.UnitTest_CertUtils.test__private_key__new
         """
-        _combinations = (
+        _combinations: TYPE_KEY_TESTING_COMBINATIONS = (
             (model.KeyTechnologyEnum.RSA, 2048, None),
             (model.KeyTechnologyEnum.RSA, 3072, None),
             (model.KeyTechnologyEnum.RSA, 4096, None),
@@ -1455,7 +1469,9 @@ class UnitTest_CertUtils(unittest.TestCase, _Mixin_fallback_possible, _Mixin_fil
         )
         for _combo in _combinations:
             key_pem = cert_utils.new_private_key(
-                _combo[0], rsa_bits=_combo[1], ec_curve=_combo[2]
+                _combo[0],
+                rsa_bits=_combo[1],  # type: ignore[arg-type]
+                ec_curve=_combo[2],  # type: ignore[arg-type]
             )
             if _combo[0] == model.KeyTechnologyEnum.RSA:
                 # crypto: -----BEGIN PRIVATE KEY-----
