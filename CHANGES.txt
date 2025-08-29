@@ -1,3 +1,19 @@
+1.1.0
+    - CERT_CA_PAYLOAD, used by CERT_CAS_DATA["compatability"]
+        was: Dict[str, str] (name: version)
+        now: Dict[str, Tuple[str, Optional[str], Optional[str]]] (name: min, max, note)
+    
+    - CERT_CAS_DATA: Expired certs have been moved to: CERT_CAS_DEPRECATED
+    - _CERT_CAS_ORDER: Expired cert names have been moved to: _CERT_CAS_DEPRECATED_ORDER
+    
+    Why?
+    
+    * the compatability matrix needed to split out versions for notes for future comparison. more standardization is needed.
+    * the compatability matrix does not account for a max_version, which can happen if a cert is removed from a trust store
+    * deprecated certs are maintained for research and historical purposes
+    
+        
+
 1.0.6
     * the following functions now accept kwarg `ipv6_require_compressed`, a bool.
       if True (default False), ipv6 values must be compressed.
