@@ -85,15 +85,15 @@ def get_response_data(resp: Response) -> Optional[PeerData]:
             i += 1
             try:
                 if i == 1:
-                    sock = resp.raw._connection.sock
+                    sock = resp.raw._connection.sock  # type: ignore[union-attr]
                 elif i == 2:
-                    sock = resp.raw._connection.sock.socket
+                    sock = resp.raw._connection.sock.socket  # type: ignore[union-attr]
                 elif i == 3:
-                    sock = resp.raw._fp.fp._sock
+                    sock = resp.raw._fp.fp._sock  # type: ignore[union-attr]
                 elif i == 4:
-                    sock = resp.raw._fp.fp._sock.socket
+                    sock = resp.raw._fp.fp._sock.socket  # type: ignore[union-attr]
                 elif i == 5:
-                    sock = resp.raw._fp.fp.raw._sock
+                    sock = resp.raw._fp.fp.raw._sock  # type: ignore[union-attr]
                 else:
                     break
                 if not isinstance(sock, _compatible_sockets):
