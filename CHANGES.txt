@@ -1,4 +1,9 @@
 1.1.0
+    - Minor typing updates
+
+    Backwards Incompatible Changes::
+
+    - expired letsencrypt certs are now in a /deprecated subdirectory; payloads reflect this
     - CERT_CA_PAYLOAD, used by CERT_CAS_DATA["compatability"]
         was: Dict[str, str] (name: version)
         now: Dict[str, Tuple[str, Optional[str], Optional[str]]] (name: min, max, note)
@@ -12,8 +17,6 @@
     * the compatability matrix does not account for a max_version, which can happen if a cert is removed from a trust store
     * deprecated certs are maintained for research and historical purposes
     
-        
-
 1.0.6
     * the following functions now accept kwarg `ipv6_require_compressed`, a bool.
       if True (default False), ipv6 values must be compressed.
