@@ -9,7 +9,7 @@ import cert_utils
 
 
 CERT_CA_SETS: Dict = {
-    "letsencrypt-certs/trustid-x3-root.pem": {
+    "letsencrypt-certs/deprecated/trustid-x3-root.pem": {
         "key_technology_basic": "RSA",
         "key_technology": ("RSA", (2048,)),
         "modulus_md5": "35f72cb35ea691144ffc2798db20ccfd",
@@ -37,7 +37,7 @@ CERT_CA_SETS: Dict = {
         "issuer_uri": None,
         "authority_key_identifier": None,
     },
-    "letsencrypt-certs/isrg-root-x1-cross-signed.pem": {
+    "letsencrypt-certs/deprecated/isrg-root-x1-cross-signed.pem": {
         "key_technology_basic": "RSA",
         "key_technology": ("RSA", (4096,)),
         "modulus_md5": "9454972e3730ac131def33e045ab19df",
@@ -79,7 +79,7 @@ CERT_CA_SETS: Dict = {
         "issuer_uri": "http://x1.i.lencr.org/",
         "authority_key_identifier": "79B459E67BB6E5E40173800888C81A58F6E99B6E",
     },
-    "letsencrypt-certs/lets-encrypt-r3-cross-signed.pem": {
+    "letsencrypt-certs/deprecated/lets-encrypt-r3-cross-signed.pem": {
         "key_technology_basic": "RSA",
         "key_technology": ("RSA", (2048,)),
         "spki_sha256": "8D02536C887482BC34FF54E41D2BA659BF85B341A0A20AFADB5813DCFBCF286D",
