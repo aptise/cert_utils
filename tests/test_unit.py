@@ -4,7 +4,6 @@ import os
 from typing import Dict
 from typing import Iterable
 from typing import List
-from typing import Literal
 from typing import Optional
 from typing import Tuple
 from typing import TYPE_CHECKING
@@ -13,6 +12,7 @@ import unittest
 # pypi
 import cryptography
 import josepy
+from typing_extensions import Literal
 
 # local
 import cert_utils
