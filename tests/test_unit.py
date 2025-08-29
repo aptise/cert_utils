@@ -1557,7 +1557,7 @@ class UnitTest_CertUtils(unittest.TestCase, _Mixin_fallback_possible, _Mixin_fil
         python -m unittest tests.test_unit.UnitTest_CertUtils.test_convert_pkcs7_to_pems
         python -m unittest tests.test_unit.UnitTest_CertUtils_fallback.test_convert_pkcs7_to_pems
         """
-        fname_pkcs7 = "letsencrypt-certs/trustid-x3-root.p7c"
+        fname_pkcs7 = "letsencrypt-certs/deprecated/trustid-x3-root.p7c"
         fpath_pkcs7 = self._filepath_testfile(fname_pkcs7)
         fdata_pkcs7 = self._filedata_testfile_binary(fname_pkcs7)
         with self.assertLogs("cert_utils", level="DEBUG") as logged:
@@ -1573,7 +1573,7 @@ class UnitTest_CertUtils(unittest.TestCase, _Mixin_fallback_possible, _Mixin_fil
                     logged.output,
                 )
 
-        fname_pem = "letsencrypt-certs/trustid-x3-root.pem"
+        fname_pem = "letsencrypt-certs/deprecated/trustid-x3-root.pem"
         fpath_pem = self._filedata_testfile(fname_pem)
         fdata_pem = self._filedata_testfile(fname_pem)
         pem_pem = cert_utils.cleanup_pem_text(fdata_pem)
