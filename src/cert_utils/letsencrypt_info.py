@@ -570,6 +570,7 @@ CERT_CAS_DATA: Dict[str, CERT_CA_PAYLOAD] = {
         "compatibility": {
             "All": ("<0", ">0", "Untrusted Fake Root"),
         },
+        "alternates": ["letsencrypt_staging_root_x2_signed_by_x2"],
     },
     "letsencrypt_staging_root_x2_signed_by_x2": {
         "display_name": "(STAGING) Bogus Broccoli X2 (X1 cross-signed)",
