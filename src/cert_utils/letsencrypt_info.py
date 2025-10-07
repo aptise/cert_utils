@@ -555,7 +555,7 @@ CERT_CAS_DATA: Dict[str, CERT_CA_PAYLOAD] = {
         },
     },
     "letsencrypt_staging_root_x2": {
-        "display_name": "(STAGING) Pretend Pear X1",
+        "display_name": "(STAGING) Bogus Broccoli X2",
         "url_pem": "https://letsencrypt.org/certs/staging/letsencrypt-stg-root-x2.pem",
         "is_trusted_root": True,
         "is_untrusted_root": True,
@@ -572,7 +572,7 @@ CERT_CAS_DATA: Dict[str, CERT_CA_PAYLOAD] = {
         },
     },
     "letsencrypt_staging_root_x2_signed_by_x2": {
-        "display_name": "(STAGING) Bogus Broccoli X2",
+        "display_name": "(STAGING) Bogus Broccoli X2 (X1 cross-signed)",
         "url_pem": "https://letsencrypt.org/certs/staging/letsencrypt-stg-root-x2-signed-by-x1.pem",
         "is_trusted_root": True,
         "is_untrusted_root": True,
