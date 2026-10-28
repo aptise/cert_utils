@@ -7,7 +7,7 @@ target-version = ['py37']
 
 [tool.mypy]
 check_untyped_defs = true
-exclude = ['^\.eggs/', '^\.tox/', '^build/', '^dist/', '^setup\.py$']
+exclude = ['^\.eggs/', '^\.tox/', '^build/', '^dist/']
 
 [[tool.mypy.overrides]]
 module = ["acme.*", "certbot.*", "josepy.*", "test.*"]
@@ -42,7 +42,7 @@ passenv = CERT_UTILS_FORCE_JOSEPY
 deps =
     flake8
     flake8-import-order
-commands = flake8 src tests setup.py
+commands = flake8 src tests
 
 [testenv:mypy]
 commands = mypy src tests

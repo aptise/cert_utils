@@ -743,7 +743,10 @@ def key_single_op__pem_filepath(
         if not data_bytes:
             if err.startswith(b"unknown option -check"):
                 raise OpenSslError_VersionTooLow(err)
-            elif err != b"read EC key\nEC Key valid.\n":
+            elif proc.returncode or err not in (
+                b"read EC key\nEC Key valid.\n",
+                b"EC Key valid.\n",
+            ):
                 # this happens, where some versions give an error and no data!
                 raise OpenSslError_InvalidKey(err)
         data_str = data_bytes.decode("utf8")

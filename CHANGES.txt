@@ -1,3 +1,14 @@
+Unreleased
+    - Remove setup.py; build with the pyproject.toml setuptools backend.
+    - Correct CLI argv handling and public typing contracts.
+    - Return structured certificate/CSR/key result types to type checkers.
+    - Fix OpenSSL EC checks and CSR generation for paths containing spaces.
+    - Align chain validation purpose; add validation_time, purpose, and
+      server_hostname keyword arguments. Defaults still validate at current time.
+    - Align chain ordering across backends: ordering is distinct from trust,
+      expiry, signature and purpose validation; use ensure_chain for validation.
+    - Invalid CSR signatures now raise OpenSslError_InvalidCSR consistently.
+
 1.1.1
     - fix "display_name" and "alternates" of letsencrypt staging cross-sign
 
@@ -141,3 +152,13 @@
 0.1.0
     initial release
     forked from peter_sslers
+
+CLI follow-up (unreleased)
+    - Add offline CLI coverage; fix issuer parsing, missing peer data,
+      module dispatch, ARI HTTP errors and renewal URL joining.
+    - Move the historical OpenSSL MD5 reference into project documentation.
+
+HTTP configuration (unreleased)
+    - Add connect/read timeout defaults (5/30 seconds), CERT_UTILS_TIMEOUT and
+      --timeout CONNECT,READ overrides. Close CLI-owned sessions reliably.
+    - Document profile-dependent CN behavior and intentional peer-socket probes.

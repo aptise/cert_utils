@@ -24,6 +24,8 @@ from typing_extensions import Required
 from typing_extensions import TypedDict
 
 # localapp
+from .network import get_timeout
+from .network import Timeout
 from .utils import cleanup_pem_text
 from .utils import md5_text
 
@@ -748,7 +750,7 @@ for cert_id, cert_data in CERT_CAS_DATA.items():
         cert_data["cert_pem"] = cert_pem_text
 
 
-def download_letsencrypt_certificates() -> Dict[str, Any]:
+def download_letsencrypt_certificates(*, timeout: Optional[Timeout] = None) -> Dict[str, Any]:
     """
     DEPRECATED
 
@@ -765,7 +767,7 @@ def download_letsencrypt_certificates() -> Dict[str, Any]:
     # ???: raise Exception if the cert_pem changes?
     certs = copy.deepcopy(CERT_CAS_DATA)
     for c in list(certs.keys()):
-        resp = requests.get(certs[c]["url_pem"])
+        resp = requests.get(certs[c]["url_pem"], timeout=get_timeout(timeout))
         if resp.status_code != 200:
             raise ValueError("Could not load certificate")
         cert_pem_text = resp.text

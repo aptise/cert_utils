@@ -31,4 +31,4 @@ Use `python -m pytest --no-cov` when coverage is not needed.
 
 Mypy, pytest, coverage, and tox configuration live in `pyproject.toml`.
 Run `tox -e mypy` for typing or `tox -e lint` for style checks. Packaging metadata
-and dependencies live in `setup.cfg`; `setup.py` is a compatibility entry point.
+and dependencies live in `setup.cfg`. Builds use the setuptools backend declared in `pyproject.toml`.
