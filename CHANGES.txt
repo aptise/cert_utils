@@ -1,4 +1,4 @@
-Unreleased
+1.2.0 (Unreleased)
     - Remove setup.py; build with the pyproject.toml setuptools backend.
     - Correct CLI argv handling and public typing contracts.
     - Return structured certificate/CSR/key result types to type checkers.
@@ -8,6 +8,7 @@ Unreleased
     - Align chain ordering across backends: ordering is distinct from trust,
       expiry, signature and purpose validation; use ensure_chain for validation.
     - Invalid CSR signatures now raise OpenSslError_InvalidCSR consistently.
+    - Added Python3.14 to test and support matrix
 
 1.1.1
     - fix "display_name" and "alternates" of letsencrypt staging cross-sign

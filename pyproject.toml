@@ -28,7 +28,7 @@ show_missing = true
 # INI embedding supports the tox versions available on Python 3.7.
 legacy_tox_ini = """
 [tox]
-envlist = lint,mypy,py37,py38,py39,py310,py311,py312,py313
+envlist = lint,mypy,py37,py38,py39,py310,py311,py312,py313,py314
 
 [testenv]
 commands =
