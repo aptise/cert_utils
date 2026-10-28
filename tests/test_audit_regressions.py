@@ -81,9 +81,7 @@ def test_client_purpose_does_not_check_server_hostname(fallback):
             (base / "root_0.pem").read_text(),
             cert_pem=(base / "cert.pem").read_text(),
             chain_pem=(base / "chain_0.pem").read_text(),
-            validation_time=datetime.datetime(
-                2024, 1, 1, tzinfo=datetime.timezone.utc
-            ),
+            validation_time=datetime.datetime(2024, 1, 1, tzinfo=datetime.timezone.utc),
             purpose="sslclient",
             server_hostname="wrong.example.com",
         )

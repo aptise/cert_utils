@@ -138,7 +138,7 @@ CERT_CAS_DEPRECATED: Dict[str, CERT_CA_PAYLOAD] = {
         "is_self_signed": False,
     },
     "letsencrypt_intermediate_x1_cross": {
-        "display_name": "Let's Encrypt Authority X1 " "(IdenTrust cross-signed)",
+        "display_name": "Let's Encrypt Authority X1 (IdenTrust cross-signed)",
         "url_pem": "https://letsencrypt.org/certs/lets-encrypt-x1-cross-signed.pem",
         "is_active": False,
         "is_retired": True,
@@ -170,7 +170,7 @@ CERT_CAS_DEPRECATED: Dict[str, CERT_CA_PAYLOAD] = {
         "is_self_signed": False,
     },
     "letsencrypt_intermediate_x2_cross": {
-        "display_name": "Let's Encrypt Authority X2 " "(IdenTrust cross-signed)",
+        "display_name": "Let's Encrypt Authority X2 (IdenTrust cross-signed)",
         "url_pem": "https://letsencrypt.org/certs/lets-encrypt-x2-cross-signed.pem",
         "is_active": False,
         "is_retired": True,
@@ -202,7 +202,7 @@ CERT_CAS_DEPRECATED: Dict[str, CERT_CA_PAYLOAD] = {
         "is_self_signed": False,
     },
     "letsencrypt_intermediate_x3_cross": {
-        "display_name": "Let's Encrypt Authority X3 " "(IdenTrust cross-signed)",
+        "display_name": "Let's Encrypt Authority X3 (IdenTrust cross-signed)",
         "url_pem": "https://letsencrypt.org/certs/lets-encrypt-x3-cross-signed.pem",
         "is_active": False,
         "is_retired": True,
@@ -234,7 +234,7 @@ CERT_CAS_DEPRECATED: Dict[str, CERT_CA_PAYLOAD] = {
         "is_self_signed": False,
     },
     "letsencrypt_intermediate_x4_cross": {
-        "display_name": "Let's Encrypt Authority X4 " "(IdenTrust cross-signed)",
+        "display_name": "Let's Encrypt Authority X4 (IdenTrust cross-signed)",
         "url_pem": "https://letsencrypt.org/certs/lets-encrypt-x4-cross-signed.pem",
         "is_active": False,
         "is_retired": True,
@@ -266,7 +266,7 @@ CERT_CAS_DEPRECATED: Dict[str, CERT_CA_PAYLOAD] = {
         "is_self_signed": False,
     },
     "letsencrypt_intermediate_r3_cross": {
-        "display_name": "Let's Encrypt R3 (IdenTrust " "cross-signed)",
+        "display_name": "Let's Encrypt R3 (IdenTrust cross-signed)",
         "url_pem": "https://letsencrypt.org/certs/lets-encrypt-r3-cross-signed.pem",
         "is_active": False,
         "is_retired": True,
@@ -298,7 +298,7 @@ CERT_CAS_DEPRECATED: Dict[str, CERT_CA_PAYLOAD] = {
         "is_self_signed": False,
     },
     "letsencrypt_intermediate_r4_cross": {
-        "display_name": "Let's Encrypt R4 (IdenTrust " "cross-signed)",
+        "display_name": "Let's Encrypt R4 (IdenTrust cross-signed)",
         "url_pem": "https://letsencrypt.org/certs/lets-encrypt-r4-cross-signed.pem",
         "is_active": False,
         "is_retired": True,
@@ -484,7 +484,7 @@ CERT_CAS_DEPRECATED: Dict[str, CERT_CA_PAYLOAD] = {
         "is_self_signed": False,
     },
     "letsencrypt_staging_root_x2_signed_by_x2": {
-        "display_name": "(STAGING) Bogus " "Broccoli X2 (X1 " "cross-signed)",
+        "display_name": "(STAGING) Bogus Broccoli X2 (X1 cross-signed)",
         "url_pem": "https://letsencrypt.org/certs/staging/letsencrypt-stg-root-x2-signed-by-x1.pem",
         "is_trusted_root": True,
         "is_untrusted_root": True,
@@ -498,7 +498,7 @@ CERT_CAS_DEPRECATED: Dict[str, CERT_CA_PAYLOAD] = {
             "sha256": "32D21AF6FC87417A55D7E23C6992B8CE0CB9B5FCD85DA30D194156D53758E4C5",
         },
         ".enddate": (2025, 9, 15, 16, 0, 0),
-        "compatibility": {"All": ("<0", ">0", "Untrusted " "Fake Root")},
+        "compatibility": {"All": ("<0", ">0", "Untrusted Fake Root")},
         "is_retired": True,
     },
     "e7": {
@@ -663,12 +663,12 @@ CERT_CAS_DATA: Dict[str, CERT_CA_PAYLOAD] = {
             "Windows": (
                 ">= XP SP3",
                 None,
-                "unless Automatic Root Certificate " "Updates have been disabled",
+                "unless Automatic Root Certificate Updates have been disabled",
             ),
             "Windows Server": (
                 ">= 2008",
                 None,
-                "unless Automatic Root " "Certificate Updates have been " "disabled",
+                "unless Automatic Root Certificate Updates have been disabled",
             ),
             "macOS": (">= 10.12.1 Sierra", None, None),
             "iOS": (">= 10", None, None),
@@ -686,7 +686,7 @@ CERT_CAS_DATA: Dict[str, CERT_CA_PAYLOAD] = {
             "Chrome": (
                 ">= 105",
                 None,
-                "earlier versions use the operating " "system trust store",
+                "earlier versions use the operating system trust store",
             ),
             "PlayStation PS4": (">= PS4 v8.0.0", None, None),
         },
@@ -709,12 +709,12 @@ CERT_CAS_DATA: Dict[str, CERT_CA_PAYLOAD] = {
             "Windows": (
                 ">= XP SP3",
                 None,
-                "unless Automatic Root Certificate " "Updates have been disabled",
+                "unless Automatic Root Certificate Updates have been disabled",
             ),
             "Windows Server": (
                 ">= 2008",
                 None,
-                "unless Automatic Root " "Certificate Updates have been " "disabled",
+                "unless Automatic Root Certificate Updates have been disabled",
             ),
             "macOS": (">= 13", None, None),
             "iOS": (">= 16", None, None),
@@ -734,12 +734,12 @@ CERT_CAS_DATA: Dict[str, CERT_CA_PAYLOAD] = {
             "Chrome": (
                 ">= 105",
                 None,
-                "earlier versions use the operating " "system trust store",
+                "earlier versions use the operating system trust store",
             ),
         },
     },
     "isrg_root_x2_cross_2025": {
-        "display_name": "Let's Encrypt ISRG Root X2 (cross-signed " "by ISRG Root X1)",
+        "display_name": "Let's Encrypt ISRG Root X2 (cross-signed by ISRG Root X1)",
         "url_pem": "https://letsencrypt.org/certs/gen-y/root-x2-by-x1.pem",
         "signed_by": "isrg_root_x1",
         "is_active": True,

@@ -55,9 +55,7 @@ def test_rounded_refills_are_not_relabelled_as_exact():
         if limit["refill"]["precision"] == "published_rounded":
             window = limit["nominal_window_seconds"]
             assert window is not None
-            assert (
-                limit["refill"]["period_seconds"] * limit["capacity"] >= window
-            )
+            assert limit["refill"]["period_seconds"] * limit["capacity"] >= window
     domain = RATE_LIMITS["limits"]["certificates_per_registered_domain"]
     assert domain["scope"]["dimensions"] == ["registered_domain_or_ip_range"]
     assert domain["scope"]["key_rules"]["ipv6"] == "/64 network"

@@ -42,9 +42,7 @@ def test_url_dispatch_and_http_rejection():
 
 
 def test_module_entry_point_uses_arguments():
-    with patch.object(
-        cert_info.sys, "argv", ["cert_info", "http://example.com"]
-    ):
+    with patch.object(cert_info.sys, "argv", ["cert_info", "http://example.com"]):
         with pytest.raises(ValueError):
             runpy.run_path(cert_info.__file__, run_name="__main__")
 
@@ -70,9 +68,7 @@ def test_socket_layouts_and_cache(position, tls):
             )
         },
         5: {
-            "_fp": SimpleNamespace(
-                fp=SimpleNamespace(raw=SimpleNamespace(_sock=sock))
-            )
+            "_fp": SimpleNamespace(fp=SimpleNamespace(raw=SimpleNamespace(_sock=sock)))
         },
     }
     resp: Any = requests.Response()
@@ -159,9 +155,7 @@ def test_ari_directory_and_unsupported_endpoint():
         response_json({"window": 1}),
     ]
     with patch.object(cert_info, "new_session", return_value=session):
-        assert cert_info.ari_query("https://directory", "id")[0] == {
-            "window": 1
-        }
+        assert cert_info.ari_query("https://directory", "id")[0] == {"window": 1}
     assert session.get.call_args_list[-1][0] == ("https://ari/id",)
     session.get.side_effect = None
     session.get.return_value = response_json({})
@@ -174,15 +168,11 @@ def test_ari_directory_and_unsupported_endpoint():
 def test_file_processing(tmp_path, endpoint, capsys):
     path = tmp_path / "certificate.pem"
     path.write_text("pem")
-    with patch.object(
-        cert_info.cert_utils, "parse_cert", return_value={}
-    ) as parse:
+    with patch.object(cert_info.cert_utils, "parse_cert", return_value={}) as parse:
         with patch.object(
             cert_info.cert_utils, "ari_construct_identifier", return_value="id"
         ):
-            with patch.object(
-                cert_info, "issuer_to_endpoint", return_value=endpoint
-            ):
+            with patch.object(cert_info, "issuer_to_endpoint", return_value=endpoint):
                 with patch.object(cert_info, "ari_query") as query:
                     cert_info.process_filepath(str(path))
     parse.assert_called_once_with(cert_pem="pem", cert_pem_filepath=str(path))
@@ -192,9 +182,7 @@ def test_file_processing(tmp_path, endpoint, capsys):
         cert_info.process_filepath(str(tmp_path / "missing"))
 
 
-@pytest.mark.parametrize(
-    "data", [None, {}, {"cert_pem": "pem", "cert_dict": {}}]
-)
+@pytest.mark.parametrize("data", [None, {}, {"cert_pem": "pem", "cert_dict": {}}])
 @pytest.mark.parametrize("endpoint", [None, "https://directory"])
 def test_url_processing_handles_missing_peer(data, endpoint):
     session = Mock()
@@ -203,9 +191,7 @@ def test_url_processing_handles_missing_peer(data, endpoint):
         with patch.object(
             cert_info.cert_utils, "ari_construct_identifier", return_value="id"
         ):
-            with patch.object(
-                cert_info, "issuer_to_endpoint", return_value=endpoint
-            ):
+            with patch.object(cert_info, "issuer_to_endpoint", return_value=endpoint):
                 with patch.object(cert_info, "ari_query") as query:
                     cert_info.process_url("https://example.com")
     assert query.call_count == bool(data and endpoint)
@@ -218,9 +204,7 @@ def test_empty_der_certificate_is_not_converted():
     resp: Any = requests.Response()
     resp.raw = SimpleNamespace(_connection=SimpleNamespace(sock=sock))
     with patch.object(cert_info, "_compatible_sockets", (type(sock),)):
-        with patch.object(
-            cert_info.cert_utils, "convert_der_to_pem"
-        ) as convert:
+        with patch.object(cert_info.cert_utils, "convert_der_to_pem") as convert:
             data = cert_info.get_response_data(resp)
     assert data == {"peername": ("127.0.0.1", 443), "cert_dict": {}}
     convert.assert_not_called()
@@ -277,9 +261,7 @@ def test_invalid_timeout_environment(monkeypatch, value):
 def test_timeout_cli_override(monkeypatch):
     monkeypatch.setenv("CERT_UTILS_TIMEOUT", "invalid")
     with patch.object(cert_info, "process_url") as process:
-        cert_info.main(
-            ["cert_info", "--timeout", "2,8", "https://example.com"]
-        )
+        cert_info.main(["cert_info", "--timeout", "2,8", "https://example.com"])
     process.assert_called_once_with("https://example.com", timeout=(2.0, 8.0))
     with patch.object(cert_info, "process_filepath") as process:
         cert_info.main(["cert_info", "file.pem", "--timeout=2,8"])
@@ -366,9 +348,7 @@ def test_certificate_download_timeout(monkeypatch):
     )
     response = Mock(status_code=200, text="pem")
     with patch.object(requests, "get", return_value=response) as get:
-        with patch.object(
-            letsencrypt_info, "cleanup_pem_text", return_value="pem"
-        ):
+        with patch.object(letsencrypt_info, "cleanup_pem_text", return_value="pem"):
             letsencrypt_info.download_letsencrypt_certificates()
             assert get.call_args[1]["timeout"] == (2.0, 9.0)
             letsencrypt_info.download_letsencrypt_certificates(timeout=(1, 3))

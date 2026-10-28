@@ -124,9 +124,7 @@ def get_response_data(resp: Response) -> Optional[PeerData]:
             resp._sock_data["cert_dict"] = sock.getpeercert()  # type: ignore[attr-defined]
             _cert_raw = sock.getpeercert(binary_form=True)  # type: ignore[attr-defined]
             if _cert_raw:
-                resp._sock_data["cert_pem"] = cert_utils.convert_der_to_pem(
-                    _cert_raw
-                )
+                resp._sock_data["cert_pem"] = cert_utils.convert_der_to_pem(_cert_raw)
         except AttributeError:  # http connections
             pass
     else:
@@ -225,17 +223,13 @@ def ari_query(
         if not _renewal_base:
             raise ValueError("endpoint does not support ARI")
         _renewal_base_url = "%s/%s" % (_renewal_base.rstrip("/"), ari_id)
-        _d, _h = process_ari_url(
-            sess, _renewal_base_url, _print=True, timeout=timeout
-        )
+        _d, _h = process_ari_url(sess, _renewal_base_url, _print=True, timeout=timeout)
         return (_d, _h)
     finally:
         sess.close()
 
 
-def process_filepath(
-    filepath: str, *, timeout: Optional[Timeout] = None
-) -> None:
+def process_filepath(filepath: str, *, timeout: Optional[Timeout] = None) -> None:
     print("**" * 40)
     print("**" * 40)
     print("Process Filepath:")
@@ -246,9 +240,7 @@ def process_filepath(
     with open(filepath, "r") as _file:
         cert_pem = _file.read()
 
-    cert_data = cert_utils.parse_cert(
-        cert_pem=cert_pem, cert_pem_filepath=filepath
-    )
+    cert_data = cert_utils.parse_cert(cert_pem=cert_pem, cert_pem_filepath=filepath)
     print("=-" * 40)
     print("Cert Data:")
     pprint.pprint(cert_data)
@@ -314,9 +306,7 @@ def main(argv: Optional[List[str]] = None) -> None:
     timeout = None
     if any(arg.startswith("--timeout") for arg in argv[1:]):
         parser = argparse.ArgumentParser(prog=argv[0] if argv else "cert_info")
-        parser.add_argument(
-            "--timeout", type=parse_timeout, metavar="CONNECT,READ"
-        )
+        parser.add_argument("--timeout", type=parse_timeout, metavar="CONNECT,READ")
         parser.add_argument("target")
         options = parser.parse_args(argv[1:])
         timeout = options.timeout

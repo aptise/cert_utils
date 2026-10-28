@@ -3,7 +3,12 @@ Contributing
 
 Code Requirements - General
 * typing and mypy is required
-* pre-commit is used to integrate black formatting
+* Run `python -m black src tests` after every Python edit, before verification.
+  pre-commit also runs Black using the project configuration.
+* Keep text literals readable: use one literal for short text and complete URLs.
+  Wrap long prose only at natural phrase boundaries, never into word-sized
+  fragments or arbitrary character slices. Preserve intentional regex structure
+  and line-oriented messages when they improve readability.
 
 Code Requirements - Style
 * for fallback oprations, parse required args before invoking `check_openssl()`

@@ -26,7 +26,7 @@ RATE_LIMITS: Catalogue = {
             "unit": "account",
             "scope": {
                 "dimensions": ["source_ip"],
-                "key_rules": {"source_ip": "exact IPv4 " "or IPv6 " "address"},
+                "key_rules": {"source_ip": "exact IPv4 or IPv6 address"},
             },
             "nominal_window_seconds": 10800,
             "refill": {
@@ -43,27 +43,18 @@ RATE_LIMITS: Catalogue = {
             },
             "override_scopes": [],
             "source_url": (
-                "https://letsencrypt.org/docs/rate-limits/#new-regi"
-                "strations-per-ip-address"
+                "https://letsencrypt.org/docs/rate-limits/#new-registrations-per-ip-address"
             ),
         },
         "registrations_per_ipv6_range": {
             "kind": "token_bucket",
-            "title": "New Registrations per IPv6 " "Range",
+            "title": "New Registrations per IPv6 Range",
             "capacity": 500,
             "unit": "account",
             "scope": {
                 "dimensions": ["source_ipv6_48"],
                 "key_rules": {
-                    "source_ipv6_48": "IPv6 "
-                    "address "
-                    "masked "
-                    "to "
-                    "/48; "
-                    "additional "
-                    "to "
-                    "per-IP "
-                    "quota"
+                    "source_ipv6_48": "IPv6 address masked to /48; additional to per-IP quota"
                 },
             },
             "nominal_window_seconds": 10800,
@@ -81,8 +72,7 @@ RATE_LIMITS: Catalogue = {
             },
             "override_scopes": [],
             "source_url": (
-                "https://letsencrypt.org/docs/rate-limits/#new-regi"
-                "strations-per-ipv6-range"
+                "https://letsencrypt.org/docs/rate-limits/#new-registrations-per-ipv6-range"
             ),
         },
         "orders_per_account": {
@@ -106,37 +96,25 @@ RATE_LIMITS: Catalogue = {
             },
             "override_scopes": ["account"],
             "source_url": (
-                "https://letsencrypt.org/docs/rate-limits/#new-orde"
-                "rs-per-account"
+                "https://letsencrypt.org/docs/rate-limits/#new-orders-per-account"
             ),
         },
         "certificates_per_registered_domain": {
             "kind": "token_bucket",
-            "title": "New Certificates per " "Registered Domain",
+            "title": "New Certificates per Registered Domain",
             "capacity": 50,
             "unit": "certificate",
             "scope": {
                 "dimensions": ["registered_domain_or_ip_range"],
                 "key_rules": {
-                    "dns": "Public "
-                    "Suffix "
-                    "List "
-                    "registered "
-                    "domain; "
-                    "not "
-                    "simply "
-                    "the "
-                    "last "
-                    "two "
-                    "labels",
-                    "ipv4": "exact " "address",
-                    "ipv6": "/64 " "network",
-                    "sharing": "global " "across " "accounts",
-                    "multi_identifier": "evaluate "
-                    "each "
-                    "distinct "
-                    "registered-domain/IP-range "
-                    "bucket",
+                    "dns": (
+                        "Public Suffix List registered "
+                        "domain; not simply the last two labels"
+                    ),
+                    "ipv4": "exact address",
+                    "ipv6": "/64 network",
+                    "sharing": "global across accounts",
+                    "multi_identifier": "evaluate each distinct registered-domain/IP-range bucket",
                 },
             },
             "nominal_window_seconds": 604800,
@@ -154,34 +132,23 @@ RATE_LIMITS: Catalogue = {
             },
             "override_scopes": ["registered_domain", "account"],
             "source_url": (
-                "https://letsencrypt.org/docs/rate-limits/#new-cert"
-                "ificates-per-registered-domain"
+                "https://letsencrypt.org/docs/rate-limits/#new-certificates-per-registered-domain"
             ),
         },
         "certificates_per_exact_identifier_set": {
             "kind": "token_bucket",
-            "title": "New Certificates per " "Exact Set of " "Identifiers",
+            "title": "New Certificates per Exact Set of Identifiers",
             "capacity": 5,
             "unit": "certificate",
             "scope": {
                 "dimensions": ["identifier_set"],
                 "key_rules": {
-                    "normalization": "case-insensitive "
-                    "and "
-                    "order-independent "
-                    "identifiers",
-                    "sharing": "global " "across " "accounts",
-                    "ip_canonicalization": "not "
-                    "specified "
-                    "by "
-                    "this "
-                    "source; "
-                    "do "
-                    "not "
-                    "infer "
-                    "string "
-                    "equivalence "
-                    "rules",
+                    "normalization": "case-insensitive and order-independent identifiers",
+                    "sharing": "global across accounts",
+                    "ip_canonicalization": (
+                        "not specified by this source; do "
+                        "not infer string equivalence rules"
+                    ),
                 },
             },
             "nominal_window_seconds": 604800,
@@ -199,23 +166,17 @@ RATE_LIMITS: Catalogue = {
             },
             "override_scopes": [],
             "source_url": (
-                "https://letsencrypt.org/docs/rate-limits/#new-cert"
-                "ificates-per-exact-set-of-identifiers"
+                "https://letsencrypt.org/docs/rate-limits/#new-certificates-per-exact-set-of-identifiers"
             ),
         },
         "authorization_failures_per_identifier_account": {
             "kind": "token_bucket",
-            "title": "Authorization "
-            "Failures per "
-            "Identifier per "
-            "Account",
+            "title": "Authorization Failures per Identifier per Account",
             "capacity": 5,
             "unit": "failure",
             "scope": {
                 "dimensions": ["account", "identifier"],
-                "key_rules": {
-                    "identifier": "DNS " "name " "or " "IP " "address"
-                },
+                "key_rules": {"identifier": "DNS name or IP address"},
             },
             "nominal_window_seconds": 3600,
             "refill": {
@@ -232,22 +193,19 @@ RATE_LIMITS: Catalogue = {
             },
             "override_scopes": [],
             "source_url": (
-                "https://letsencrypt.org/docs/rate-limits/#authoriz"
-                "ation-failures-per-identifier-per-account"
+                "https://letsencrypt.org/docs/rate-limits/#authorization-failures-per-identifier-per-account"
             ),
         },
         "consecutive_authorization_failures": {
             "kind": "consecutive_failure_guard",
-            "title": "Consecutive Authorization "
-            "Failures per Identifier "
-            "per Account",
+            "title": (
+                "Consecutive Authorization " "Failures per Identifier per Account"
+            ),
             "capacity": 1152,
             "unit": "failure",
             "scope": {
                 "dimensions": ["account", "identifier"],
-                "key_rules": {
-                    "identifier": "DNS " "name " "or " "IP " "address"
-                },
+                "key_rules": {"identifier": "DNS name or IP address"},
             },
             "nominal_window_seconds": None,
             "refill": {
@@ -264,16 +222,14 @@ RATE_LIMITS: Catalogue = {
             },
             "override_scopes": [],
             "source_url": (
-                "https://letsencrypt.org/docs/rate-limits/#consecut"
-                "ive-authorization-failures-per-identifier-per-acco"
-                "unt"
+                "https://letsencrypt.org/docs/rate-limits/#consecutive-authorization-failures-per-identifier-per-account"
             ),
             "reset_on": "authorization_succeeded",
             "exhaustion_action": "identifier_issuance_paused",
-            "recovery": "self_service_unpause_link; "
-            "automatic unpause "
-            "semantics not "
-            "specified",
+            "recovery": (
+                "self_service_unpause_link; automatic "
+                "unpause semantics not specified"
+            ),
         },
     },
     "endpoints": {
@@ -291,8 +247,7 @@ RATE_LIMITS: Catalogue = {
             "exhaustion_http_status": 503,
             "retry_after_header": True,
             "source_url": (
-                "https://letsencrypt.org/docs/rate-limits/#overall-"
-                "requests-limit"
+                "https://letsencrypt.org/docs/rate-limits/#overall-requests-limit"
             ),
         },
         "/acme/new-account": {
@@ -309,8 +264,7 @@ RATE_LIMITS: Catalogue = {
             "exhaustion_http_status": 503,
             "retry_after_header": True,
             "source_url": (
-                "https://letsencrypt.org/docs/rate-limits/#overall-"
-                "requests-limit"
+                "https://letsencrypt.org/docs/rate-limits/#overall-requests-limit"
             ),
         },
         "/acme/new-order": {
@@ -327,8 +281,7 @@ RATE_LIMITS: Catalogue = {
             "exhaustion_http_status": 503,
             "retry_after_header": True,
             "source_url": (
-                "https://letsencrypt.org/docs/rate-limits/#overall-"
-                "requests-limit"
+                "https://letsencrypt.org/docs/rate-limits/#overall-requests-limit"
             ),
         },
         "/acme/revoke-cert": {
@@ -345,8 +298,7 @@ RATE_LIMITS: Catalogue = {
             "exhaustion_http_status": 503,
             "retry_after_header": True,
             "source_url": (
-                "https://letsencrypt.org/docs/rate-limits/#overall-"
-                "requests-limit"
+                "https://letsencrypt.org/docs/rate-limits/#overall-requests-limit"
             ),
         },
         "/acme/renewal-info": {
@@ -363,8 +315,7 @@ RATE_LIMITS: Catalogue = {
             "exhaustion_http_status": 503,
             "retry_after_header": True,
             "source_url": (
-                "https://letsencrypt.org/docs/rate-limits/#overall-"
-                "requests-limit"
+                "https://letsencrypt.org/docs/rate-limits/#overall-requests-limit"
             ),
         },
         "/acme/*": {
@@ -381,8 +332,7 @@ RATE_LIMITS: Catalogue = {
             "exhaustion_http_status": 503,
             "retry_after_header": True,
             "source_url": (
-                "https://letsencrypt.org/docs/rate-limits/#overall-"
-                "requests-limit"
+                "https://letsencrypt.org/docs/rate-limits/#overall-requests-limit"
             ),
         },
         "/directory": {
@@ -399,18 +349,19 @@ RATE_LIMITS: Catalogue = {
             "exhaustion_http_status": 503,
             "retry_after_header": True,
             "source_url": (
-                "https://letsencrypt.org/docs/rate-limits/#overall-"
-                "requests-limit"
+                "https://letsencrypt.org/docs/rate-limits/#overall-requests-limit"
             ),
         },
     },
     "endpoint_matching": {
         "patterns": "literal paths and /acme/* prefix pattern",
-        "overlap_policy": "not specified by source; do not assume "
-        "precedence or additive buckets",
-        "renewal_exemption": "transport/load-balancer applicability not "
-        "specified; do not disable request pacing "
-        "for ARI",
+        "overlap_policy": (
+            "not specified by source; do not " "assume precedence or additive buckets"
+        ),
+        "renewal_exemption": (
+            "transport/load-balancer applicability not "
+            "specified; do not disable request pacing for ARI"
+        ),
     },
     "constraints": {
         "identifiers_per_certificate": {
@@ -429,34 +380,33 @@ RATE_LIMITS: Catalogue = {
     "renewals": {
         "ari_replacement": {
             "conditions": [
-                "order explicitly replaces an "
-                "existing certificate using ARI",
-                "at least one identifier overlaps the " "replaced certificate",
-                "certificate has not already been " "replaced using ARI",
+                "order explicitly replaces an existing certificate using ARI",
+                "at least one identifier overlaps the replaced certificate",
+                "certificate has not already been replaced using ARI",
             ],
-            "exempt_from": "documented certificate-issuance rate "
-            "limits; not an arbitrary ARI-capable "
-            "request",
+            "exempt_from": (
+                "documented certificate-issuance rate "
+                "limits; not an arbitrary ARI-capable request"
+            ),
             "server_decides_eligibility": True,
         },
         "same_identifier_set": {
-            "normalization": "ignore capitalization and "
-            "identifier ordering",
+            "normalization": "ignore capitalization and identifier ordering",
             "exempt_limit_ids": [
                 "orders_per_account",
                 "certificates_per_registered_domain",
             ],
-            "other_limits": "still apply unless the server "
-            "grants an exemption",
+            "other_limits": "still apply unless the server grants an exemption",
         },
     },
     "retry_policy": {
         "honor_retry_after": True,
-        "multiple_exhausted_limits": "wait until the latest applicable retry "
-        "time",
+        "multiple_exhausted_limits": "wait until the latest applicable retry time",
         "revocation_resets_quota": False,
-        "quota_is_shared": "local estimates cannot observe other clients or "
-        "account-specific overrides",
+        "quota_is_shared": (
+            "local estimates cannot observe other "
+            "clients or account-specific overrides"
+        ),
     },
 }
 

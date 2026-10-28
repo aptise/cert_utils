@@ -1215,14 +1215,21 @@ class UnitTest_CertUtils(unittest.TestCase, _Mixin_fallback_possible, _Mixin_fil
                 with self.assertLogs("cert_utils", level="DEBUG") as logged:
                     self.assertTrue(
                         cert_utils.ensure_chain(
-                            validation_time=datetime.datetime(2024, 1, 1, tzinfo=datetime.timezone.utc),
-                            root_pem=root_pem, chain_pem=_chain, cert_pem=cert_pem
+                            validation_time=datetime.datetime(
+                                2024, 1, 1, tzinfo=datetime.timezone.utc
+                            ),
+                            root_pem=root_pem,
+                            chain_pem=_chain,
+                            cert_pem=cert_pem,
                         )
                     )
                     self.assertTrue(
                         cert_utils.ensure_chain(
-                            validation_time=datetime.datetime(2024, 1, 1, tzinfo=datetime.timezone.utc),
-                            root_pem=root_pem, fullchain_pem=fullchain_pem
+                            validation_time=datetime.datetime(
+                                2024, 1, 1, tzinfo=datetime.timezone.utc
+                            ),
+                            root_pem=root_pem,
+                            fullchain_pem=fullchain_pem,
                         )
                     )
                     if self._fallback_global or self._fallback_cryptography:
@@ -1242,14 +1249,20 @@ class UnitTest_CertUtils(unittest.TestCase, _Mixin_fallback_possible, _Mixin_fil
                 # invoking `fullchain_pem` with: `chain_pem`
                 with self.assertRaises(ValueError) as cm:
                     result = cert_utils.ensure_chain(
-                        validation_time=datetime.datetime(2024, 1, 1, tzinfo=datetime.timezone.utc),
-                        root_pem=root_pem, fullchain_pem=fullchain_pem, chain_pem=_chain
+                        validation_time=datetime.datetime(
+                            2024, 1, 1, tzinfo=datetime.timezone.utc
+                        ),
+                        root_pem=root_pem,
+                        fullchain_pem=fullchain_pem,
+                        chain_pem=_chain,
                     )
                 self.assertEqual(cm.exception.args[0], _error_expected)
                 # invoking `fullchain_pem` with: `cert_pem`
                 with self.assertRaises(ValueError) as cm:
                     result = cert_utils.ensure_chain(
-                        validation_time=datetime.datetime(2024, 1, 1, tzinfo=datetime.timezone.utc),
+                        validation_time=datetime.datetime(
+                            2024, 1, 1, tzinfo=datetime.timezone.utc
+                        ),
                         root_pem=root_pem,
                         fullchain_pem=fullchain_pem,
                         cert_pem=cert_pem,
@@ -1258,7 +1271,9 @@ class UnitTest_CertUtils(unittest.TestCase, _Mixin_fallback_possible, _Mixin_fil
                 # invoking `fullchain_pem` with: `cert_pem` and `chain_pem`
                 with self.assertRaises(ValueError) as cm:
                     result = cert_utils.ensure_chain(
-                        validation_time=datetime.datetime(2024, 1, 1, tzinfo=datetime.timezone.utc),
+                        validation_time=datetime.datetime(
+                            2024, 1, 1, tzinfo=datetime.timezone.utc
+                        ),
                         root_pem=root_pem,
                         fullchain_pem=fullchain_pem,
                         chain_pem=_chain,
@@ -1270,15 +1285,21 @@ class UnitTest_CertUtils(unittest.TestCase, _Mixin_fallback_possible, _Mixin_fil
                 # invoking NO `fullchain_pem` with: `chain_pem`
                 with self.assertRaises(ValueError) as cm:
                     result = cert_utils.ensure_chain(
-                        validation_time=datetime.datetime(2024, 1, 1, tzinfo=datetime.timezone.utc),
-                        root_pem=root_pem, chain_pem=_chain
+                        validation_time=datetime.datetime(
+                            2024, 1, 1, tzinfo=datetime.timezone.utc
+                        ),
+                        root_pem=root_pem,
+                        chain_pem=_chain,
                     )
                 self.assertEqual(cm.exception.args[0], _error_expected)
                 # invoking NO `fullchain_pem` with: `cert_pem`
                 with self.assertRaises(ValueError) as cm:
                     result = cert_utils.ensure_chain(
-                        validation_time=datetime.datetime(2024, 1, 1, tzinfo=datetime.timezone.utc),
-                        root_pem=root_pem, cert_pem=cert_pem
+                        validation_time=datetime.datetime(
+                            2024, 1, 1, tzinfo=datetime.timezone.utc
+                        ),
+                        root_pem=root_pem,
+                        cert_pem=cert_pem,
                     )
 
                 # ENSURE THE CHAIN ORDER

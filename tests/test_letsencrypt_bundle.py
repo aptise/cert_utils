@@ -44,9 +44,7 @@ def test_certificate_metadata_and_issuer_signature(key):
     else:
         cert.verify_directly_issued_by(issuer)
     assert data["is_self_signed"] == (cert.subject == cert.issuer)
-    expected = (
-        "RSA" if isinstance(cert.public_key(), rsa.RSAPublicKey) else "EC"
-    )
+    expected = "RSA" if isinstance(cert.public_key(), rsa.RSAPublicKey) else "EC"
     assert data["key_technology"] == expected
     assert data[".enddate"] == cert.not_valid_after_utc.timetuple()[:6]
     fingerprints = data["cert.fingerprints"]
@@ -73,12 +71,8 @@ def test_certificate_metadata_and_issuer_signature(key):
 def test_orders_preferences_and_file_inventory():
     assert set(info._CERT_CAS_ORDER) == set(info.CERT_CAS_DATA)
     assert len(info._CERT_CAS_ORDER) == len(info.CERT_CAS_DATA)
-    assert set(info._CERT_CAS_DEPRECATED_ORDER) == set(
-        info.CERT_CAS_DEPRECATED
-    )
-    assert len(info._CERT_CAS_DEPRECATED_ORDER) == len(
-        info.CERT_CAS_DEPRECATED
-    )
+    assert set(info._CERT_CAS_DEPRECATED_ORDER) == set(info.CERT_CAS_DEPRECATED)
+    assert len(info._CERT_CAS_DEPRECATED_ORDER) == len(info.CERT_CAS_DEPRECATED)
     assert not set(info.CERT_CAS_DATA) & set(info.CERT_CAS_DEPRECATED)
     for folder, data in [
         (BUNDLE, info.CERT_CAS_DATA),
@@ -125,9 +119,7 @@ def test_current_and_backup_intermediates():
 def test_cross_sign_renewal_preserves_old_certificate():
     old = certificate("isrg_root_x2_cross")
     renewed = certificate("isrg_root_x2_cross_2025")
-    assert old.fingerprint(hashes.SHA256()) != renewed.fingerprint(
-        hashes.SHA256()
-    )
+    assert old.fingerprint(hashes.SHA256()) != renewed.fingerprint(hashes.SHA256())
     assert old.not_valid_after_utc < renewed.not_valid_after_utc
 
 
@@ -136,27 +128,19 @@ def test_official_archive_fingerprint_manifest():
 
     manifest = json.loads(
         (
-            Path(__file__).parent
-            / "test_data"
-            / "letsencrypt_bundle_manifest.json"
+            Path(__file__).parent / "test_data" / "letsencrypt_bundle_manifest.json"
         ).read_text()
     )
     assert set(manifest) == set(ALL)
     for key, expected in manifest.items():
         folder = "deprecated/" if key in info.CERT_CAS_DEPRECATED else ""
-        assert expected["bundle_path"] == (
-            folder + ALL[key]["url_pem"].split("/")[-1]
-        )
+        assert expected["bundle_path"] == (folder + ALL[key]["url_pem"].split("/")[-1])
         bundled = x509.load_pem_x509_certificate(
             (BUNDLE / expected["bundle_path"]).read_bytes()
         )
+        assert bundled.fingerprint(hashes.SHA256()).hex().upper() == expected["sha256"]
         assert (
-            bundled.fingerprint(hashes.SHA256()).hex().upper()
-            == expected["sha256"]
-        )
-        assert (
-            ALL[key]["url_pem"]
-            == "https://letsencrypt.org/certs/" + expected["source"]
+            ALL[key]["url_pem"] == "https://letsencrypt.org/certs/" + expected["source"]
         )
         assert (
             certificate(key).fingerprint(hashes.SHA256()).hex().upper()
