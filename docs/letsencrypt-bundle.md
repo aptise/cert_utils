@@ -23,8 +23,8 @@ Sources:
 
 All 51 bundled PEM certificates were compared by DER SHA-256 fingerprint
 against that official archive. The offline manifest in
-`tests/test_data/letsencrypt_bundle_manifest.json` records their source paths
-and fingerprints; the website checkout is not required to run the tests.
+`tests/test_data/letsencrypt_bundle_manifest.json` records their upstream `source` paths,
+local `bundle_path` paths and fingerprints; the website checkout is not required to run the tests.
 
 ## Current set
 

@@ -65,7 +65,7 @@ CERT_CA_SETS: Dict = {
         "issuer_uri": None,
         "authority_key_identifier": None,
     },
-    "letsencrypt-certs/isrg-root-x2-cross-signed.pem": {
+    "letsencrypt-certs/deprecated/isrg-root-x2-cross-signed.pem": {
         "key_technology_basic": "EC",
         "key_technology": ("EC", ("P-384",)),
         "modulus_md5": None,

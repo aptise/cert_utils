@@ -11,6 +11,8 @@ from cryptography.hazmat.primitives.asymmetric import rsa
 import pytest
 
 from cert_utils.letsencrypt_info import certificates as info
+from ._utils import _Mixin_filedata
+from ._utils import CERT_CA_SETS
 
 BUNDLE = Path(info.__file__).parents[1] / "letsencrypt-certs"
 ALL = dict(info.CERT_CAS_DEPRECATED, **info.CERT_CAS_DATA)
@@ -141,6 +143,17 @@ def test_official_archive_fingerprint_manifest():
     )
     assert set(manifest) == set(ALL)
     for key, expected in manifest.items():
+        folder = "deprecated/" if key in info.CERT_CAS_DEPRECATED else ""
+        assert expected["bundle_path"] == (
+            folder + ALL[key]["url_pem"].split("/")[-1]
+        )
+        bundled = x509.load_pem_x509_certificate(
+            (BUNDLE / expected["bundle_path"]).read_bytes()
+        )
+        assert (
+            bundled.fingerprint(hashes.SHA256()).hex().upper()
+            == expected["sha256"]
+        )
         assert (
             ALL[key]["url_pem"]
             == "https://letsencrypt.org/certs/" + expected["source"]
@@ -149,3 +162,14 @@ def test_official_archive_fingerprint_manifest():
             certificate(key).fingerprint(hashes.SHA256()).hex().upper()
             == expected["sha256"]
         )
+
+
+@pytest.mark.parametrize("filename", list(CERT_CA_SETS))
+def test_legacy_ca_fixture_paths_resolve(filename):
+    helper = _Mixin_filedata()
+    path = Path(helper._filepath_testfile(filename))
+    assert path.is_file(), filename
+    cert = x509.load_pem_x509_certificate(path.read_bytes())
+    assert cert.fingerprint(hashes.SHA1()).hex().upper() == (
+        CERT_CA_SETS[filename]["cert.fingerprints"]["sha1"]
+    )
