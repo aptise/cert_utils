@@ -1,6 +1,7 @@
 # stdlib
 import base64
 import binascii
+import datetime
 import hashlib
 import ipaddress
 import json
@@ -66,24 +67,23 @@ from .utils import new_pem_tempfile
 from .utils import split_pem_chain
 from .utils import TECHNOLOGY_RETURN_VALUES
 
-# from .utils import new_der_tempfile
-
-# ==============================================================================
-
 if TYPE_CHECKING:
-    import datetime
-    from cryptography.x509 import Certificate
-    from cryptography.x509 import CertificateSigningRequest
-    from cryptography.hazmat.primitives.hashes import HashAlgorithm
     from cryptography.hazmat.primitives.asymmetric.dsa import DSAPublicKey
-    from cryptography.hazmat.primitives.asymmetric.rsa import RSAPrivateKey
-    from cryptography.hazmat.primitives.asymmetric.rsa import RSAPublicKey
-    from cryptography.hazmat.primitives.asymmetric.ec import EllipticCurvePublicKey
     from cryptography.hazmat.primitives.asymmetric.ec import EllipticCurvePrivateKey
+    from cryptography.hazmat.primitives.asymmetric.ec import EllipticCurvePublicKey
     from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
     from cryptography.hazmat.primitives.asymmetric.ed448 import Ed448PublicKey
+    from cryptography.hazmat.primitives.asymmetric.rsa import RSAPrivateKey
+    from cryptography.hazmat.primitives.asymmetric.rsa import RSAPublicKey
     from cryptography.hazmat.primitives.asymmetric.x25519 import X25519PublicKey
     from cryptography.hazmat.primitives.asymmetric.x448 import X448PublicKey
+    from cryptography.hazmat.primitives.hashes import HashAlgorithm
+    from cryptography.x509 import Certificate
+    from cryptography.x509 import CertificateSigningRequest
+    from typing_extensions import Protocol
+
+    class _PublicKeySPKI(Protocol):
+        def public_bytes(self, encoding: Any, format: Any) -> bytes: ...
 
     _TYPES_CRYPTOGRAPHY_KEYS = Union[
         EllipticCurvePrivateKey,
@@ -1465,8 +1465,6 @@ def parse_cert(
         return rval
 
     log.debug(".parse_cert > openssl fallback")
-    global openssl_version
-    global _openssl_behavior
     tmpfile_pem = None
     try:
         if not cert_pem_filepath:
@@ -1750,7 +1748,7 @@ def parse_csr(
 def parse_key__spki_sha256(
     key_pem: str,
     key_pem_filepath: Optional[str] = None,
-    publickey: Optional["_TYPES_CRYPTOGRAPHY_KEYS"] = None,
+    publickey: Optional["_PublicKeySPKI"] = None,
     key_technology_basic: Optional[str] = None,
     as_b64: Optional[bool] = None,
 ) -> str:
@@ -2685,7 +2683,7 @@ def account_key__parse(
 
 
 def account_key__sign(
-    data,
+    data: Union[str, bytes],
     key_pem: str,
     key_pem_filepath: Optional[str] = None,
     standardize_signature: Optional[bool] = True,
@@ -2767,11 +2765,11 @@ def account_key__sign(
 
 def account_key__verify(
     signature,
-    data,
+    data: Union[str, bytes],
     key_pem: str,
     key_pem_filepath: Optional[str] = None,
     standardize_signature: Optional[bool] = True,
-) -> bytes:
+) -> None:
     """
     This routine will use cryptography if available.
     If not, openssl is used via subprocesses
@@ -2781,7 +2779,7 @@ def account_key__verify(
                              Only used for commandline OpenSSL fallback operations.
     :param standardize_signature: bool. Default `True`. Was the signature standardized?
     :returns: result
-    :rtype: bool
+    :rtype: None
     """
     log.info("account_key__verify >")
     if not isinstance(signature, bytes):
@@ -2813,13 +2811,13 @@ def account_key__verify(
                     int.from_bytes(signature[rlen:], byteorder="big"),
                 )
                 signature = asn1sig
-            result = pkey.public_key().verify(
+            pkey.public_key().verify(
                 signature,
                 data,
                 conditionals.crypto_ec.ECDSA(conditionals.crypto_hashes.SHA256()),
             )
         elif isinstance(pkey, conditionals.crypto_rsa.RSAPrivateKey):
-            result = pkey.public_key().verify(
+            pkey.public_key().verify(
                 signature,
                 data,
                 conditionals.cryptography.hazmat.primitives.asymmetric.padding.PKCS1v15(),  # type: ignore[arg-type]
@@ -2827,7 +2825,7 @@ def account_key__verify(
             )
         else:
             raise ValueError("unsupported private key type")
-        return result
+        return None
     log.debug(".account_key__verify > openssl fallback")
     raise ValueError("not supported yet")
 

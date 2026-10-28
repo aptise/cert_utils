@@ -5,6 +5,7 @@ pip install cert_utils requests
 from __future__ import annotations
 
 # stdlib
+import _socket
 import logging
 import os
 import pprint
@@ -12,15 +13,15 @@ import socket  # peername hack, see below
 import sys
 from typing import Dict
 from typing import List
+from typing import NoReturn
 from typing import Optional
 from typing import Tuple
 from typing import TYPE_CHECKING
-from typing import TypedDict
 
 # pypi
-import _socket  # noqa: I100,I201  # peername hack, see below
 import requests
 from requests import Response
+from typing_extensions import TypedDict
 
 # local
 import cert_utils
@@ -247,7 +248,7 @@ def process_url(url: str) -> None:
             print("No known ARI endpoint")
 
 
-def usage(argv):
+def usage(argv: List[str]) -> NoReturn:
     cmd = os.path.basename(argv[0])
     print(
         "usage: %s < url | filepath >\n"
@@ -257,10 +258,12 @@ def usage(argv):
     sys.exit(1)
 
 
-def main(argv: List = sys.argv):
+def main(argv: Optional[List[str]] = None) -> None:
+    if argv is None:
+        argv = sys.argv
     if len(argv) != 2:
         usage(argv)
-    target = sys.argv[1]
+    target = argv[1]
     if target.startswith("http://"):
         raise ValueError("Can not handle `http`!")
     elif target.startswith("https://"):

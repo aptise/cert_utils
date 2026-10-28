@@ -18,9 +18,9 @@ if TYPE_CHECKING:
     from cryptography.x509 import Certificate
     from cryptography.x509 import CertificateSigningRequest
     from cryptography.x509.name import Name
+
+    from ..core import _PublicKeySPKI
     from ..core import _TYPES_CRYPTOGRAPHY_PUBLICKEY
-    from ..core import _TYPES_CRYPTOGRAPHY_KEYS
-    from ..core import _TYPES_CRYPTOGRAPHY_PUBLICKEY_EXTENDED
 
 
 # ==============================================================================
@@ -76,9 +76,7 @@ def _cryptography__public_key_technology(
 
 
 def _cryptography__public_key_spki_sha256(
-    cryptography_publickey: Union[
-        "_TYPES_CRYPTOGRAPHY_KEYS", "_TYPES_CRYPTOGRAPHY_PUBLICKEY_EXTENDED"
-    ],
+    cryptography_publickey: "_PublicKeySPKI",
     as_b64: Optional[bool] = None,
 ) -> str:
     """
