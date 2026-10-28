@@ -1,4 +1,12 @@
 1.2.0 (Unreleased)
+    - Refresh the bundled Let's Encrypt CA archive (CERT_CAS_VERSION = 5):
+      add YE/YR roots, their cross-signs, the renewed X2 cross-sign and YE/YR
+      intermediates. Mark YE3/YR3 as backups and preserve retired certificates
+      under letsencrypt-certs/deprecated with corrected metadata.
+    - Add pending YE/YR roots after established X2/X1 root preferences; they
+      are not yet trusted by major root stores. Preserve the original X2
+      cross-sign under its existing key in CERT_CAS_DEPRECATED; the renewed
+      certificate uses isrg_root_x2_cross_2025.
     - Remove setup.py; build with the pyproject.toml setuptools backend.
     - Correct CLI argv handling and public typing contracts.
     - Return structured certificate/CSR/key result types to type checkers.

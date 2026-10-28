@@ -206,3 +206,5 @@ per-request timeout override support. CLI-owned sessions are closed on success
 and failure; callers retain ownership of sessions passed to `process_ari_url`.
 
 Compatibility design notes: [certificate profiles and peer hooks](docs/compatibility.md).
+
+Bundled CA snapshot and migration notes: [Let's Encrypt certificate archive](docs/letsencrypt-bundle.md).
