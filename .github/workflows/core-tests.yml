@@ -47,7 +47,8 @@ jobs:
         pip freeze
 
     - name: Test with tox/pytest
-      # Select explicitly: tox 4.30.x may mistake packaging setup.cfg for tox config.
+      # Python 3.9 uses tox 4.30.3, whose discovery mistakes setup.cfg for tox config.
+      # Remove -c pyproject.toml when Python 3.9 support is dropped.
       run: |
         tox -c pyproject.toml -e py -- ${{ matrix.pytest-args }}
 

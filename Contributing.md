@@ -34,7 +34,10 @@ Run `tox -c pyproject.toml -e mypy` for typing or `tox -c pyproject.toml -e lint
 and dependencies live in `setup.cfg`. Builds use the setuptools backend declared in `pyproject.toml`.
 
 Use `tox -c pyproject.toml -e py` to run the test environment. The explicit
-configuration path works around tox 4.30.x configuration discovery, which can
-select the packaging-only setup.cfg and fail with `section tox:tox not found`.
+configuration path works around a tox 4.30.3 discovery bug in the Python 3.9
+CI job: that is the newest tox available for Python 3.9, and it can select the
+packaging-only setup.cfg and fail with `section tox:tox not found`.
+When Python 3.9 support is removed, remove the `-c pyproject.toml` workaround
+from the CI and contributor commands (after checking the remaining tox versions).
 Keep the configuration in pyproject.toml; do not add a placeholder tox section
 to setup.cfg, which would select an incomplete configuration.

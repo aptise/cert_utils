@@ -162,7 +162,7 @@ def test_ari_directory_and_unsupported_endpoint():
         assert cert_info.ari_query("https://directory", "id")[0] == {
             "window": 1
         }
-    assert session.get.call_args_list[-1].args == ("https://ari/id",)
+    assert session.get.call_args_list[-1][0] == ("https://ari/id",)
     session.get.side_effect = None
     session.get.return_value = response_json({})
     with patch.object(cert_info, "new_session", return_value=session):
@@ -248,21 +248,21 @@ def test_timeout_default_environment_and_explicit_override(monkeypatch):
                 requests.Session, "request", return_value=requests.Response()
             ) as request:
                 session.get("https://example.com")
-            assert request.call_args.kwargs["timeout"] == expected
+            assert request.call_args[1]["timeout"] == expected
     monkeypatch.setenv("CERT_UTILS_TIMEOUT", "1.5,9")
     with cert_info.new_session() as session:
         with patch.object(
             requests.Session, "request", return_value=requests.Response()
         ) as request:
             session.get("https://example.com")
-        assert request.call_args.kwargs["timeout"] == (1.5, 9.0)
+        assert request.call_args[1]["timeout"] == (1.5, 9.0)
     monkeypatch.setenv("CERT_UTILS_TIMEOUT", "invalid")
     with cert_info.new_session((2.0, 3.0)) as session:
         with patch.object(
             requests.Session, "request", return_value=requests.Response()
         ) as request:
             session.get("https://example.com", timeout=(7.0, 8.0))
-        assert request.call_args.kwargs["timeout"] == (7.0, 8.0)
+        assert request.call_args[1]["timeout"] == (7.0, 8.0)
 
 
 @pytest.mark.parametrize(
@@ -339,8 +339,8 @@ def test_positional_request_timeout_is_preserved():
                 None,
                 (7.0, 8.0),
             )
-    assert request.call_args.args[-1] == (7.0, 8.0)
-    assert "timeout" not in request.call_args.kwargs
+    assert request.call_args[0][-1] == (7.0, 8.0)
+    assert "timeout" not in request.call_args[1]
 
 
 def test_directory_timeout_propagates_to_ari_despite_invalid_env(monkeypatch):
@@ -352,7 +352,7 @@ def test_directory_timeout_propagates_to_ari_despite_invalid_env(monkeypatch):
     ]
     with patch.object(cert_info, "new_session", return_value=session):
         cert_info.ari_query("https://directory", "id", timeout=(3.0, 4.0))
-    assert session.get.call_args.kwargs["timeout"] == (3.0, 4.0)
+    assert session.get.call_args[1]["timeout"] == (3.0, 4.0)
 
 
 def test_certificate_download_timeout(monkeypatch):
@@ -370,6 +370,6 @@ def test_certificate_download_timeout(monkeypatch):
             letsencrypt_info, "cleanup_pem_text", return_value="pem"
         ):
             letsencrypt_info.download_letsencrypt_certificates()
-            assert get.call_args.kwargs["timeout"] == (2.0, 9.0)
+            assert get.call_args[1]["timeout"] == (2.0, 9.0)
             letsencrypt_info.download_letsencrypt_certificates(timeout=(1, 3))
-            assert get.call_args.kwargs["timeout"] == (1.0, 3.0)
+            assert get.call_args[1]["timeout"] == (1.0, 3.0)
