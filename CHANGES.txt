@@ -163,3 +163,7 @@ HTTP configuration (unreleased)
     - Add connect/read timeout defaults (5/30 seconds), CERT_UTILS_TIMEOUT and
       --timeout CONNECT,READ overrides. Close CLI-owned sessions reliably.
     - Document profile-dependent CN behavior and intentional peer-socket probes.
+
+CI compatibility (unreleased)
+    - Select pyproject.toml explicitly when invoking tox, avoiding the
+      setup.cfg discovery failure in tox 4.30.x on Python 3.9.

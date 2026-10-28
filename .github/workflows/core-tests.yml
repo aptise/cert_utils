@@ -47,9 +47,9 @@ jobs:
         pip freeze
 
     - name: Test with tox/pytest
-      # tox is used to run pytest
+      # Select explicitly: tox 4.30.x may mistake packaging setup.cfg for tox config.
       run: |
-        tox -e py -- ${{ matrix.pytest-args }}
+        tox -c pyproject.toml -e py -- ${{ matrix.pytest-args }}
 
     - name: Upload coverage reports
       if: always()
