@@ -1132,9 +1132,7 @@ class UnitTest_CertUtils(unittest.TestCase, _Mixin_fallback_possible, _Mixin_fil
             cert_pem = self._filedata_testfile(cert_filename)
 
             with self.assertLogs("cert_utils", level="DEBUG") as logged:
-                (_cert, _chain) = cert_utils.cert_and_chain_from_fullchain(
-                    fullchain_pem
-                )
+                _cert, _chain = cert_utils.cert_and_chain_from_fullchain(fullchain_pem)
                 self.assertEqual(_cert, cert_pem)
                 if self._fallback_global or self._fallback_cryptography:
                     self.assertIn(
@@ -1190,9 +1188,7 @@ class UnitTest_CertUtils(unittest.TestCase, _Mixin_fallback_possible, _Mixin_fil
                 fullchain_pem = cert_pem + test_pems[idx]["chain"]
 
                 # decompose a fullchain
-                (_cert, _chain) = cert_utils.cert_and_chain_from_fullchain(
-                    fullchain_pem
-                )
+                _cert, _chain = cert_utils.cert_and_chain_from_fullchain(fullchain_pem)
                 self.assertEqual(_cert, cert_pem)
                 self.assertEqual(_chain, test_pems[idx]["chain"])
 

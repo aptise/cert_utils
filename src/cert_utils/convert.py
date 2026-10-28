@@ -23,7 +23,6 @@ from .utils import new_der_tempfile
 from .utils import new_pem_tempfile
 from .utils import split_pem_chain
 
-
 # ==============================================================================
 
 log = logging.getLogger("cert_utils")

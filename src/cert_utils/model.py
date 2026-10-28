@@ -36,7 +36,7 @@ class AccountKeyData(object):
         self.key_pem = key_pem
         self.key_pem_filepath = key_pem_filepath
 
-        (_jwk, _thumbprint, _alg) = core.account_key__parse(
+        _jwk, _thumbprint, _alg = core.account_key__parse(
             key_pem=key_pem,
             key_pem_filepath=key_pem_filepath,
         )

@@ -49,3 +49,13 @@ jobs:
       # tox is used to run pytest
       run: |
         tox -e py -- ${{ matrix.pytest-args }}
+
+    - name: Upload coverage reports
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: coverage-${{ matrix.python-version }}-${{ matrix.os }}
+        path: |
+          coverage.xml
+          htmlcov/
+        if-no-files-found: warn

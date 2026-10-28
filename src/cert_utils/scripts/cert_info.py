@@ -186,7 +186,7 @@ def ari_query(
     if not _renewal_base:
         raise ValueError("endpoint does not support ARI")
     _renewal_base_url = "%s/%s" % (_renewal_base, ari_id)
-    (_d, _h) = process_ari_url(sess, _renewal_base_url, _print=True)
+    _d, _h = process_ari_url(sess, _renewal_base_url, _print=True)
     return (_d, _h)
 
 

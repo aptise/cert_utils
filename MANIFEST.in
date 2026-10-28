@@ -3,7 +3,6 @@ graft tests
 
 include pyproject.toml
 include setup.cfg
-include tox.ini
 include CHANGES.txt
 include LICENSE.txt
 include README.md
