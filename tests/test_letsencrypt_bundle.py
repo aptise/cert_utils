@@ -10,9 +10,9 @@ from cryptography.hazmat.primitives.asymmetric import padding
 from cryptography.hazmat.primitives.asymmetric import rsa
 import pytest
 
-from cert_utils import letsencrypt_info as info
+from cert_utils.letsencrypt_info import certificates as info
 
-BUNDLE = Path(info.__file__).parent / "letsencrypt-certs"
+BUNDLE = Path(info.__file__).parents[1] / "letsencrypt-certs"
 ALL = dict(info.CERT_CAS_DEPRECATED, **info.CERT_CAS_DATA)
 
 

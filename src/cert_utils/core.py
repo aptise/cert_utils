@@ -305,7 +305,7 @@ def make_csr(
         openssl req -new -sha256 -k {FILEPATH_KEY} -subj "/" -addext {FILEPATH_SAN}
     """
     log.info("make_csr >")
-    # keep synced with: lib.letsencrypt_info.LIMITS["names/certificate"]["limit"]
+    # General CSR size guard, not an issuer/profile-specific rate limit.
 
     if domain_names is None:
         domain_names = []

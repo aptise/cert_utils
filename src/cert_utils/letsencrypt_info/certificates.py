@@ -1,7 +1,6 @@
 """
 This file contains the following:
 
-* LetsEncrypt Rate Limits in JSON form
 * Information on the LetsEncrypt Trust Chain
 * A routine to load the LetsEncrypt Certificates into Python
 
@@ -14,105 +13,17 @@ import copy
 import os
 from typing import Any
 from typing import Dict
-from typing import List
 from typing import Optional
-from typing import Tuple
 
 # pypi
 import requests
-from typing_extensions import Required
-from typing_extensions import TypedDict
 
 # localapp
-from .network import get_timeout
-from .network import Timeout
-from .utils import cleanup_pem_text
-from .utils import md5_text
-
-# ==============================================================================
-
-
-# updated ratelimits are published at:
-# https://letsencrypt.org/docs/rate-limits/
-# last checked: 2024.06.26
-
-LIMITS: Dict[str, Dict[str, Any]] = {
-    "names/certificate": {"limit": 100},  # "Names per Certificate"
-    "certificates/domain": {
-        "limit": 50,
-        "timeframe": "1 week",
-        "includes_renewals": False,
-    },  # "Certificates per Registered Domain"
-    "certificates/fqdn": {
-        "limit": 5,
-        "timeframe": "1 week",
-    },  # "Duplicate Certificate"
-    "registrations/ip_address": {
-        "limit": 10,
-        "timeframe": "3 hours",
-    },  # "Accounts per IP Address"
-    "registrations/ip_range": {
-        "limit": 500,
-        "timeframe": "3 hours",
-        "range": "IPv6 /48",
-    },  # "Accounts per IP Range"
-    "new_orders": {
-        "limit": 300,
-        "timeframe": "3 hours",
-        "acme-v2-only": True,
-    },  # "New Orders"
-    "pending_authorizations/account": {
-        "limit": 300,
-        "timeframe": "1 week",
-    },  # "Pending Authorizations"
-    "failed_validation/account/hostname": {
-        "limit": 5,
-        "timeframe": "1 hour",
-    },  # "Failed Validation"
-    "endpoints": {
-        "new-reg": {
-            "overall_requests": 20,
-            "timeframe": "1 second",
-        },  # ACME-V1
-        "new-authz": {
-            "overall_requests": 20,
-            "timeframe": "1 second",
-        },  # ACME-V1
-        "new-cert": {
-            "overall_requests": 20,
-            "timeframe": "1 second",
-        },  # ACME-V1
-        "new-nonce": {
-            "overall_requests": 20,
-            "timeframe": "1 second",
-        },  # ACME-V2
-        "new-account": {
-            "overall_requests": 20,
-            "timeframe": "1 second",
-        },  # ACME-V2
-        "new-order": {
-            "overall_requests": 20,
-            "timeframe": "1 second",
-        },  # ACME-V2
-        "revoke-cert": {
-            "overall_requests": 20,
-            "timeframe": "1 second",
-        },  # ACME-V2
-        "/directory": {
-            "overall_requests": 40,
-            "timeframe": "1 second",
-        },
-        "/acme": {
-            "overall_requests": 40,
-            "timeframe": "1 second",
-        },
-        "/acme/*": {
-            "overall_requests": 40,
-            "timeframe": "1 second",
-        },
-    },  # "Overall Requests"; enforced by gateway/cdn/balancer
-}
-
+from .types import CERT_CA_PAYLOAD
+from ..network import get_timeout
+from ..network import Timeout
+from ..utils import cleanup_pem_text
+from ..utils import md5_text
 
 # ==============================================================================
 
@@ -145,35 +56,6 @@ Compatibility Info
 ["cert.fingerprints"]["sha1"] = `openssl x509 -fingerprint -sha1 -noout -in isrg-root-x2.pem`
 
 """
-
-CERT_CA_PAYLOAD = TypedDict(
-    "CERT_CA_PAYLOAD",
-    {
-        "display_name": Required[str],
-        "url_pem": Required[str],
-        "is_trusted_root": Optional[bool],
-        "is_untrusted_root": Optional[bool],
-        "is_self_signed": Optional[bool],
-        "signed_by": Required[str],
-        "is_active": Required[bool],
-        "is_retired": Optional[bool],
-        "is_backup": Optional[bool],
-        "key_technology": Required[str],
-        "cert.fingerprints": Optional[Dict[str, str]],
-        ".enddate": Optional[Tuple[int, ...]],
-        "compatibility": Optional[
-            Dict[str, Tuple[str, Optional[str], Optional[str]]]
-        ],  # platform: (min, max, note)
-        "alternates": Optional[List[str]],
-        "alternate_of": Optional[str],
-        "letsencrypt_serial": Optional[str],
-        # loaded via deprecated processors
-        "cert_pem": Optional[str],
-        "cert_pem_md5": Optional[str],
-    },
-    total=False,
-)
-
 
 CERT_CAS_DEPRECATED: Dict[str, CERT_CA_PAYLOAD] = {
     "trustid_root_x3": {
@@ -1152,7 +1034,7 @@ for _cert_id, _payload in CERT_CAS_DATA.items():
 
 
 # LOAD THE CERTS INTO THE SYSTEM
-_dir_here = os.path.abspath(os.path.dirname(__file__))
+_dir_here = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 _dir_certs = os.path.join(_dir_here, "letsencrypt-certs")
 for cert_id, cert_data in CERT_CAS_DATA.items():
     _filename = cert_data["url_pem"].split("/")[-1]  # type: ignore[attr-defined]

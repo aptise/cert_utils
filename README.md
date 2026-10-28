@@ -208,3 +208,6 @@ and failure; callers retain ownership of sessions passed to `process_ari_url`.
 Compatibility design notes: [certificate profiles and peer hooks](docs/compatibility.md).
 
 Bundled CA snapshot and migration notes: [Let's Encrypt certificate archive](docs/letsencrypt-bundle.md).
+
+Machine-readable production rate policy: [schema 2 and migration guide](docs/rate-limits.md).
+Import `cert_utils.letsencrypt_info.rate_limits.RATE_LIMITS` without loading the CA archive.

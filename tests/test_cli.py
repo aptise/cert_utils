@@ -356,7 +356,7 @@ def test_directory_timeout_propagates_to_ari_despite_invalid_env(monkeypatch):
 
 
 def test_certificate_download_timeout(monkeypatch):
-    from cert_utils import letsencrypt_info
+    from cert_utils.letsencrypt_info import certificates as letsencrypt_info
 
     monkeypatch.setenv("CERT_UTILS_TIMEOUT", "2,9")
     monkeypatch.setattr(

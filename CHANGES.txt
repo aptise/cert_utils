@@ -1,4 +1,14 @@
 1.2.0 (Unreleased)
+    - Organize Let's Encrypt metadata under letsencrypt_info: certificates.py,
+      rate_limits.py and shared types.py. The namespace imports neither dataset
+      eagerly; the bundled PEM directory stays at its established location.
+    - BREAKING: replace LIMITS with versioned rate-policy schema 2. Import
+      cert_utils.letsencrypt_info.rate_limits.RATE_LIMITS for the CA-independent
+      catalogue. Old schema keys and module-level metadata imports are removed;
+      see docs/rate-limits.md for migration.
+    - Update production policy from the 2026-08-05 source: separate scopes,
+      refill/burst values, renewal exemptions, failure guards and profile
+      constraints. See docs/rate-limits.md for migration and throttling caveats.
     - Refresh the bundled Let's Encrypt CA archive (CERT_CAS_VERSION = 5):
       add YE/YR roots, their cross-signs, the renewed X2 cross-sign and YE/YR
       intermediates. Mark YE3/YR3 as backups and preserve retired certificates

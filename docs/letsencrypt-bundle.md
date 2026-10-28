@@ -1,5 +1,19 @@
 # Bundled Let's Encrypt certificate archive
 
+Import certificate metadata explicitly:
+
+```python
+from cert_utils.letsencrypt_info import certificates
+from cert_utils.letsencrypt_info.types import CERT_CA_PAYLOAD
+
+roots = certificates.DEFAULT_CA_PREFERENCES
+```
+
+The namespace itself no longer eagerly exports/loads certificate data.
+Certificate PEM files remain in `cert_utils/letsencrypt-certs`; only the Python
+module moved. Rate policy is separate in `cert_utils.letsencrypt_info.rate_limits`,
+and both modules share definitions from `cert_utils.letsencrypt_info.types`.
+
 Snapshot: 2026-10-28; `CERT_CAS_VERSION = 5`.
 
 Sources:
