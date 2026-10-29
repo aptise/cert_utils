@@ -1,7 +1,11 @@
 # stdlib
+import datetime
 from enum import Enum
 from typing import Dict
+from typing import List
 from typing import Optional
+from typing import Tuple
+from typing import Union
 
 # pypi
 from typing_extensions import Literal
@@ -20,7 +24,7 @@ class AccountKeyData(object):
 
     key_pem: str
     key_pem_filepath: Optional[str]
-    jwk: Dict
+    jwk: Dict[str, str]
     thumbprint: str
     alg: str
 
@@ -28,7 +32,7 @@ class AccountKeyData(object):
         self,
         key_pem: str,
         key_pem_filepath: Optional[str] = None,
-    ):
+    ) -> None:
         """
         :param key_pem: (required) A PEM encoded RSA key
         :param key_pem_filepath: (optional) The filepath of a PEM encoded RSA key
@@ -36,7 +40,7 @@ class AccountKeyData(object):
         self.key_pem = key_pem
         self.key_pem_filepath = key_pem_filepath
 
-        (_jwk, _thumbprint, _alg) = core.account_key__parse(
+        _jwk, _thumbprint, _alg = core.account_key__parse(
             key_pem=key_pem,
             key_pem_filepath=key_pem_filepath,
         )
@@ -100,7 +104,7 @@ class KeyTechnology(_mixin_mapping):
     }
 
     @classmethod
-    def to_new_args(cls, id_) -> "NewKeyArgs":
+    def to_new_args(cls, id_: int) -> "NewKeyArgs":
         kwargs: "NewKeyArgs" = {}
         if id_ in (cls.RSA, cls.RSA_2048, cls.RSA_3072, cls.RSA_4096):
             kwargs["key_technology_id"] = KeyTechnologyEnum.RSA
@@ -134,6 +138,44 @@ class KeyTechnologyEnum(Enum):
 
 
 class NewKeyArgs(TypedDict, total=False):
-    key_technology_id: Literal[KeyTechnologyEnum.RSA, KeyTechnologyEnum.EC]
+    key_technology_id: Union[
+        Literal[KeyTechnologyEnum.RSA, KeyTechnologyEnum.EC], Literal[1, 2]
+    ]
     rsa_bits: Optional[Literal[2048, 3072, 4096]]
     ec_curve: Optional[Literal["P-256", "P-384"]]
+
+
+class CertificateData(TypedDict):
+    issuer: Optional[str]
+    subject: Optional[str]
+    startdate: Optional[datetime.datetime]
+    enddate: Optional[datetime.datetime]
+    SubjectAlternativeName: Optional[List[str]]
+    key_technology: Optional[Tuple[str, Tuple[Union[int, str], ...]]]
+    fingerprint_sha1: Optional[str]
+    spki_sha256: Optional[str]
+    issuer_uri: Optional[str]
+    authority_key_identifier: Optional[str]
+    serial: Optional[int]
+
+
+class CSRData(TypedDict):
+    subject: Optional[str]
+    SubjectAlternativeName: List[str]
+    key_technology: Optional[Tuple[str, Tuple[Union[int, str], ...]]]
+    spki_sha256: Optional[str]
+
+
+KeyData = TypedDict(
+    "KeyData",
+    {
+        "key_technology": Optional[Union[str, Tuple[str, Tuple[Union[int, str], ...]]]],
+        "text": Optional[str],
+        "modulus_md5": Optional[str],
+        "key_technology_basic": Optional[str],
+        "spki_sha256": Optional[str],
+        "XX-modulus_md5": str,
+        "XX-check": str,
+    },
+    total=False,
+)

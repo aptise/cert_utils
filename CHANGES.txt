@@ -1,3 +1,39 @@
+1.2.0
+    - Implement account_key__verify's OpenSSL fallback using psutil.Popen.
+      Return None on success; fallback failures raise OpenSslError_InvalidSignature
+      (an OpenSslError subclass). Native InvalidSignature behavior is preserved.
+    - Fix EC fallback signing to honor standardize_signature: True returns
+      fixed-width r||s, False/None returns DER. Existing fallback callers needing
+      DER must explicitly pass False. SHA-256 remains unchanged on both backends.
+    - Organize Let's Encrypt metadata under letsencrypt_info: certificates.py,
+      rate_limits.py and shared types.py. The namespace imports neither dataset
+      eagerly; the bundled PEM directory stays at its established location.
+    - BREAKING: replace LIMITS with versioned rate-policy schema 2. Import
+      cert_utils.letsencrypt_info.rate_limits.RATE_LIMITS for the CA-independent
+      catalogue. Old schema keys and module-level metadata imports are removed;
+      see docs/rate-limits.md for migration.
+    - Update production policy from the 2026-08-05 source: separate scopes,
+      refill/burst values, renewal exemptions, failure guards and profile
+      constraints. See docs/rate-limits.md for migration and throttling caveats.
+    - Refresh the bundled Let's Encrypt CA archive (CERT_CAS_VERSION = 5):
+      add YE/YR roots, their cross-signs, the renewed X2 cross-sign and YE/YR
+      intermediates. Mark YE3/YR3 as backups and preserve retired certificates
+      under letsencrypt-certs/deprecated with corrected metadata.
+    - Add pending YE/YR roots after established X2/X1 root preferences; they
+      are not yet trusted by major root stores. Preserve the original X2
+      cross-sign under its existing key in CERT_CAS_DEPRECATED; the renewed
+      certificate uses isrg_root_x2_cross_2025.
+    - Remove setup.py; build with the pyproject.toml setuptools backend.
+    - Correct CLI argv handling and public typing contracts.
+    - Return structured certificate/CSR/key result types to type checkers.
+    - Fix OpenSSL EC checks and CSR generation for paths containing spaces.
+    - Align chain validation purpose; add validation_time, purpose, and
+      server_hostname keyword arguments. Defaults still validate at current time.
+    - Align chain ordering across backends: ordering is distinct from trust,
+      expiry, signature and purpose validation; use ensure_chain for validation.
+    - Invalid CSR signatures now raise OpenSslError_InvalidCSR consistently.
+    - Added Python3.14 to test and support matrix
+
 1.1.1
     - fix "display_name" and "alternates" of letsencrypt staging cross-sign
 
@@ -141,3 +177,22 @@
 0.1.0
     initial release
     forked from peter_sslers
+
+CLI follow-up (unreleased)
+    - Add offline CLI coverage; fix issuer parsing, missing peer data,
+      module dispatch, ARI HTTP errors and renewal URL joining.
+    - Move the historical OpenSSL MD5 reference into project documentation.
+
+HTTP configuration (unreleased)
+    - Add connect/read timeout defaults (5/30 seconds), CERT_UTILS_TIMEOUT and
+      --timeout CONNECT,READ overrides. Close CLI-owned sessions reliably.
+    - Document profile-dependent CN behavior and intentional peer-socket probes.
+
+CI compatibility (unreleased)
+    - Select pyproject.toml explicitly when invoking tox, avoiding the
+      setup.cfg discovery failure in tox 4.30.x on Python 3.9.
+
+Python 3.7 test compatibility (unreleased)
+    - Access mock calls as (args, kwargs) tuples; the .args/.kwargs convenience
+      properties are unavailable on Python 3.7.
+    - Tie the tox 4.30.3 configuration workaround to Python 3.9 support.

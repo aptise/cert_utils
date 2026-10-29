@@ -1,6 +1,7 @@
 # stdlib
 import base64
 import binascii
+import datetime
 import hashlib
 import ipaddress
 import json
@@ -46,6 +47,9 @@ from .compat.openssl import key_single_op__pem_filepath
 from .compat.openssl import RE_openssl_x509_subject
 from .compat.openssl import san_domains_from_text
 from .compat.openssl import serial_from_text
+from .compat.signatures import der_to_raw as _ecdsa_der_to_raw
+from .compat.signatures import openssl_key_width as _openssl_account_key_width
+from .compat.signatures import raw_to_der as _ecdsa_raw_to_der
 from .errors import CryptographyError
 from .errors import FallbackError_FilepathRequired
 from .errors import OpenSslError
@@ -53,9 +57,13 @@ from .errors import OpenSslError_CsrGeneration
 from .errors import OpenSslError_InvalidCertificate
 from .errors import OpenSslError_InvalidCSR
 from .errors import OpenSslError_InvalidKey
+from .errors import OpenSslError_InvalidSignature
 from .errors import OpenSslError_VersionTooLow
 from .model import ALLOWED_BITS_RSA
 from .model import ALLOWED_CURVES_ECDSA
+from .model import CertificateData
+from .model import CSRData
+from .model import KeyData
 from .model import KeyTechnology
 from .model import KeyTechnologyEnum
 from .utils import cleanup_pem_text
@@ -66,24 +74,23 @@ from .utils import new_pem_tempfile
 from .utils import split_pem_chain
 from .utils import TECHNOLOGY_RETURN_VALUES
 
-# from .utils import new_der_tempfile
-
-# ==============================================================================
-
 if TYPE_CHECKING:
-    import datetime
-    from cryptography.x509 import Certificate
-    from cryptography.x509 import CertificateSigningRequest
-    from cryptography.hazmat.primitives.hashes import HashAlgorithm
     from cryptography.hazmat.primitives.asymmetric.dsa import DSAPublicKey
-    from cryptography.hazmat.primitives.asymmetric.rsa import RSAPrivateKey
-    from cryptography.hazmat.primitives.asymmetric.rsa import RSAPublicKey
-    from cryptography.hazmat.primitives.asymmetric.ec import EllipticCurvePublicKey
     from cryptography.hazmat.primitives.asymmetric.ec import EllipticCurvePrivateKey
+    from cryptography.hazmat.primitives.asymmetric.ec import EllipticCurvePublicKey
     from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
     from cryptography.hazmat.primitives.asymmetric.ed448 import Ed448PublicKey
+    from cryptography.hazmat.primitives.asymmetric.rsa import RSAPrivateKey
+    from cryptography.hazmat.primitives.asymmetric.rsa import RSAPublicKey
     from cryptography.hazmat.primitives.asymmetric.x25519 import X25519PublicKey
     from cryptography.hazmat.primitives.asymmetric.x448 import X448PublicKey
+    from cryptography.hazmat.primitives.hashes import HashAlgorithm
+    from cryptography.x509 import Certificate
+    from cryptography.x509 import CertificateSigningRequest
+    from typing_extensions import Protocol
+
+    class _PublicKeySPKI(Protocol):
+        def public_bytes(self, encoding: Any, format: Any) -> bytes: ...
 
     _TYPES_CRYPTOGRAPHY_KEYS = Union[
         EllipticCurvePrivateKey,
@@ -302,7 +309,7 @@ def make_csr(
         openssl req -new -sha256 -k {FILEPATH_KEY} -subj "/" -addext {FILEPATH_SAN}
     """
     log.info("make_csr >")
-    # keep synced with: lib.letsencrypt_info.LIMITS["names/certificate"]["limit"]
+    # General CSR size guard, not an issuer/profile-specific rate limit.
 
     if domain_names is None:
         domain_names = []
@@ -407,8 +414,8 @@ def make_csr(
             stderr=subprocess.PIPE,
         ) as proc:
             data_bytes, err = proc.communicate()
-            if err:
-                raise OpenSslError_CsrGeneration("could not create a CSR")
+            if proc.returncode:
+                raise OpenSslError_CsrGeneration(err.decode("utf8", errors="replace"))
             csr_text = data_bytes.decode("utf8")
 
     elif _acme_generator_strategy == 2:
@@ -457,16 +464,28 @@ def make_csr(
                 tmpfile_csr_san.seek(0)
 
                 # note that we use /bin/cat (!)
-                _command = (
-                    """%s req -new -sha256 -key %s -subj "/" -reqexts SAN -config < /bin/cat %s"""
-                    % (openssl_path, key_pem_filepath, tmpfile_csr_san.name)
-                )
+                _command_legacy = [
+                    openssl_path,
+                    "req",
+                    "-new",
+                    "-sha256",
+                    "-key",
+                    key_pem_filepath,
+                    "-subj",
+                    "/",
+                    "-reqexts",
+                    "SAN",
+                    "-config",
+                    tmpfile_csr_san.name,
+                ]
                 with psutil.Popen(
-                    _command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE
+                    _command_legacy, stdout=subprocess.PIPE, stderr=subprocess.PIPE
                 ) as proc:
                     data_bytes, err = proc.communicate()
-                    if err:
-                        raise OpenSslError_CsrGeneration("could not create a CSR")
+                    if proc.returncode:
+                        raise OpenSslError_CsrGeneration(
+                            err.decode("utf8", errors="replace")
+                        )
                     csr_text = data_bytes.decode("utf8")
                     csr_text = cleanup_pem_text(csr_text)
 
@@ -477,17 +496,26 @@ def make_csr(
             _csr_san = "subjectAltName = " + ", ".join(
                 ["DNS:%s" % d for d in domain_names]
             )
-            _command = '''%s req -new -sha256 -key %s -subj "/" -addext "%s"''' % (
+            _command_args = [
                 openssl_path,
+                "req",
+                "-new",
+                "-sha256",
+                "-key",
                 key_pem_filepath,
+                "-subj",
+                "/",
+                "-addext",
                 _csr_san,
-            )
+            ]
             with psutil.Popen(
-                _command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE
+                _command_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE
             ) as proc:
                 data_bytes, err = proc.communicate()
-                if err:
-                    raise OpenSslError_CsrGeneration("could not create a CSR")
+                if proc.returncode:
+                    raise OpenSslError_CsrGeneration(
+                        err.decode("utf8", errors="replace")
+                    )
                 csr_text = data_bytes.decode("utf8")
                 csr_text = cleanup_pem_text(csr_text)
     else:
@@ -694,7 +722,7 @@ def validate_key(
     if openssl_version is None:
         check_openssl_version()
 
-    def _check_fallback(_technology: Literal["rsa", "ec"]):
+    def _check_fallback(_technology: Literal["rsa", "ec"]) -> Optional[Union[int, str]]:
         log.debug(".validate_key > openssl fallback: _check_fallback[%s]", _technology)
         # openssl rsa -in {KEY} -check
         try:
@@ -772,7 +800,9 @@ def validate_csr(
     log.info("validate_csr >")
     if conditionals.cryptography:
         csr = conditionals.cryptography.x509.load_pem_x509_csr(csr_pem.encode())
-        return csr.is_signature_valid
+        if not csr.is_signature_valid:
+            raise OpenSslError_InvalidCSR("invalid CSR signature")
+        return True
 
     log.debug(".validate_csr > openssl fallback")
     # openssl req -text -noout -verify -in {CSR}
@@ -788,7 +818,7 @@ def validate_csr(
         stderr=subprocess.PIPE,
     ) as proc:
         data_bytes, err = proc.communicate()
-        if not data_bytes:
+        if proc.returncode or not data_bytes or b"verify failure" in err.lower():
             raise OpenSslError_InvalidCSR(err)
         # this may be True or bytes, depending on the version
         # in any event, being here means we passed
@@ -1353,7 +1383,7 @@ def parse_cert__key_technology(
 def parse_cert(
     cert_pem: str,
     cert_pem_filepath: Optional[str] = None,
-) -> Dict:
+) -> CertificateData:
     """
     This routine will use cryptography if available.
     If not, openssl is used via subprocesses
@@ -1367,10 +1397,7 @@ def parse_cert(
     :rtype: dict
     """
     log.info("parse_cert >")
-    rval: Dict[
-        str,
-        Union[None, str, int, "datetime.datetime", List[str], TECHNOLOGY_RETURN_VALUES],
-    ] = {
+    rval: CertificateData = {
         "issuer": None,
         "subject": None,
         "enddate": None,
@@ -1465,8 +1492,6 @@ def parse_cert(
         return rval
 
     log.debug(".parse_cert > openssl fallback")
-    global openssl_version
-    global _openssl_behavior
     tmpfile_pem = None
     try:
         if not cert_pem_filepath:
@@ -1667,7 +1692,7 @@ def parse_csr__spki_sha256(
 def parse_csr(
     csr_pem: str,
     csr_pem_filepath: Optional[str] = None,
-) -> Dict:
+) -> CSRData:
     """
     This routine will use cryptography if available.
     If not, openssl is used via subprocesses
@@ -1679,7 +1704,7 @@ def parse_csr(
     :rtype: dict
     """
     log.info("parse_csr >")
-    rval: Dict[str, Union[None, List, str, TECHNOLOGY_RETURN_VALUES]] = {
+    rval: CSRData = {
         "key_technology": None,
         "spki_sha256": None,
         "SubjectAlternativeName": [],
@@ -1750,7 +1775,7 @@ def parse_csr(
 def parse_key__spki_sha256(
     key_pem: str,
     key_pem_filepath: Optional[str] = None,
-    publickey: Optional["_TYPES_CRYPTOGRAPHY_KEYS"] = None,
+    publickey: Optional["_PublicKeySPKI"] = None,
     key_technology_basic: Optional[str] = None,
     as_b64: Optional[bool] = None,
 ) -> str:
@@ -1868,7 +1893,7 @@ def parse_key__technology_basic(
 def parse_key(
     key_pem: str,
     key_pem_filepath: Optional[str] = None,
-) -> Dict:
+) -> KeyData:
     """
     !!!: This is a debugging display function. The output is not guaranteed across installations.
 
@@ -1882,7 +1907,7 @@ def parse_key(
     :rtype: dict
     """
     log.info("parse_key >")
-    rval: Dict[str, Union[None, str, Tuple]] = {
+    rval: KeyData = {
         "key_technology": None,
         "text": None,
         "modulus_md5": None,
@@ -1981,8 +2006,8 @@ def parse_key(
 
 
 def new_account_key(
-    key_technology_id: Literal[
-        KeyTechnologyEnum.RSA, KeyTechnologyEnum.EC
+    key_technology_id: Union[
+        Literal[KeyTechnologyEnum.RSA, KeyTechnologyEnum.EC], Literal[1, 2]
     ] = KeyTechnologyEnum.RSA,
     rsa_bits: Optional[Literal[2048, 3072, 4096]] = 2048,
     ec_curve: Optional[Literal["P-256", "P-384"]] = "P-256",
@@ -1990,7 +2015,7 @@ def new_account_key(
     """
     :param int key_technology_id: Key Technology type. Default: KeyTechnology.RSA
     :param int rsa_bits: number of bits. default 2048
-    :param istrnt ec_curve: default "P-256"
+    :param str ec_curve: default "P-256"
     :returns: AccountKey in PEM format
     :rtype: str
     """
@@ -2011,13 +2036,15 @@ def new_account_key(
 
 
 def new_private_key(
-    key_technology_id: Literal[KeyTechnologyEnum.RSA, KeyTechnologyEnum.EC],
+    key_technology_id: Union[
+        Literal[KeyTechnologyEnum.RSA, KeyTechnologyEnum.EC], Literal[1, 2]
+    ],
     rsa_bits: Optional[Union[Literal[2048], Literal[3072], Literal[4096]]] = 2048,
     ec_curve: Optional[Union[Literal["P-256"], Literal["P-384"]]] = "P-384",
 ) -> str:
     """
-    :param int key_technology_id: Key Technology type. Default: None
-    :param int rsa_bits: number of bits. default None
+    :param key_technology_id: Required key technology (enum or legacy integer).
+    :param int rsa_bits: number of bits. default 2048
     :param str ec_curve: ec curve. default P-256
     :returns: PrivateKey in PEM format
     :rtype: str
@@ -2267,6 +2294,10 @@ def ensure_chain(
     cert_pem: Optional[str] = None,
     chain_pem: Optional[str] = None,
     root_pems_other: Optional[List[str]] = None,
+    *,
+    validation_time: Optional[datetime.datetime] = None,
+    purpose: Literal["sslserver", "sslclient"] = "sslserver",
+    server_hostname: Optional[str] = None,
 ) -> bool:
     """
     validates from a root down to a chain
@@ -2297,6 +2328,11 @@ def ensure_chain(
             * `:param:fullchain_pem` MUST NOT be provided.
     :param root_pems_other: an iterable list of trusted roots certificates, in
        PEM encoding; currently unused.
+    Both backends validate server certificate purpose by default. Pass
+    purpose="sslclient" for client certificates. server_hostname optionally
+    verifies a particular DNS identity; otherwise the certificate identity is used. For historical validation,
+    pass an explicit timezone-aware validation_time; defaults use the current time.
+
     :returns: True
     :rtype: bool
 
@@ -2320,6 +2356,10 @@ def ensure_chain(
         be iteratively built up like the pure-python example
     """
     log.info("ensure_chain >")
+    if purpose not in ("sslserver", "sslclient"):
+        raise ValueError("invalid certificate purpose")
+    if validation_time is not None and validation_time.utcoffset() is None:
+        raise ValueError("validation_time must be timezone-aware")
     if fullchain_pem:
         if chain_pem or cert_pem:
             raise ValueError(
@@ -2341,7 +2381,7 @@ def ensure_chain(
         cert_pem = cert_pem.strip()  # needed to match regex results in above situation
 
     # sometimes people submit things they should not
-    if intermediates[-1] == cert_pem:
+    if intermediates and intermediates[-1] == cert_pem:
         intermediates = intermediates[:-1]
 
     if conditionals.cryptography:
@@ -2371,8 +2411,20 @@ def ensure_chain(
             store
         )
 
+        if validation_time is not None:
+            builder = builder.time(validation_time)
         try:
-            builder.build_client_verifier().verify(cert_cert, intermediate_certs)
+            if purpose == "sslclient":
+                builder.build_client_verifier().verify(cert_cert, intermediate_certs)
+            else:
+                names = _cryptography__cert_or_req__all_names(cert_cert)
+                hostname = server_hostname or (names[0] if names else None)
+                if hostname is None:
+                    raise ValueError("server certificate requires a DNS identity")
+                verifier = builder.build_server_verifier(
+                    conditionals.cryptography.x509.DNSName(hostname)
+                )
+                verifier.verify(cert_cert, intermediate_certs)
         except Exception as exc:  # noqa: F841
             raise
         return True
@@ -2399,19 +2451,29 @@ def ensure_chain(
                 openssl_path,
                 "verify",
                 "-purpose",
-                "sslserver",
+                purpose,
                 "-CAfile",
                 _tmpfile_root.name,
                 "-untrusted",
                 _tempfile_intermediate.name,
-                _tmpfile_cert.name,
-            ],
+            ]
+            + (
+                ["-attime", str(int(validation_time.timestamp()))]
+                if validation_time is not None
+                else []
+            )
+            + (
+                ["-verify_hostname", server_hostname]
+                if server_hostname is not None and purpose == "sslserver"
+                else []
+            )
+            + [_tmpfile_cert.name],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
         ) as proc:
             data, err = proc.communicate()
             if err:
-                raise OpenSslError("could not verify: 1")
+                raise OpenSslError(err.decode("utf8", errors="replace"))
             data = data.decode("utf8")
             if data != expected_success:
                 raise OpenSslError("could not verify: 2")
@@ -2432,15 +2494,14 @@ def ensure_chain_order(
         Optional
     :type cert_pem: str
     :returns: bool
-    :rtype: None
+    :rtype: bool
 
-    The OpenSSL Equivalent / Fallback is::
-
-        /usr/local/bin/openssl verify -purpose sslserver -partial_chain -trusted {ROOT.pem} {CHAINREVERSED.pem}
+    Compares issuer/subject adjacency only on both backends.
+    Use ensure_chain for trust, signature, purpose and expiry validation.
     """
     log.debug("ensure_chain_order >")
     if cert_pem:
-        chain_certs.append(cert_pem)
+        chain_certs = chain_certs + [cert_pem]
     if len(chain_certs) < 2:
         raise ValueError("must submit 2 or more chain certificates")
     # reverse the cert list
@@ -2488,55 +2549,41 @@ def ensure_chain_order(
     if openssl_version is None:
         check_openssl_version()
 
-    _tempfiles = {}
-    _last_idx = len(r_chain_certs) - 1
-    try:
-        # make a bunch of tempfiles
-        for _idx, cert_pem in enumerate(r_chain_certs):
-            _tmpfile_cert = new_pem_tempfile(cert_pem)
-            _tempfiles[_idx] = _tmpfile_cert
-
-        for idx, cert_pem in enumerate(r_chain_certs):
-            if idx == _last_idx:
-                break
-            file_a = _tempfiles[idx]
-            file_b = _tempfiles[idx + 1]
-
-            expected_success = "%s: OK\n" % file_b.name
+    previous_subject = None
+    for pem in r_chain_certs:
+        tmp = new_pem_tempfile(pem)
+        try:
             with psutil.Popen(
                 [
                     openssl_path,
-                    "verify",
-                    "-purpose",
-                    "sslserver",
-                    "-partial_chain",
-                    "-trusted",
-                    file_a.name,
-                    file_b.name,
+                    "x509",
+                    "-in",
+                    tmp.name,
+                    "-noout",
+                    "-subject",
+                    "-issuer",
                 ],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
             ) as proc:
-                data, err = proc.communicate()
-                if err:
-                    raise OpenSslError("could not verify: 1")
-                data = data.decode("utf8")
-                if data != expected_success:
-                    raise OpenSslError("could not verify: 2")
-        return True
-    finally:
-        for _idx in _tempfiles:
-            _tmp = _tempfiles[_idx]
-            _tmp.close()
-
-
-# ------------------------------------------------------------------------------
+                output, err = proc.communicate()
+                if proc.returncode:
+                    raise OpenSslError(err.decode("utf8", errors="replace"))
+            fields = dict(line.split("=", 1) for line in output.decode().splitlines())
+            subject = fields["subject"].strip()
+            issuer = fields["issuer"].strip()
+            if previous_subject is not None and previous_subject != issuer:
+                raise OpenSslError("could not verify: upchain does not match issuer")
+            previous_subject = subject
+        finally:
+            tmp.close()
+    return True
 
 
 def account_key__parse(
     key_pem: str,
     key_pem_filepath: Optional[str] = None,
-) -> Tuple[Dict, str, str]:
+) -> Tuple[Dict[str, str], str, str]:
     """
     :param key_pem: (required) the RSA Key in PEM format
     :param key_pem_filepath: Optional filepath to a PEM encoded RSA account key file.
@@ -2685,7 +2732,7 @@ def account_key__parse(
 
 
 def account_key__sign(
-    data,
+    data: Union[str, bytes],
     key_pem: str,
     key_pem_filepath: Optional[str] = None,
     standardize_signature: Optional[bool] = True,
@@ -2697,7 +2744,8 @@ def account_key__sign(
     :param key_pem: (required) the RSA Key in PEM format
     :param key_pem_filepath: Optional filepath to a PEM encoded RSA account key file.
                              Only used for commandline OpenSSL fallback operations.
-    :standardize_signature: Bool. Default `True`.  Will reformat signatures if needed
+    :standardize_signature: For EC, True returns fixed-width r||s; False/None
+        returns ASN.1 DER. RSA is unaffected. SHA-256 is used on both backends.
     :returns: signature
     :rtype: bytes
     """
@@ -2714,10 +2762,6 @@ def account_key__sign(
         pkey = conditionals.crypto_serialization.load_pem_private_key(
             key_pem.encode(), None
         )
-        # possible loads are "Union[DSAPrivateKey, DSAPublicKey, RSAPrivateKey, RSAPublicKey]"
-        # but only RSAPublicKey is used or will work
-        # TODO: check to ensure key type is RSAPublicKey
-
         if isinstance(pkey, conditionals.crypto_ec.EllipticCurvePrivateKey):
             signature = pkey.sign(  # type: ignore[union-attr, call-arg]
                 data,
@@ -2750,6 +2794,7 @@ def account_key__sign(
         if key_pem_filepath is None:
             _tmpfile = new_pem_tempfile(key_pem)
             key_pem_filepath = _tmpfile.name
+        width = _openssl_account_key_width(openssl_path, key_pem_filepath)
         with psutil.Popen(
             [openssl_path, "dgst", "-sha256", "-sign", key_pem_filepath],
             stdin=subprocess.PIPE,
@@ -2759,6 +2804,8 @@ def account_key__sign(
             signature, err = proc.communicate(data)
             if proc.returncode != 0:
                 raise IOError("account_key__sign\n{0}".format(err))
+            if width is not None and standardize_signature:
+                signature = _ecdsa_der_to_raw(signature, width)
             return signature
     finally:
         if _tmpfile:
@@ -2766,12 +2813,12 @@ def account_key__sign(
 
 
 def account_key__verify(
-    signature,
-    data,
+    signature: Union[str, bytes],
+    data: Union[str, bytes],
     key_pem: str,
     key_pem_filepath: Optional[str] = None,
     standardize_signature: Optional[bool] = True,
-) -> bytes:
+) -> None:
     """
     This routine will use cryptography if available.
     If not, openssl is used via subprocesses
@@ -2779,9 +2826,12 @@ def account_key__verify(
     :param key_pem: (required) the RSA Key in PEM format
     :param key_pem_filepath: Optional filepath to a PEM encoded RSA account key file.
                              Only used for commandline OpenSSL fallback operations.
-    :param standardize_signature: bool. Default `True`. Was the signature standardized?
-    :returns: result
-    :rtype: bool
+    :param standardize_signature: For EC, True expects fixed-width r||s;
+        False/None expects ASN.1 DER. RSA is unaffected. No format guessing.
+    :returns: None on success; invalid signatures raise.
+              Invalid OpenSSL verifications raise OpenSslError_InvalidSignature;
+              the Python backend retains Cryptography InvalidSignature.
+    :rtype: None
     """
     log.info("account_key__verify >")
     if not isinstance(signature, bytes):
@@ -2813,13 +2863,13 @@ def account_key__verify(
                     int.from_bytes(signature[rlen:], byteorder="big"),
                 )
                 signature = asn1sig
-            result = pkey.public_key().verify(
+            pkey.public_key().verify(
                 signature,
                 data,
                 conditionals.crypto_ec.ECDSA(conditionals.crypto_hashes.SHA256()),
             )
         elif isinstance(pkey, conditionals.crypto_rsa.RSAPrivateKey):
-            result = pkey.public_key().verify(
+            pkey.public_key().verify(
                 signature,
                 data,
                 conditionals.cryptography.hazmat.primitives.asymmetric.padding.PKCS1v15(),  # type: ignore[arg-type]
@@ -2827,9 +2877,44 @@ def account_key__verify(
             )
         else:
             raise ValueError("unsupported private key type")
-        return result
+        return None
     log.debug(".account_key__verify > openssl fallback")
-    raise ValueError("not supported yet")
+    if openssl_version is None:
+        check_openssl_version()
+    with tempfile.TemporaryDirectory(prefix="cert-utils-verify-") as folder:
+        if key_pem_filepath is None:
+            key_pem_filepath = os.path.join(folder, "key.pem")
+            descriptor = os.open(
+                key_pem_filepath, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600
+            )
+            with os.fdopen(descriptor, "wb") as key_file:
+                key_file.write(key_pem.encode())
+        width = _openssl_account_key_width(openssl_path, key_pem_filepath)
+        if width is not None and standardize_signature:
+            signature = _ecdsa_raw_to_der(signature, width)
+        signature_path = os.path.join(folder, "signature.bin")
+        with open(signature_path, "wb") as signature_file:
+            signature_file.write(signature)
+        with psutil.Popen(
+            [
+                openssl_path,
+                "dgst",
+                "-sha256",
+                "-prverify",
+                key_pem_filepath,
+                "-signature",
+                signature_path,
+            ],
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        ) as proc:
+            output, error = proc.communicate(data)
+            if proc.returncode:
+                raise OpenSslError_InvalidSignature(
+                    (error or output).decode("utf8", errors="replace")
+                )
+    return None
 
 
 def ari__encode_serial_no(serial_no: int) -> str:

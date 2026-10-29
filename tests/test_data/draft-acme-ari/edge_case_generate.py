@@ -28,7 +28,7 @@ from typing_extensions import Literal
 
 
 def generate_cert(
-    strategy: Union[Literal["key_id"], Literal["issuer+serial"], Literal["all"]]
+    strategy: Union[Literal["key_id"], Literal["issuer+serial"], Literal["all"]],
 ) -> bytes:
     # pregenerate values
     _key_identifier = bytes.fromhex(

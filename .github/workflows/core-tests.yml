@@ -31,6 +31,7 @@ jobs:
           - "3.11"
           - "3.12"
           - "3.13"
+          - "3.14"
 
     steps:
     - uses: actions/checkout@v3
@@ -46,6 +47,17 @@ jobs:
         pip freeze
 
     - name: Test with tox/pytest
-      # tox is used to run pytest
+      # Python 3.9 uses tox 4.30.3, whose discovery mistakes setup.cfg for tox config.
+      # Remove -c pyproject.toml when Python 3.9 support is dropped.
       run: |
-        tox -e py -- ${{ matrix.pytest-args }}
+        tox -c pyproject.toml -e py -- ${{ matrix.pytest-args }}
+
+    - name: Upload coverage reports
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: coverage-${{ matrix.python-version }}-${{ matrix.os }}
+        path: |
+          coverage.xml
+          htmlcov/
+        if-no-files-found: warn

@@ -1,0 +1,257 @@
+{
+  "trustid_root_x3": {
+    "source": "trustid-x3-root.pem",
+    "sha256": "0687260331A72403D909F105E69BCF0D32E1BD2493FFC6D9206D11BCD6770739",
+    "bundle_path": "deprecated/trustid-x3-root.pem"
+  },
+  "isrg_root_x1_cross": {
+    "source": "isrg-root-x1-cross-signed.pem",
+    "sha256": "6D99FB265EB1C5B3744765FCBC648F3CD8E1BFFAFDC4C2F99B9D47CF7FF1C24F",
+    "bundle_path": "deprecated/isrg-root-x1-cross-signed.pem"
+  },
+  "letsencrypt_ocsp_root_x1": {
+    "source": "isrg-root-ocsp-x1.pem",
+    "sha256": "F21BC92040EC5DBAA820418A24936628FF87C177E1A5D8AB41FA7EE1FF812642",
+    "bundle_path": "deprecated/isrg-root-ocsp-x1.pem"
+  },
+  "letsencrypt_intermediate_x1": {
+    "source": "letsencryptauthorityx1.pem",
+    "sha256": "BDEE0D7C8F9C278F14EA9B6A4F90ED665A9F56DB0A56B1CDDA6765912F398A5E",
+    "bundle_path": "deprecated/letsencryptauthorityx1.pem"
+  },
+  "letsencrypt_intermediate_x1_cross": {
+    "source": "lets-encrypt-x1-cross-signed.pem",
+    "sha256": "7FDCE3BF4103C2684B3ADBB5792884BD45C75094C217788863950346F79C90A3",
+    "bundle_path": "deprecated/lets-encrypt-x1-cross-signed.pem"
+  },
+  "letsencrypt_intermediate_x2": {
+    "source": "letsencryptauthorityx2.pem",
+    "sha256": "E4EB54A7FFA552EF64D8E1AE338B69BE909C29E6AF57170A2F6F44DF225E5A14",
+    "bundle_path": "deprecated/letsencryptauthorityx2.pem"
+  },
+  "letsencrypt_intermediate_x2_cross": {
+    "source": "lets-encrypt-x2-cross-signed.pem",
+    "sha256": "EC0C6CA496A67A13342FEC5221F68D4B3E53B1BC22F6E4BCCC9C68F0415CDEA4",
+    "bundle_path": "deprecated/lets-encrypt-x2-cross-signed.pem"
+  },
+  "letsencrypt_intermediate_x3": {
+    "source": "letsencryptauthorityx3.pem",
+    "sha256": "731D3D9CFAA061487A1D71445A42F67DF0AFCA2A6C2D2F98FF7B3CE112B1F568",
+    "bundle_path": "deprecated/letsencryptauthorityx3.pem"
+  },
+  "letsencrypt_intermediate_x3_cross": {
+    "source": "lets-encrypt-x3-cross-signed.pem",
+    "sha256": "25847D668EB4F04FDD40B12B6B0740C567DA7D024308EB6C2C96FE41D9DE218D",
+    "bundle_path": "deprecated/lets-encrypt-x3-cross-signed.pem"
+  },
+  "letsencrypt_intermediate_x4": {
+    "source": "letsencryptauthorityx4.pem",
+    "sha256": "5DE9152BED31FA0515DD1FC746133F1327562EF72A84CF2D2403E748A604D0D4",
+    "bundle_path": "deprecated/letsencryptauthorityx4.pem"
+  },
+  "letsencrypt_intermediate_x4_cross": {
+    "source": "lets-encrypt-x4-cross-signed.pem",
+    "sha256": "A74B0C32B65B95FE2C4F8F098947A68B695033BED0B51DD8B984ECAE89571BB6",
+    "bundle_path": "deprecated/lets-encrypt-x4-cross-signed.pem"
+  },
+  "letsencrypt_intermediate_r3": {
+    "source": "lets-encrypt-r3.pem",
+    "sha256": "67ADD1166B020AE61B8F5FC96813C04C2AA589960796865572A3C7E737613DFD",
+    "bundle_path": "deprecated/lets-encrypt-r3.pem"
+  },
+  "letsencrypt_intermediate_r3_cross": {
+    "source": "lets-encrypt-r3-cross-signed.pem",
+    "sha256": "730C1BDCD85F57CE5DC0BBA733E5F1BA5A925B2A771D640A26F7A454224DAD3B",
+    "bundle_path": "deprecated/lets-encrypt-r3-cross-signed.pem"
+  },
+  "letsencrypt_intermediate_r4": {
+    "source": "lets-encrypt-r4.pem",
+    "sha256": "1A07529A8B3F01D231DFAD2ABDF71899200BB65CD7E03C59FA82272533355B74",
+    "bundle_path": "deprecated/lets-encrypt-r4.pem"
+  },
+  "letsencrypt_intermediate_r4_cross": {
+    "source": "lets-encrypt-r4-cross-signed.pem",
+    "sha256": "5A8F16FDA448D783481CCA57A2428D174DAD8C60943CEB28F661AE31FD39A5FA",
+    "bundle_path": "deprecated/lets-encrypt-r4-cross-signed.pem"
+  },
+  "letsencrypt_intermediate_e1": {
+    "source": "lets-encrypt-e1.pem",
+    "sha256": "46494E30379059DF18BE52124305E606FC59070E5B21076CE113954B60517CDA",
+    "bundle_path": "deprecated/lets-encrypt-e1.pem"
+  },
+  "letsencrypt_intermediate_e2": {
+    "source": "lets-encrypt-e2.pem",
+    "sha256": "BACDE0463053CE1D62F8BE74370BBAE79D4FCAF19FC07643AEF195E6A59BD578",
+    "bundle_path": "deprecated/lets-encrypt-e2.pem"
+  },
+  "staging_letsencrypt_root_x1": {
+    "source": "fakelerootx1.pem",
+    "sha256": "219C4FFCFB04F1D3AD6CA79B2B5C6C0F4493177A80FA37CCE7FC9A32DF28323D",
+    "bundle_path": "deprecated/fakelerootx1.pem"
+  },
+  "staging_letsencrypt_intermediate_x1": {
+    "source": "fakeleintermediatex1.pem",
+    "sha256": "A99C1B71DA32ADD9429714F71E740AFDC543C4F7F012A748D24A789B8BF3D6C7",
+    "bundle_path": "deprecated/fakeleintermediatex1.pem"
+  },
+  "e5": {
+    "source": "2024/e5.pem",
+    "sha256": "E788D14B0436B5120BBEE3F15C15BADF08C1407FE72568A4F16F9151C380E1E3",
+    "bundle_path": "deprecated/e5.pem"
+  },
+  "e5_cross": {
+    "source": "2024/e5-cross.pem",
+    "sha256": "5DFDB3CF31B26F23D87C09F3A0CEF642F64069A9FB7CFE29270BB5DC0F1E16BB",
+    "bundle_path": "deprecated/e5-cross.pem"
+  },
+  "e6": {
+    "source": "2024/e6.pem",
+    "sha256": "065AB7D2A050F947587121765D8D070C0E1330D5798FAA42C2072749ED293762",
+    "bundle_path": "deprecated/e6.pem"
+  },
+  "e6_cross": {
+    "source": "2024/e6-cross.pem",
+    "sha256": "76E9E288AAFC0E37F4390CBF946AAD997D5C1C901B3CE513D3D8FADBABE2AB85",
+    "bundle_path": "deprecated/e6-cross.pem"
+  },
+  "r10": {
+    "source": "2024/r10.pem",
+    "sha256": "9D7C3F1AA6AD2B2EC0D5CF1E246F8D9AE6CBC9FD0755AD37BB974B1F2FB603F3",
+    "bundle_path": "deprecated/r10.pem"
+  },
+  "r11": {
+    "source": "2024/r11.pem",
+    "sha256": "591E9CE6C863D3A079E9FABE1478C7339A26B21269DDE795211361024AE31A44",
+    "bundle_path": "deprecated/r11.pem"
+  },
+  "isrg_root_x2_cross": {
+    "source": "isrg-root-x2-cross-signed.pem",
+    "sha256": "8B05B68CC659E5ED0FCB38F2C942FBFD200E6F2FF9F85D63C6994EF5E0B02701",
+    "bundle_path": "deprecated/isrg-root-x2-cross-signed.pem"
+  },
+  "letsencrypt_staging_root_x2_signed_by_x2": {
+    "source": "staging/letsencrypt-stg-root-x2-signed-by-x1.pem",
+    "sha256": "32D21AF6FC87417A55D7E23C6992B8CE0CB9B5FCD85DA30D194156D53758E4C5",
+    "bundle_path": "deprecated/letsencrypt-stg-root-x2-signed-by-x1.pem"
+  },
+  "e7": {
+    "source": "2024/e7.pem",
+    "sha256": "54715420224C5B65BEED018DC3940D7338C577E322D5488F633D8C6A8FED61B2",
+    "bundle_path": "deprecated/e7.pem"
+  },
+  "e7_cross": {
+    "source": "2024/e7-cross.pem",
+    "sha256": "AEB1FD7410E83BC96F5DA3C6A7C2C1BB836D1FA5CB86E708515890E428A8770B",
+    "bundle_path": "deprecated/e7-cross.pem"
+  },
+  "e8": {
+    "source": "2024/e8.pem",
+    "sha256": "AC1274542267F17B525535B5563BF731FEBB182533B46A82DC869CB64EB528C0",
+    "bundle_path": "deprecated/e8.pem"
+  },
+  "e8_cross": {
+    "source": "2024/e8-cross.pem",
+    "sha256": "83624FD338C8D9B023C18A67CB7A9C0519DA43D11775B4C6CBDAD45C3D997C52",
+    "bundle_path": "deprecated/e8-cross.pem"
+  },
+  "e9": {
+    "source": "2024/e9.pem",
+    "sha256": "4185DF97806C2BA76F1D79823F112FFA639A49CCDC990908102067AB6412B886",
+    "bundle_path": "deprecated/e9.pem"
+  },
+  "e9_cross": {
+    "source": "2024/e9-cross.pem",
+    "sha256": "FDE88F2D4F8913D3DC1664D5F8DE51E07FE2ABFED93B45ACAD5A29BFEBAA23FB",
+    "bundle_path": "deprecated/e9-cross.pem"
+  },
+  "r12": {
+    "source": "2024/r12.pem",
+    "sha256": "131FCE7784016899A5A00203A9EFC80F18EBBD75580717EDC1553580930836EC",
+    "bundle_path": "deprecated/r12.pem"
+  },
+  "r13": {
+    "source": "2024/r13.pem",
+    "sha256": "D3B128216A843F8EF1321501F5DF52A5DF52939EE2C19297712CD3DE4D419354",
+    "bundle_path": "deprecated/r13.pem"
+  },
+  "r14": {
+    "source": "2024/r14.pem",
+    "sha256": "24D45AA9B8D6053D281F3842C8CC0C6C1AF7CCDFD42DD5C12F6A74FA9323F7A2",
+    "bundle_path": "deprecated/r14.pem"
+  },
+  "isrg_root_x1": {
+    "source": "isrgrootx1.pem",
+    "sha256": "96BCEC06264976F37460779ACF28C5A7CFE8A3C0AAE11A8FFCEE05C0BDDF08C6",
+    "bundle_path": "isrgrootx1.pem"
+  },
+  "isrg_root_x2": {
+    "source": "isrg-root-x2.pem",
+    "sha256": "69729B8E15A86EFC177A57AFB7171DFC64ADD28C2FCA8CF1507E34453CCB1470",
+    "bundle_path": "isrg-root-x2.pem"
+  },
+  "isrg_root_x2_cross_2025": {
+    "source": "gen-y/root-x2-by-x1.pem",
+    "sha256": "EE5F7ABD6981BB0255632CD8F49283451B4B18844D12040B44EE00F07B8FE2C6",
+    "bundle_path": "root-x2-by-x1.pem"
+  },
+  "isrg_root_ye": {
+    "source": "gen-y/root-ye.pem",
+    "sha256": "E14FFCAD5B0025731006CAA43A121A22D8E9700F4FB9CF852F02A708AA5D5666",
+    "bundle_path": "root-ye.pem"
+  },
+  "isrg_root_ye_cross": {
+    "source": "gen-y/root-ye-by-x2.pem",
+    "sha256": "0FC0901CCA2BAE9E9FDBB02D50D02F1094F7B36672086991B9E897626DC485F0",
+    "bundle_path": "root-ye-by-x2.pem"
+  },
+  "isrg_root_yr": {
+    "source": "gen-y/root-yr.pem",
+    "sha256": "E57B7E6F150C419102E8D5C055729FF967B9D1A829BF00CEC89CA604EBF4A86F",
+    "bundle_path": "root-yr.pem"
+  },
+  "isrg_root_yr_cross": {
+    "source": "gen-y/root-yr-by-x1.pem",
+    "sha256": "072639D0B140D5BFFAE16AD9C3F6CC6086040621F51EE61A6D46A8915C07CF76",
+    "bundle_path": "root-yr-by-x1.pem"
+  },
+  "ye1": {
+    "source": "gen-y/int-ye1.pem",
+    "sha256": "A2372D06431E9716365EEED47EC020351497D182FCC038E457E58168A03CAC07",
+    "bundle_path": "int-ye1.pem"
+  },
+  "ye2": {
+    "source": "gen-y/int-ye2.pem",
+    "sha256": "97658DE8C68DFA98ACE1E5028A63D54A1AAE911B3E21471076C6850CD08CBAB4",
+    "bundle_path": "int-ye2.pem"
+  },
+  "yr1": {
+    "source": "gen-y/int-yr1.pem",
+    "sha256": "13949634D99CD6FD6AA80BC034FEFACCEB1969FEEF986586713ECDBB05758D3F",
+    "bundle_path": "int-yr1.pem"
+  },
+  "yr2": {
+    "source": "gen-y/int-yr2.pem",
+    "sha256": "238B85A0099C65B970477D5724F1A1D475CE5058CFFE4EFA8733899BDB863C47",
+    "bundle_path": "int-yr2.pem"
+  },
+  "ye3": {
+    "source": "gen-y/int-ye3.pem",
+    "sha256": "82BCFC482CC19F71E6F98F4A027616EBDA6D47096D408B336160D1C0EF8B995A",
+    "bundle_path": "int-ye3.pem"
+  },
+  "yr3": {
+    "source": "gen-y/int-yr3.pem",
+    "sha256": "35500CB63B8D9769528D65D87220F51C069807A595ACBF2FB6ECA38FBE0A4BD2",
+    "bundle_path": "int-yr3.pem"
+  },
+  "letsencrypt_staging_root_x1": {
+    "source": "staging/letsencrypt-stg-root-x1.pem",
+    "sha256": "E70570A989F8565AABDF7CAE27ABD1621872D6A3F811E3FEF27E3DBA02912198",
+    "bundle_path": "letsencrypt-stg-root-x1.pem"
+  },
+  "letsencrypt_staging_root_x2": {
+    "source": "staging/letsencrypt-stg-root-x2.pem",
+    "sha256": "9B2A339FE6A3E85585C4CD75536CB8C1CF7CD603B9A64BEC2521858AE48DA85D",
+    "bundle_path": "letsencrypt-stg-root-x2.pem"
+  }
+}

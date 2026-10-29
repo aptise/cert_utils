@@ -1,2 +1,49 @@
+[build-system]
+requires = ["setuptools>=61", "wheel"]
+build-backend = "setuptools.build_meta"
+
 [tool.black]
 target-version = ['py37']
+
+[tool.mypy]
+check_untyped_defs = true
+exclude = ['^\.eggs/', '^\.tox/', '^build/', '^dist/']
+
+[[tool.mypy.overrides]]
+module = ["acme.*", "certbot.*", "josepy.*", "test.*"]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "--cov=cert_utils --cov-branch --cov-report=term-missing --cov-report=html --cov-report=xml"
+
+[tool.coverage.run]
+source = ["cert_utils"]
+branch = true
+
+[tool.coverage.report]
+show_missing = true
+
+[tool.tox]
+# INI embedding supports the tox versions available on Python 3.7.
+legacy_tox_ini = """
+[tox]
+envlist = lint,mypy,py37,py38,py39,py310,py311,py312,py313,py314
+
+[testenv]
+commands =
+    python --version
+    pytest {posargs:}
+extras = testing
+setenv = CERT_UTILS_EXTENDED_TESTS = 1
+passenv = CERT_UTILS_FORCE_JOSEPY
+
+[testenv:lint]
+deps =
+    flake8
+    flake8-import-order
+commands = flake8 src tests
+
+[testenv:mypy]
+commands = mypy src tests
+"""

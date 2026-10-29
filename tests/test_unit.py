@@ -1,4 +1,5 @@
 # stdlib
+import datetime
 import json
 import os
 from typing import Dict
@@ -1132,9 +1133,7 @@ class UnitTest_CertUtils(unittest.TestCase, _Mixin_fallback_possible, _Mixin_fil
             cert_pem = self._filedata_testfile(cert_filename)
 
             with self.assertLogs("cert_utils", level="DEBUG") as logged:
-                (_cert, _chain) = cert_utils.cert_and_chain_from_fullchain(
-                    fullchain_pem
-                )
+                _cert, _chain = cert_utils.cert_and_chain_from_fullchain(fullchain_pem)
                 self.assertEqual(_cert, cert_pem)
                 if self._fallback_global or self._fallback_cryptography:
                     self.assertIn(
@@ -1190,9 +1189,7 @@ class UnitTest_CertUtils(unittest.TestCase, _Mixin_fallback_possible, _Mixin_fil
                 fullchain_pem = cert_pem + test_pems[idx]["chain"]
 
                 # decompose a fullchain
-                (_cert, _chain) = cert_utils.cert_and_chain_from_fullchain(
-                    fullchain_pem
-                )
+                _cert, _chain = cert_utils.cert_and_chain_from_fullchain(fullchain_pem)
                 self.assertEqual(_cert, cert_pem)
                 self.assertEqual(_chain, test_pems[idx]["chain"])
 
@@ -1218,12 +1215,21 @@ class UnitTest_CertUtils(unittest.TestCase, _Mixin_fallback_possible, _Mixin_fil
                 with self.assertLogs("cert_utils", level="DEBUG") as logged:
                     self.assertTrue(
                         cert_utils.ensure_chain(
-                            root_pem=root_pem, chain_pem=_chain, cert_pem=cert_pem
+                            validation_time=datetime.datetime(
+                                2024, 1, 1, tzinfo=datetime.timezone.utc
+                            ),
+                            root_pem=root_pem,
+                            chain_pem=_chain,
+                            cert_pem=cert_pem,
                         )
                     )
                     self.assertTrue(
                         cert_utils.ensure_chain(
-                            root_pem=root_pem, fullchain_pem=fullchain_pem
+                            validation_time=datetime.datetime(
+                                2024, 1, 1, tzinfo=datetime.timezone.utc
+                            ),
+                            root_pem=root_pem,
+                            fullchain_pem=fullchain_pem,
                         )
                     )
                     if self._fallback_global or self._fallback_cryptography:
@@ -1243,12 +1249,20 @@ class UnitTest_CertUtils(unittest.TestCase, _Mixin_fallback_possible, _Mixin_fil
                 # invoking `fullchain_pem` with: `chain_pem`
                 with self.assertRaises(ValueError) as cm:
                     result = cert_utils.ensure_chain(
-                        root_pem=root_pem, fullchain_pem=fullchain_pem, chain_pem=_chain
+                        validation_time=datetime.datetime(
+                            2024, 1, 1, tzinfo=datetime.timezone.utc
+                        ),
+                        root_pem=root_pem,
+                        fullchain_pem=fullchain_pem,
+                        chain_pem=_chain,
                     )
                 self.assertEqual(cm.exception.args[0], _error_expected)
                 # invoking `fullchain_pem` with: `cert_pem`
                 with self.assertRaises(ValueError) as cm:
                     result = cert_utils.ensure_chain(
+                        validation_time=datetime.datetime(
+                            2024, 1, 1, tzinfo=datetime.timezone.utc
+                        ),
                         root_pem=root_pem,
                         fullchain_pem=fullchain_pem,
                         cert_pem=cert_pem,
@@ -1257,6 +1271,9 @@ class UnitTest_CertUtils(unittest.TestCase, _Mixin_fallback_possible, _Mixin_fil
                 # invoking `fullchain_pem` with: `cert_pem` and `chain_pem`
                 with self.assertRaises(ValueError) as cm:
                     result = cert_utils.ensure_chain(
+                        validation_time=datetime.datetime(
+                            2024, 1, 1, tzinfo=datetime.timezone.utc
+                        ),
                         root_pem=root_pem,
                         fullchain_pem=fullchain_pem,
                         chain_pem=_chain,
@@ -1268,13 +1285,21 @@ class UnitTest_CertUtils(unittest.TestCase, _Mixin_fallback_possible, _Mixin_fil
                 # invoking NO `fullchain_pem` with: `chain_pem`
                 with self.assertRaises(ValueError) as cm:
                     result = cert_utils.ensure_chain(
-                        root_pem=root_pem, chain_pem=_chain
+                        validation_time=datetime.datetime(
+                            2024, 1, 1, tzinfo=datetime.timezone.utc
+                        ),
+                        root_pem=root_pem,
+                        chain_pem=_chain,
                     )
                 self.assertEqual(cm.exception.args[0], _error_expected)
                 # invoking NO `fullchain_pem` with: `cert_pem`
                 with self.assertRaises(ValueError) as cm:
                     result = cert_utils.ensure_chain(
-                        root_pem=root_pem, cert_pem=cert_pem
+                        validation_time=datetime.datetime(
+                            2024, 1, 1, tzinfo=datetime.timezone.utc
+                        ),
+                        root_pem=root_pem,
+                        cert_pem=cert_pem,
                     )
 
                 # ENSURE THE CHAIN ORDER
@@ -1412,15 +1437,12 @@ class UnitTest_CertUtils(unittest.TestCase, _Mixin_fallback_possible, _Mixin_fil
                         "DEBUG:cert_utils:.account_key__sign > openssl fallback",
                         logged.output,
                     )
-                    # ALL must verify
-                    # note we track the `_signature`
-                    # We can't do this on openssl only yet, if ever
-                    verified = cert_utils.account_key__verify(
-                        _signature,
-                        input,
-                        key_pem=key_pem,
-                        key_pem_filepath=key_pem_filepath,
-                    )
+                cert_utils.account_key__verify(
+                    _signature,
+                    input,
+                    key_pem=key_pem,
+                    key_pem_filepath=key_pem_filepath,
+                )
 
     def test__new_account_key(self):
         """

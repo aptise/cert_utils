@@ -3,9 +3,10 @@ graft tests
 
 include pyproject.toml
 include setup.cfg
-include tox.ini
 include CHANGES.txt
 include LICENSE.txt
 include README.md
 
 recursive-exclude * __pycache__ *.py[cod] .DS_Store
+
+graft docs

@@ -1,6 +1,14 @@
-# local
-from ..errors import OpenSslError
+# Historical OpenSSL MD5 output normalization
 
+This code is preserved for historical reference, not as a supported API.
+Older OpenSSL releases printed MD5 digests differently. This helper documents
+how the original toolkit normalized those outputs when examples were scarce.
+MD5 here identifies legacy output formatting; it is not a certificate-security
+recommendation. The example uses the package's OpenSslError exception.
+
+```python
+# local
+from cert_utils.errors import OpenSslError
 
 # ==============================================================================
 
@@ -22,3 +30,5 @@ def _cleanup_openssl_md5(data: bytes) -> str:
     if len(data_str) != 32:
         raise OpenSslError("error reading md5 (ii)")
     return data_str
+
+```

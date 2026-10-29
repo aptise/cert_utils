@@ -2,3 +2,12 @@
 /build/
 /dist/
 /src/cert_utils.egg-info/
+
+.coverage
+.coverage.*
+/htmlcov/
+/coverage.xml
+.pytest_cache/
+.mypy_cache/
+.tox/
+__pycache__/

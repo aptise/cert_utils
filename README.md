@@ -181,3 +181,35 @@ common to find these machines, Python2.7 was dropped to take advantage of
 typing.  Depending on the version of OpenSSL installed on a system,
 **cert_utils** will invoke the binary or regex the output to bridge support
 through a unified interface.
+
+Historical implementation notes: [OpenSSL reference](docs/openssl-reference.md).
+
+HTTP timeouts
+-------------
+
+`cert_info` uses a Requests `(connect, read)` timeout of `(5, 30)` seconds.
+The read timeout limits inactivity between reads; it is not a total command
+execution deadline. Override both values with positive, finite seconds:
+
+```sh
+CERT_UTILS_TIMEOUT=3,20 cert_info https://example.com
+cert_info --timeout 2,10 https://example.com
+cert_info --timeout 2,10 /path/to/cert.pem
+```
+
+Precedence is explicit CLI/Python argument, then `CERT_UTILS_TIMEOUT`, then the
+default. The CLI override also applies to directory and subsequent ARI requests.
+Python callers can pass `timeout=(connect, read)` to `new_session`, `ari_query`,
+`process_url`, `process_filepath`, `process_ari_url`, and
+`download_letsencrypt_certificates`. Sessions from `new_session` retain Requests'
+per-request timeout override support. CLI-owned sessions are closed on success
+and failure; callers retain ownership of sessions passed to `process_ari_url`.
+
+Compatibility design notes: [certificate profiles and peer hooks](docs/compatibility.md).
+
+Bundled CA snapshot and migration notes: [Let's Encrypt certificate archive](docs/letsencrypt-bundle.md).
+
+Machine-readable production rate policy: [schema 2 and migration guide](docs/rate-limits.md).
+Import `cert_utils.letsencrypt_info.rate_limits.RATE_LIMITS` without loading the CA archive.
+
+Account-signature formats and backend behavior: [signing and verification](docs/account-signatures.md).
