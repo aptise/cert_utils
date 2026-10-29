@@ -24,6 +24,12 @@ class OpenSslError_CsrGeneration(OpenSslError):
     pass
 
 
+class OpenSslError_InvalidSignature(OpenSslError):
+    """OpenSSL could not verify the supplied message/signature pair."""
+
+    pass
+
+
 class OpenSslError_InvalidKey(OpenSslError):
     pass
 

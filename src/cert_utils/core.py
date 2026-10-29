@@ -47,6 +47,9 @@ from .compat.openssl import key_single_op__pem_filepath
 from .compat.openssl import RE_openssl_x509_subject
 from .compat.openssl import san_domains_from_text
 from .compat.openssl import serial_from_text
+from .compat.signatures import der_to_raw as _ecdsa_der_to_raw
+from .compat.signatures import openssl_key_width as _openssl_account_key_width
+from .compat.signatures import raw_to_der as _ecdsa_raw_to_der
 from .errors import CryptographyError
 from .errors import FallbackError_FilepathRequired
 from .errors import OpenSslError
@@ -54,6 +57,7 @@ from .errors import OpenSslError_CsrGeneration
 from .errors import OpenSslError_InvalidCertificate
 from .errors import OpenSslError_InvalidCSR
 from .errors import OpenSslError_InvalidKey
+from .errors import OpenSslError_InvalidSignature
 from .errors import OpenSslError_VersionTooLow
 from .model import ALLOWED_BITS_RSA
 from .model import ALLOWED_CURVES_ECDSA
@@ -2740,7 +2744,8 @@ def account_key__sign(
     :param key_pem: (required) the RSA Key in PEM format
     :param key_pem_filepath: Optional filepath to a PEM encoded RSA account key file.
                              Only used for commandline OpenSSL fallback operations.
-    :standardize_signature: Bool. Default `True`.  Will reformat signatures if needed
+    :standardize_signature: For EC, True returns fixed-width r||s; False/None
+        returns ASN.1 DER. RSA is unaffected. SHA-256 is used on both backends.
     :returns: signature
     :rtype: bytes
     """
@@ -2757,10 +2762,6 @@ def account_key__sign(
         pkey = conditionals.crypto_serialization.load_pem_private_key(
             key_pem.encode(), None
         )
-        # possible loads are "Union[DSAPrivateKey, DSAPublicKey, RSAPrivateKey, RSAPublicKey]"
-        # but only RSAPublicKey is used or will work
-        # TODO: check to ensure key type is RSAPublicKey
-
         if isinstance(pkey, conditionals.crypto_ec.EllipticCurvePrivateKey):
             signature = pkey.sign(  # type: ignore[union-attr, call-arg]
                 data,
@@ -2793,6 +2794,7 @@ def account_key__sign(
         if key_pem_filepath is None:
             _tmpfile = new_pem_tempfile(key_pem)
             key_pem_filepath = _tmpfile.name
+        width = _openssl_account_key_width(openssl_path, key_pem_filepath)
         with psutil.Popen(
             [openssl_path, "dgst", "-sha256", "-sign", key_pem_filepath],
             stdin=subprocess.PIPE,
@@ -2802,6 +2804,8 @@ def account_key__sign(
             signature, err = proc.communicate(data)
             if proc.returncode != 0:
                 raise IOError("account_key__sign\n{0}".format(err))
+            if width is not None and standardize_signature:
+                signature = _ecdsa_der_to_raw(signature, width)
             return signature
     finally:
         if _tmpfile:
@@ -2809,7 +2813,7 @@ def account_key__sign(
 
 
 def account_key__verify(
-    signature,
+    signature: Union[str, bytes],
     data: Union[str, bytes],
     key_pem: str,
     key_pem_filepath: Optional[str] = None,
@@ -2822,9 +2826,11 @@ def account_key__verify(
     :param key_pem: (required) the RSA Key in PEM format
     :param key_pem_filepath: Optional filepath to a PEM encoded RSA account key file.
                              Only used for commandline OpenSSL fallback operations.
-    :param standardize_signature: bool. Default `True`. Was the signature standardized?
+    :param standardize_signature: For EC, True expects fixed-width r||s;
+        False/None expects ASN.1 DER. RSA is unaffected. No format guessing.
     :returns: None on success; invalid signatures raise.
-              Requires Cryptography and josepy; subprocess verification is unsupported.
+              Invalid OpenSSL verifications raise OpenSslError_InvalidSignature;
+              the Python backend retains Cryptography InvalidSignature.
     :rtype: None
     """
     log.info("account_key__verify >")
@@ -2873,7 +2879,42 @@ def account_key__verify(
             raise ValueError("unsupported private key type")
         return None
     log.debug(".account_key__verify > openssl fallback")
-    raise ValueError("not supported yet")
+    if openssl_version is None:
+        check_openssl_version()
+    with tempfile.TemporaryDirectory(prefix="cert-utils-verify-") as folder:
+        if key_pem_filepath is None:
+            key_pem_filepath = os.path.join(folder, "key.pem")
+            descriptor = os.open(
+                key_pem_filepath, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600
+            )
+            with os.fdopen(descriptor, "wb") as key_file:
+                key_file.write(key_pem.encode())
+        width = _openssl_account_key_width(openssl_path, key_pem_filepath)
+        if width is not None and standardize_signature:
+            signature = _ecdsa_raw_to_der(signature, width)
+        signature_path = os.path.join(folder, "signature.bin")
+        with open(signature_path, "wb") as signature_file:
+            signature_file.write(signature)
+        with psutil.Popen(
+            [
+                openssl_path,
+                "dgst",
+                "-sha256",
+                "-prverify",
+                key_pem_filepath,
+                "-signature",
+                signature_path,
+            ],
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        ) as proc:
+            output, error = proc.communicate(data)
+            if proc.returncode:
+                raise OpenSslError_InvalidSignature(
+                    (error or output).decode("utf8", errors="replace")
+                )
+    return None
 
 
 def ari__encode_serial_no(serial_no: int) -> str:

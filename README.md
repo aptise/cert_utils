@@ -211,3 +211,5 @@ Bundled CA snapshot and migration notes: [Let's Encrypt certificate archive](doc
 
 Machine-readable production rate policy: [schema 2 and migration guide](docs/rate-limits.md).
 Import `cert_utils.letsencrypt_info.rate_limits.RATE_LIMITS` without loading the CA archive.
+
+Account-signature formats and backend behavior: [signing and verification](docs/account-signatures.md).

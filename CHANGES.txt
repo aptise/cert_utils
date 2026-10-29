@@ -1,4 +1,10 @@
 1.2.0 (Unreleased)
+    - Implement account_key__verify's OpenSSL fallback using psutil.Popen.
+      Return None on success; fallback failures raise OpenSslError_InvalidSignature
+      (an OpenSslError subclass). Native InvalidSignature behavior is preserved.
+    - Fix EC fallback signing to honor standardize_signature: True returns
+      fixed-width r||s, False/None returns DER. Existing fallback callers needing
+      DER must explicitly pass False. SHA-256 remains unchanged on both backends.
     - Organize Let's Encrypt metadata under letsencrypt_info: certificates.py,
       rate_limits.py and shared types.py. The namespace imports neither dataset
       eagerly; the bundled PEM directory stays at its established location.
