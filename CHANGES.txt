@@ -1,4 +1,4 @@
-1.2.0 (Unreleased)
+1.2.0
     - Implement account_key__verify's OpenSSL fallback using psutil.Popen.
       Return None on success; fallback failures raise OpenSslError_InvalidSignature
       (an OpenSslError subclass). Native InvalidSignature behavior is preserved.
