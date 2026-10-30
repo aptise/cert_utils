@@ -1,3 +1,7 @@
+1.2.1
+    - Strengthen CertificateData: issuer, subject, validity dates and SHA-1
+      fingerprint are required values on both parsing backends. Parsing errors
+      raise; metadata unavailable for unsupported keys remains optional.
 1.2.0
     - Implement account_key__verify's OpenSSL fallback using psutil.Popen.
       Return None on success; fallback failures raise OpenSslError_InvalidSignature
