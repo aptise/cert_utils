@@ -1,3 +1,9 @@
+1.2.2
+    - Add a typed, JSON-compatible letsencrypt_info.profiles policy snapshot
+      with source provenance, duration units, retired profiles and announced
+      classic-profile validity/reuse changes. It is advisory metadata; server
+      advertisements and actual certificate/ACME timestamps remain authoritative.
+
 1.2.1
     - Strengthen CertificateData: issuer, subject, validity dates and SHA-1
       fingerprint are required values on both parsing backends. Parsing errors
