@@ -146,13 +146,13 @@ class NewKeyArgs(TypedDict, total=False):
 
 
 class CertificateData(TypedDict):
-    issuer: Optional[str]
-    subject: Optional[str]
-    startdate: Optional[datetime.datetime]
-    enddate: Optional[datetime.datetime]
+    issuer: str
+    subject: str
+    startdate: datetime.datetime
+    enddate: datetime.datetime
     SubjectAlternativeName: Optional[List[str]]
     key_technology: Optional[Tuple[str, Tuple[Union[int, str], ...]]]
-    fingerprint_sha1: Optional[str]
+    fingerprint_sha1: str
     spki_sha256: Optional[str]
     issuer_uri: Optional[str]
     authority_key_identifier: Optional[str]

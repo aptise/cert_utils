@@ -756,6 +756,16 @@ class UnitTest_CertUtils(unittest.TestCase, _Mixin_fallback_possible, _Mixin_fil
                         "DEBUG:cert_utils:.parse_cert > openssl fallback",
                         logged.output,
                     )
+            issuer: str = rval["issuer"]
+            subject: str = rval["subject"]
+            startdate: datetime.datetime = rval["startdate"]
+            enddate: datetime.datetime = rval["enddate"]
+            fingerprint: str = rval["fingerprint_sha1"]
+            self.assertIsInstance(issuer, str)
+            self.assertIsInstance(subject, str)
+            self.assertIsInstance(startdate, datetime.datetime)
+            self.assertIsInstance(enddate, datetime.datetime)
+            self.assertIsInstance(fingerprint, str)
             self.assertEqual(
                 rval["fingerprint_sha1"],
                 self._cert_sets[cert_set]["cert.fingerprints"]["sha1"],

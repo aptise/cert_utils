@@ -1380,6 +1380,29 @@ def parse_cert__key_technology(
     return _cert_pubkey_technology__text(data_str)
 
 
+def _new_certificate_data(
+    issuer: str,
+    subject: str,
+    startdate: datetime.datetime,
+    enddate: datetime.datetime,
+    fingerprint_sha1: str,
+) -> CertificateData:
+    """Build the complete metadata shape after required fields are parsed."""
+    return {
+        "issuer": issuer,
+        "subject": subject,
+        "enddate": enddate,
+        "startdate": startdate,
+        "SubjectAlternativeName": None,
+        "key_technology": None,
+        "fingerprint_sha1": fingerprint_sha1,
+        "spki_sha256": None,
+        "issuer_uri": None,
+        "authority_key_identifier": None,
+        "serial": None,
+    }
+
+
 def parse_cert(
     cert_pem: str,
     cert_pem_filepath: Optional[str] = None,
@@ -1397,20 +1420,6 @@ def parse_cert(
     :rtype: dict
     """
     log.info("parse_cert >")
-    rval: CertificateData = {
-        "issuer": None,
-        "subject": None,
-        "enddate": None,
-        "startdate": None,
-        "SubjectAlternativeName": None,
-        "key_technology": None,
-        "fingerprint_sha1": None,
-        "spki_sha256": None,
-        "issuer_uri": None,
-        "authority_key_identifier": None,
-        "serial": None,
-    }
-
     if conditionals.cryptography:
         if TYPE_CHECKING:
             assert conditionals.crypto_hashes is not None
@@ -1418,13 +1427,16 @@ def parse_cert(
             cert_pem.encode()
         )
         publickey = cert.public_key()
-        rval["issuer"] = _format_cryptography_components(cert.issuer)
-        rval["subject"] = _format_cryptography_components(cert.subject)
-        rval["enddate"] = cert.not_valid_after_utc
-        rval["startdate"] = cert.not_valid_before_utc
+        rval = _new_certificate_data(
+            issuer=_format_cryptography_components(cert.issuer),
+            subject=_format_cryptography_components(cert.subject),
+            startdate=cert.not_valid_before_utc,
+            enddate=cert.not_valid_after_utc,
+            fingerprint_sha1=cert.fingerprint(conditionals.crypto_hashes.SHA1())
+            .hex()
+            .upper(),
+        )
         rval["key_technology"] = _cryptography__public_key_technology(publickey)
-        _fingerprint_bytes = cert.fingerprint(conditionals.crypto_hashes.SHA1())
-        rval["fingerprint_sha1"] = _fingerprint_bytes.hex().upper()
         rval["spki_sha256"] = parse_cert__spki_sha256(
             cert_pem=cert_pem,
             cert_pem_filepath=cert_pem_filepath,
@@ -1502,19 +1514,21 @@ def parse_cert(
         _subject_b = _openssl_cert_single_op__pem_filepath(
             cert_pem_filepath, "-subject"
         )
-        rval["issuer"] = _format_openssl_components(_issuer_b, fieldset="issuer")
-        rval["subject"] = _format_openssl_components(_subject_b, fieldset="subject")
-        rval["startdate"] = parse_cert__startdate(
-            cert_pem=cert_pem, cert_pem_filepath=cert_pem_filepath
-        )
-        rval["enddate"] = parse_cert__enddate(
-            cert_pem=cert_pem, cert_pem_filepath=cert_pem_filepath
+        rval = _new_certificate_data(
+            issuer=_format_openssl_components(_issuer_b, fieldset="issuer"),
+            subject=_format_openssl_components(_subject_b, fieldset="subject"),
+            startdate=parse_cert__startdate(
+                cert_pem=cert_pem, cert_pem_filepath=cert_pem_filepath
+            ),
+            enddate=parse_cert__enddate(
+                cert_pem=cert_pem, cert_pem_filepath=cert_pem_filepath
+            ),
+            fingerprint_sha1=fingerprint_cert(
+                cert_pem=cert_pem, cert_pem_filepath=cert_pem_filepath, algorithm="sha1"
+            ),
         )
         rval["key_technology"] = _key_technology = parse_cert__key_technology(
             cert_pem=cert_pem, cert_pem_filepath=cert_pem_filepath
-        )
-        rval["fingerprint_sha1"] = fingerprint_cert(
-            cert_pem=cert_pem, cert_pem_filepath=cert_pem_filepath, algorithm="sha1"
         )
         if _key_technology:
             rval["spki_sha256"] = parse_cert__spki_sha256(

@@ -103,7 +103,10 @@ Examples API:
 
 For example, `cert_utils.parse_cert` returns a Python dict of key fields in a
 certificate.  This can make writing a script to analyze large directories of
-certificates fairly simple.
+certificates fairly simple. Successful parsing always supplies string `issuer`,
+`subject`, and `fingerprint_sha1` values and datetime `startdate` and `enddate`
+values. Other metadata can be `None`, including key technology and SPKI for
+unsupported key algorithms. Parsing failures raise an exception.
 
 
 ### Parse a Leaf/End-Entity
