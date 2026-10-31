@@ -1,19 +1,14 @@
-# cert_info v1.3 implementation
+# cert_info Python 3.7 test compatibility
 
-Scope: approved CLI operations, Certbot renewal discovery and private per-root
-metadata caching. Branch: feature-cert-info-discovery. No commits.
+Scope: fix test_cli_cache_precedence's mock argument inspection.
+Branch: fix-py37-discovery-test. No commits.
 
-Changed areas: scripts/cert_info.py, new scripts/discovery.py, CLI/discovery tests,
-and CHANGES.txt. New source and test files are staged as required by workspace
-instructions; existing files remain unstaged.
+Changed: tests/test_discovery.py uses call_args[0] instead of the .args
+property added in Python 3.8. CHANGES.txt records the compatibility fix.
+The user's discovery-module relocation is preserved.
 
-Decisions: 300-second TTL; ~/.cert_utils cache; raw byte identity;
---no-cache overrides refresh; all adds path/public-key correlation.
-Certbot renewal/ and alternate renewals/ directories are supported.
+Validation: focused test passed on the existing Python 3.14 environment
+(1 passed); git diff --check passed. Log: /tmp/cert-utils-py37-test-fix.log.
+Python 3.7 is unavailable locally, so no Python 3.7 execution is claimed.
 
-Completed checks: 64 focused tests passed (/tmp/cert-utils-focused.log);
-changed-source typing passed (/tmp/cert-utils-typing.log); syntax and diff checks.
-Combined regression completed: 293 passed, 54 skipped in 700.73 seconds
-(/tmp/cert-utils-regression.log), including broader modes and CLI precedence.
-
-Next action: user code review. No remaining implementation blockers. No documentation audit, installs, or commits authorized.
+Next action: user review and Python 3.7 CI verification. No blockers to review.

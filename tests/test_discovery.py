@@ -135,4 +135,4 @@ def test_cli_cache_precedence(monkeypatch: Any) -> None:
                 "--no-cache",
             ]
         )
-    assert discover.call_args.args[3:] == (2, True, True)
+    assert discover.call_args[0][3:] == (2, True, True)
