@@ -6,7 +6,8 @@ from unittest.mock import patch
 
 import pytest
 
-from cert_utils.scripts import cert_info, discovery
+from cert_utils import utils_discovery
+from cert_utils.scripts import cert_info
 
 
 def lineage(tmp_path: Path) -> Path:
@@ -40,13 +41,13 @@ def test_cache_and_identical_copy(tmp_path: Path, monkeypatch: Any) -> None:
     root = lineage(tmp_path)
     target = tmp_path / "copy.pem"
     target.write_bytes((root / "archive/example/cert1.pem").read_bytes())
-    result = discovery.discover(str(target), root, "exact", 300, False, False)
+    result = utils_discovery.discover(str(target), root, "exact", 300, False, False)
     assert result[0]["account"] == "account-1"
     assert result[0]["identical_certificate_paths"]
-    with patch.object(discovery, "domains", side_effect=AssertionError("cache miss")):
-        assert discovery.lineage_index(root, 300, False, False)
-    with patch.object(discovery, "domains", wraps=discovery.domains) as parse:
-        discovery.lineage_index(root, 300, True, False)
+    with patch.object(utils_discovery, "domains", side_effect=AssertionError("cache miss")):
+        assert utils_discovery.lineage_index(root, 300, False, False)
+    with patch.object(utils_discovery, "domains", wraps=utils_discovery.domains) as parse:
+        utils_discovery.lineage_index(root, 300, True, False)
         assert parse.call_count == 1
     cache = next((tmp_path / ".cert_utils").glob("*.json"))
     assert cache.stat().st_mode & 0o777 == 0o600
@@ -54,31 +55,31 @@ def test_cache_and_identical_copy(tmp_path: Path, monkeypatch: Any) -> None:
     configuration.write_text(
         configuration.read_text().replace("account-1", "account-2")
     )
-    index = discovery.lineage_index(root, 0, False, False)
+    index = utils_discovery.lineage_index(root, 0, False, False)
     assert index[str(configuration)]["account"] == "account-2"
     certificate = root / "archive/example/cert1.pem"
     certificate.write_bytes(certificate.read_bytes() + b"\n")
-    with patch.object(discovery, "domains", wraps=discovery.domains) as parse:
-        discovery.lineage_index(root, 0, False, False)
+    with patch.object(utils_discovery, "domains", wraps=utils_discovery.domains) as parse:
+        utils_discovery.lineage_index(root, 0, False, False)
         assert parse.call_count == 1
     configuration.unlink()
-    assert discovery.lineage_index(root, 0, False, False) == {}
+    assert utils_discovery.lineage_index(root, 0, False, False) == {}
 
 
 def test_no_cache_and_context(tmp_path: Path, monkeypatch: Any) -> None:
     """Context alone is inert and bypass mode creates no persistent cache."""
     monkeypatch.setenv("HOME", str(tmp_path))
     root = lineage(tmp_path)
-    discovery.lineage_index(root, 300, True, True)
+    utils_discovery.lineage_index(root, 300, True, True)
     assert not (tmp_path / ".cert_utils").exists()
     assert (
-        discovery.installation_root(
+        utils_discovery.installation_root(
             str(root / "archive/example/cert1.pem"), True, str(root)
         )
         == root
     )
     with pytest.raises(ValueError, match="conflict"):
-        discovery.installation_root(
+        utils_discovery.installation_root(
             str(root / "archive/example/cert1.pem"), True, str(tmp_path)
         )
 
@@ -87,7 +88,7 @@ def test_no_cache_and_context(tmp_path: Path, monkeypatch: Any) -> None:
 def test_additive_modes(tmp_path: Path, mode: str) -> None:
     """Every discovery mode preserves exact domain matches."""
     root = lineage(tmp_path)
-    results = discovery.discover(
+    results = utils_discovery.discover(
         str(root / "archive/example/cert1.pem"), root, mode, 0, False, True
     )
     assert results[0]["evidence"] == "identical domain set"
@@ -99,19 +100,19 @@ def test_overlap_and_key_correlation(tmp_path: Path) -> None:
     target = root / "archive/example/cert1.pem"
     entry = {"domains": ["another.example", "shared.example"], "account": "account-1"}
     with patch.object(
-        discovery,
+        utils_discovery,
         "lineage_index",
         return_value={str(root / "renewal/example.conf"): entry},
     ):
-        with patch.object(discovery, "domains", return_value=["shared.example"]):
-            assert discovery.discover(str(target), root, "exact", 0, False, True) == []
-            result = discovery.discover(str(target), root, "overlap", 0, False, True)
+        with patch.object(utils_discovery, "domains", return_value=["shared.example"]):
+            assert utils_discovery.discover(str(target), root, "exact", 0, False, True) == []
+            result = utils_discovery.discover(str(target), root, "overlap", 0, False, True)
             assert result[0]["matching_domains"] == ["shared.example"]
-        with patch.object(discovery, "domains", return_value=["unrelated.example"]):
+        with patch.object(utils_discovery, "domains", return_value=["unrelated.example"]):
             assert (
-                discovery.discover(str(target), root, "overlap", 0, False, True) == []
+                utils_discovery.discover(str(target), root, "overlap", 0, False, True) == []
             )
-            assert discovery.discover(str(target), root, "all", 0, False, True)[0][
+            assert utils_discovery.discover(str(target), root, "all", 0, False, True)[0][
                 "same_public_key"
             ]
 
@@ -122,7 +123,7 @@ def test_cli_cache_precedence(monkeypatch: Any) -> None:
     monkeypatch.setenv("CERT_INFO_REFRESH_CACHE", "invalid")
     monkeypatch.setenv("CERT_INFO_NO_CACHE", "invalid")
     with patch.object(cert_info, "process_filepath"), patch.object(
-        discovery, "discover", return_value=[]
+        utils_discovery, "discover", return_value=[]
     ) as discover:
         cert_info.main(
             [
