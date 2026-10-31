@@ -1,4 +1,9 @@
 1.3.0
+    - Add bad-payload validation and cross-object RSA/EC SPKI regression tests
+      for native and OpenSSL backends.
+    - Document KeyData.modulus_md5 and parse_key's modulus field as deprecated;
+      retain compatibility and direct RSA/EC relationships to spki_sha256.
+    - Keep audit/handoff notes local and exclude audits/ from source control.
     - Update GitHub Actions checkout/setup-python/upload-artifact releases.
     - Deprecate modulus_md5_key/csr/cert with caller-directed warnings and
       SPKI SHA-256 migration guidance; existing results remain unchanged.

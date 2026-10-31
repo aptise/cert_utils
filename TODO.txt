@@ -1,20 +1,3 @@
-Test with bad payloads:
-    validate_cert
-    validate_csr
-
-SPKI migration follow-up
-    Standalone replacements already exist: modulus_md5_key/csr/cert map to
-    parse_key__spki_sha256, parse_csr__spki_sha256, parse_cert__spki_sha256.
-    No additional standalone SPKI hashing functions are needed.
-    Add cross-object RSA/EC relationship regression tests proving that a key,
-    its CSR, and its issued certificate have the same SPKI SHA-256 digest on
-    both native and OpenSSL backends (and unrelated keys differ).
-    Mark parse_key's legacy modulus_md5 output field as deprecated in its
-    output contract; retain it for compatibility and use spki_sha256 instead; this also means deprecating the modulus_md5 in `model.KeyData` as well.
-    Replace the obsolete EC modulus-variant TODO in parse_key with SPKI
-    migration guidance; EC relationships should never require a modulus.
-
-
 ==========================================================================================
 
 
