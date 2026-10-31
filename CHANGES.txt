@@ -1,3 +1,6 @@
+1.3.2
+    - Support local Let's Encrypt discovery for fetched HTTPS certificates and
+      print the peer PEM to stdout. Refresh README CLI and cache guidance.
 1.3.1
     - Add bad-payload validation and cross-object RSA/EC SPKI regression tests
       for native and OpenSSL backends.
