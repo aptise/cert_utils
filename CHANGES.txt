@@ -1,3 +1,14 @@
+1.3.0
+    - Update GitHub Actions checkout/setup-python/upload-artifact releases.
+    - Deprecate modulus_md5_key/csr/cert with caller-directed warnings and
+      SPKI SHA-256 migration guidance; existing results remain unchanged.
+    - Record remaining SPKI relationship/legacy-field migration follow-ups.
+    - Fix the discovery cache precedence test for Python 3.7 mock call tuples.
+    - Make local cert_info ARI checks opt-in with --check-ari.
+    - Add explicit Certbot discovery, managed filesystem context, and private
+      versioned per-root metadata caching with CLI/environment controls.
+    - Report identical certificate copies, domain matches and inferred account
+      relationships; all mode also compares managed paths and public keys.
 1.2.2
     - Add identifiers.parse_cert_identifiers and parse_csr_identifiers with
       typed DNS/IP SAN values, canonical IP strings and native/OpenSSL parity.

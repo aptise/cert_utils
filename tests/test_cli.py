@@ -174,7 +174,7 @@ def test_file_processing(tmp_path, endpoint, capsys):
         ):
             with patch.object(cert_info, "issuer_to_endpoint", return_value=endpoint):
                 with patch.object(cert_info, "ari_query") as query:
-                    cert_info.process_filepath(str(path))
+                    cert_info.process_filepath(str(path), check_ari=True)
     parse.assert_called_once_with(cert_pem="pem", cert_pem_filepath=str(path))
     assert query.call_count == bool(endpoint)
     assert "ARI ID: id" in capsys.readouterr().out
@@ -193,7 +193,7 @@ def test_url_processing_handles_missing_peer(data, endpoint):
         ):
             with patch.object(cert_info, "issuer_to_endpoint", return_value=endpoint):
                 with patch.object(cert_info, "ari_query") as query:
-                    cert_info.process_url("https://example.com")
+                    cert_info.process_url("https://example.com", check_ari=True)
     assert query.call_count == bool(data and endpoint)
 
 

@@ -10,6 +10,7 @@ import os
 import re
 import subprocess
 import tempfile
+import warnings
 from typing import Any
 from typing import Dict
 from typing import List
@@ -1009,6 +1010,9 @@ def modulus_md5_key(
     key_pem_filepath: Optional[str] = None,
 ) -> Optional[str]:
     """
+    Deprecated: use parse_key__spki_sha256 for RSA and EC key relationships.
+    SPKI digests are different identifiers; do not compare them to modulus MD5.
+
     This routine will use cryptography if available.
     If not, openssl is used via subprocesses
 
@@ -1025,6 +1029,12 @@ def modulus_md5_key(
         md5(openssl rsa -noout -modulus -in {FILEPATH})
     """
     # ???: Should this raise an Exception instead of returning `None`?
+    warnings.warn(
+        "modulus_md5_key is deprecated; use parse_key__spki_sha256 "
+        "for RSA and EC key relationships (digest values differ).",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     log.info("modulus_md5_key >")
     if conditionals.cryptography:
         if TYPE_CHECKING:
@@ -1070,6 +1080,9 @@ def modulus_md5_csr(
     csr_pem_filepath: Optional[str] = None,
 ) -> Optional[str]:
     """
+    Deprecated: use parse_csr__spki_sha256 for RSA and EC key relationships.
+    SPKI digests are different identifiers; do not compare them to modulus MD5.
+
     This routine will use cryptography if available.
     If not, openssl is used via subprocesses
 
@@ -1087,6 +1100,12 @@ def modulus_md5_csr(
     """
     # TODO: Support EC Key Modulus Variant - https://github.com/aptise/cert_utils/issues/15
     # ???: Should this raise an Exception instead of returning `None`?
+    warnings.warn(
+        "modulus_md5_csr is deprecated; use parse_csr__spki_sha256 "
+        "for RSA and EC key relationships (digest values differ).",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     log.info("modulus_md5_csr >")
     if conditionals.cryptography:
         csr = conditionals.cryptography.x509.load_pem_x509_csr(csr_pem.encode())
@@ -1133,6 +1152,9 @@ def modulus_md5_cert(
     cert_pem_filepath: Optional[str] = None,
 ) -> Optional[str]:
     """
+    Deprecated: use parse_cert__spki_sha256 for RSA and EC key relationships.
+    SPKI digests are different identifiers; do not compare them to modulus MD5.
+
     This routine will use cryptography if available.
     If not, openssl is used via subprocesses
 
@@ -1148,6 +1170,12 @@ def modulus_md5_cert(
 
         md5(openssl x509 -noout -modulus -in {FILEPATH})
     """
+    warnings.warn(
+        "modulus_md5_cert is deprecated; use parse_cert__spki_sha256 "
+        "for RSA and EC key relationships (digest values differ).",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     log.info("modulus_md5_cert >")
     if conditionals.cryptography:
         cert = conditionals.cryptography.x509.load_pem_x509_certificate(
