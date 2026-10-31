@@ -28,6 +28,9 @@ commandline or as part of other projects.
 
 ## Certificate inspection with `cert_info`
 
+Run `cert_info --version` to print the library version, Python version, and
+invoked binary path to stderr. No certificate argument is required.
+
 Inspect a local PEM certificate or the certificate served by an HTTPS URL:
 
 ```sh

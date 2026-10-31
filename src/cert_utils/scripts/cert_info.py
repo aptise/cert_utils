@@ -11,6 +11,7 @@ import logging
 import math
 import os
 import pprint
+import shutil
 import socket  # peername hack, see below
 import sys
 import tempfile
@@ -316,12 +317,35 @@ def usage(argv: List[str]) -> NoReturn:
     sys.exit(1)
 
 
+class _VersionAction(argparse.Action):
+    """Print diagnostic versions and the invoked entrypoint path to stderr."""
+
+    def __call__(
+        self,
+        parser: argparse.ArgumentParser,
+        namespace: argparse.Namespace,
+        values: Any,
+        option_string: Optional[str] = None,
+    ) -> None:
+        binary = os.path.realpath(shutil.which(parser.prog) or parser.prog)
+        print("cert_info library version: %s" % cert_utils.__VERSION__, file=sys.stderr)
+        print("Python version: %s" % sys.version.split()[0], file=sys.stderr)
+        print("cert_info binary path: %s" % binary, file=sys.stderr)
+        parser.exit()
+
+
 def main(argv: Optional[List[str]] = None) -> None:
     if argv is None:
         argv = sys.argv
     from cert_utils.utils_discovery import DEFAULT_TTL, discover, installation_root
 
     parser = argparse.ArgumentParser(prog=argv[0] if argv else "cert_info")
+    parser.add_argument(
+        "--version",
+        action=_VersionAction,
+        nargs=0,
+        help="Print library/Python versions and binary path to stderr, then exit.",
+    )
     parser.add_argument("target")
     parser.add_argument("--timeout", type=parse_timeout, metavar="CONNECT,READ")
     parser.add_argument("--check-ari", action="store_true")

@@ -381,3 +381,26 @@ def test_reject_legacy_discovery_flags(flag: str) -> None:
             cert_info.main(["cert_info", "cert.pem", flag])
     assert error.value.code == 2
     process.assert_not_called()
+
+
+def test_version_reports_to_stderr_without_target(
+    capsys: Any, tmp_path: Any, monkeypatch: Any
+) -> None:
+    """Version diagnostics exit successfully without inspecting a certificate."""
+    binary = tmp_path / "cert_info"
+    monkeypatch.setenv("CERT_INFO_CACHE_TTL", "invalid")
+    with patch.object(cert_info, "process_filepath") as local, patch.object(
+        cert_info, "process_url"
+    ) as remote:
+        with pytest.raises(SystemExit) as error:
+            cert_info.main([str(binary), "--version"])
+    assert error.value.code == 0
+    output = capsys.readouterr()
+    assert output.out == ""
+    assert (
+        "cert_info library version: " + cert_info.cert_utils.__VERSION__ in output.err
+    )
+    assert "Python version: " + cert_info.sys.version.split()[0] in output.err
+    assert "cert_info binary path: " + str(binary.resolve()) in output.err
+    local.assert_not_called()
+    remote.assert_not_called()

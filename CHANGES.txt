@@ -1,4 +1,6 @@
 1.4.0
+    - Add cert_info --version diagnostics on stderr: library version, Python
+      version and invoked binary path, without requiring a certificate target.
     - BREAKING: rename cert_info flags to --discover-certbot,
       --certbot-config-directory and --certbot-managed. The Certbot application
       manages this layout; Let's Encrypt is the certificate authority.
