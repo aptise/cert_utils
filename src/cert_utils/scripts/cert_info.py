@@ -8,6 +8,7 @@ from __future__ import annotations
 import _socket
 import argparse
 import logging
+import math
 import os
 import pprint
 import socket  # peername hack, see below
@@ -229,7 +230,10 @@ def ari_query(
         sess.close()
 
 
-def process_filepath(filepath: str, *, timeout: Optional[Timeout] = None) -> None:
+def process_filepath(
+    filepath: str, *, timeout: Optional[Timeout] = None, check_ari: bool = False
+) -> None:
+    """Inspect a local certificate; contact ARI only when explicitly requested."""
     print("**" * 40)
     print("**" * 40)
     print("Process Filepath:")
@@ -246,16 +250,22 @@ def process_filepath(filepath: str, *, timeout: Optional[Timeout] = None) -> Non
     pprint.pprint(cert_data)
     print("=-" * 40)
 
+    if not check_ari:
+        return
+
     _ari_id = cert_utils.ari_construct_identifier(cert_pem)
     print("ARI ID: %s" % _ari_id)
     _acme_server = issuer_to_endpoint(cert_data=cert_data)
-    if _acme_server:
+    if _acme_server and check_ari:
         ari_query(_acme_server, _ari_id, timeout=timeout)
-    else:
+    elif check_ari:
         print("No known ARI endpoint")
 
 
-def process_url(url: str, *, timeout: Optional[Timeout] = None) -> None:
+def process_url(
+    url: str, *, timeout: Optional[Timeout] = None, check_ari: bool = False
+) -> None:
+    """Inspect an explicitly requested URL, optionally checking its ARI endpoint."""
     print("**" * 40)
     print("**" * 40)
     print("Process URL:")
@@ -275,7 +285,7 @@ def process_url(url: str, *, timeout: Optional[Timeout] = None) -> None:
         sock_data = getattr(r, "_sock_data", None) or {}
         _cert_dict = sock_data.get("cert_dict")
         _cert_pem = sock_data.get("cert_pem")
-        if _cert_pem:
+        if _cert_pem and check_ari:
             print("=-" * 40)
             print("Cert Data:")
             _ari_id = cert_utils.ari_construct_identifier(_cert_pem)
@@ -303,29 +313,88 @@ def usage(argv: List[str]) -> NoReturn:
 def main(argv: Optional[List[str]] = None) -> None:
     if argv is None:
         argv = sys.argv
-    timeout = None
-    if any(arg.startswith("--timeout") for arg in argv[1:]):
-        parser = argparse.ArgumentParser(prog=argv[0] if argv else "cert_info")
-        parser.add_argument("--timeout", type=parse_timeout, metavar="CONNECT,READ")
-        parser.add_argument("target")
-        options = parser.parse_args(argv[1:])
-        timeout = options.timeout
-        argv = [parser.prog, options.target]
-    if len(argv) != 2:
+    from cert_utils.scripts.discovery import DEFAULT_TTL, discover, installation_root
+
+    parser = argparse.ArgumentParser(prog=argv[0] if argv else "cert_info")
+    parser.add_argument("target")
+    parser.add_argument("--timeout", type=parse_timeout, metavar="CONNECT,READ")
+    parser.add_argument("--check-ari", action="store_true")
+    parser.add_argument(
+        "--discover-letsencrypt",
+        nargs="?",
+        const="exact",
+        choices=("exact", "overlap", "all"),
+    )
+    parser.add_argument("--letsencrypt-directory")
+    parser.add_argument("--letsencrypt-managed", action="store_true")
+    parser.add_argument("--cache-ttl", type=float)
+    parser.add_argument("--refresh-cache", action="store_true", default=None)
+    parser.add_argument("--no-cache", action="store_true", default=None)
+    if len(argv) < 2 or (
+        len(argv) > 2 and not any(arg.startswith("--") for arg in argv[1:])
+    ):
         usage(argv)
-    target = argv[1]
-    if target.startswith("http://"):
+    options = parser.parse_args(argv[1:])
+
+    def environment_bool(name: str, explicit: Optional[bool]) -> bool:
+        """Resolve CLI booleans before consulting environment defaults."""
+        if explicit is not None:
+            return explicit
+        value = os.environ.get(name, "false").lower()
+        if value not in ("true", "false", "1", "0", "yes", "no", "on", "off"):
+            raise ValueError("invalid boolean for " + name)
+        return value in ("true", "1", "yes", "on")
+
+    try:
+        ttl = (
+            options.cache_ttl
+            if options.cache_ttl is not None
+            else float(os.environ.get("CERT_INFO_CACHE_TTL", str(DEFAULT_TTL)))
+        )
+        if not math.isfinite(ttl) or ttl < 0:
+            raise ValueError("cache TTL must be finite and nonnegative")
+        refresh = environment_bool("CERT_INFO_REFRESH_CACHE", options.refresh_cache)
+        no_cache = environment_bool("CERT_INFO_NO_CACHE", options.no_cache)
+        root = installation_root(
+            options.target, options.letsencrypt_managed, options.letsencrypt_directory
+        )
+    except ValueError as error:
+        parser.error(str(error))
+    kwargs: Dict[str, Any] = {}
+    if options.timeout is not None:
+        kwargs["timeout"] = options.timeout
+    if options.target.startswith("http://"):
         raise ValueError("Can not handle `http`!")
-    elif target.startswith("https://"):
-        if timeout is None:
-            process_url(target)
-        else:
-            process_url(target, timeout=timeout)
+    elif options.target.startswith("https://"):
+        if options.discover_letsencrypt:
+            parser.error("discovery requires a certificate filepath")
+        if options.check_ari:
+            kwargs["check_ari"] = True
+        process_url(options.target, **kwargs)
     else:
-        if timeout is None:
-            process_filepath(target)
-        else:
-            process_filepath(target, timeout=timeout)
+        if options.check_ari:
+            kwargs["check_ari"] = True
+        process_filepath(options.target, **kwargs)
+        if options.discover_letsencrypt:
+            print(
+                "Let's Encrypt discovery (potential historical account associations):"
+            )
+            results = discover(
+                options.target,
+                root,
+                options.discover_letsencrypt,
+                ttl,
+                refresh,
+                no_cache,
+            )
+            for result in results:
+                if result["identical_certificate_paths"]:
+                    print(
+                        "ALERT: byte-identical certificate at another path; associated account is likely the issuing account."
+                    )
+                pprint.pprint(result)
+            if not results:
+                print("No matching renewal configurations.")
 
 
 if __name__ == "__main__":
