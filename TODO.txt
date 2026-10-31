@@ -1,20 +1,16 @@
+==========================================================================================
+
+
+Deferred / Outdated:
+
+Typing
+    parse_cert should use a unified type for the rval and return
+
 Domains and IP Addresses
     Restrict out reserved namespace?
     These should not be able to get a cert, even from a private CA
         ipv6
             https://www.iana.org/assignments/iana-ipv6-special-registry/iana-ipv6-special-registry.xhtml
-        
-
-Audit `# type: ignore` to handle updated type hints
-
-Test with bad payloads:
-    validate_cert
-    validate_csr
-
-Typing
-    parse_cert should use a unified type for the rval and return
-    MyPy type hints have trouble with:
-        foo = [i.decode("utf8") if isinstance(i, bytes) else i for i in bar]
 
 Design
     Explore the notion of using decorators to test for openssl and generate
@@ -26,14 +22,8 @@ Tests needed for:
     check_openssl_version
         install weird openssl versions and test against them
 
-SPKI migration follow-up
-    Standalone replacements already exist: modulus_md5_key/csr/cert map to
-    parse_key__spki_sha256, parse_csr__spki_sha256, parse_cert__spki_sha256.
-    No additional standalone SPKI hashing functions are needed.
-    Add cross-object RSA/EC relationship regression tests proving that a key,
-    its CSR, and its issued certificate have the same SPKI SHA-256 digest on
-    both native and OpenSSL backends (and unrelated keys differ).
-    Mark parse_key's legacy modulus_md5 output field as deprecated in its
-    output contract; retain it for compatibility and use spki_sha256 instead.
-    Replace the obsolete EC modulus-variant TODO in parse_key with SPKI
-    migration guidance; EC relationships should never require a modulus.
+Typing
+    MyPy type hints have trouble with:
+        foo = [i.decode("utf8") if isinstance(i, bytes) else i for i in bar]
+
+Audit `# type: ignore` to handle updated type hints

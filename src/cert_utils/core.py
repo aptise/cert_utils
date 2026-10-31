@@ -1942,6 +1942,11 @@ def parse_key(
     This routine will use cryptography if available.
     If not, openssl is used via subprocesses
 
+    The legacy ``modulus_md5`` output field is deprecated and RSA-only.
+    Use ``spki_sha256`` for relationships across RSA and EC keys; its values
+    are not interchangeable with modulus MD5 digests. The legacy field is
+    retained for compatibility.
+
     :param str key_pem: Key in PEM encoding
     :param str key_pem_filepath: Optional filepath to PEM encoded Key.
                                  Only used for commandline OpenSSL fallback operations.
@@ -1981,11 +1986,7 @@ def parse_key(
                 rval["XX-modulus_md5"] = str(exc)
         elif isinstance(privkey, conditionals.crypto_ec.EllipticCurvePrivateKey):
             rval["key_technology_basic"] = "EC"
-            # TODO: Support EC Key Modulus Variant - https://github.com/aptise/cert_utils/issues/15
-            # legacy ONLY works on RSA keys
-            # might just rely on spki_sha256
-            # related certbot/pyopenssl ticket:
-            # see https://github.com/pyca/pyopenssl/issues/291
+            # EC key relationships use spki_sha256; EC keys have no RSA modulus.
 
         rval["spki_sha256"] = parse_key__spki_sha256(
             key_pem="",

@@ -1,24 +1,21 @@
-# Actions and modulus deprecation handoff
+# Validation and SPKI follow-ups
 
-Scope: approved action upgrades, public modulus API deprecation, and SPKI TODOs.
-Branch: feature-actions-modulus-deprecation. No commits.
+Branch: feature-validation-spki-followups. Scope: two active TODO sections and
+untracking local audit notes. No commits.
 
-Changed: core-tests.yml pins checkout v7.0.1, setup-python v7.1.0 and
-upload-artifact v7.0.2 (verified upstream release pages). Migration notes checked:
-Node 24 requires runner >=2.327.1; existing GitHub-hosted Ubuntu jobs and workflow
-inputs/triggers need no changes. Hosted execution remains for CI.
+Changes: new tests/test_validation_spki.py covers malformed/wrong-object PEM,
+altered CSR signatures, cross-object RSA/EC SPKI identity, unrelated keys,
+native/OpenSSL parity, and retained parse_key modulus fields. Existing keys
+are reused; local short-lived certificates are generated without network.
+core.py/model.py document modulus_md5 field deprecation and SPKI migration;
+obsolete EC modulus TODO replaced. Completed TODO sections removed; deferred
+notes untouched. CHANGES.txt updated.
 
-core.py: modulus_md5_key/csr/cert emit caller-directed DeprecationWarning and
-document existing parse_key/csr/cert__spki_sha256 replacements. Results and
-signatures preserved. Internal modulus cleanup is retained without warnings.
-TODO.txt: appended relationship regression and legacy modulus-field migration
-follow-ups; no missing standalone SPKI hash API was found. CHANGES.txt updated.
+Audits: all three formerly tracked files removed from Git's index, retained
+on disk. /audits/ added to .gitignore. This handoff stays local.
 
-Completed: workflow YAML/reference validation, diff checks, formatting,
-and typing of core.py/new test passed (/tmp/cert-utils-modulus-typing.log).
-Selected native/OpenSSL modulus and parsing regression tests completed:
-28 passed, 20 skipped, 99 deselected, 60 expected deprecation warnings in
-337.68 seconds (/tmp/cert-utils-modulus-tests.log).
-
-Next: user review and GitHub-hosted CI verification. No implementation blockers.
-No installs, full-suite run, or general documentation audit performed.
+Checks: 30 tests passed (/tmp/cert-utils-validation-spki.log); after adding
+legacy-field assertions, affected 4 tests passed (/tmp/cert-utils-spki-field.log).
+Typing passed for all 3 changed source/test files
+(/tmp/cert-utils-followups-typing.log). Diff check passed.
+Next: user review. No full-suite run or installs.

@@ -11,3 +11,6 @@
 .mypy_cache/
 .tox/
 __pycache__/
+
+# Local audit and handoff notes
+/audits/

@@ -171,6 +171,7 @@ KeyData = TypedDict(
     {
         "key_technology": Optional[Union[str, Tuple[str, Tuple[Union[int, str], ...]]]],
         "text": Optional[str],
+        # Deprecated, RSA-only: use spki_sha256 for key relationships.
         "modulus_md5": Optional[str],
         "key_technology_basic": Optional[str],
         "spki_sha256": Optional[str],
@@ -179,3 +180,9 @@ KeyData = TypedDict(
     },
     total=False,
 )
+
+KeyData.__doc__ = """Key metadata; modulus_md5 is deprecated and RSA-only.
+
+Use spki_sha256 for RSA/EC relationships. The legacy modulus_md5 field remains
+for compatibility; its digest values are not interchangeable with SPKI hashes.
+"""
