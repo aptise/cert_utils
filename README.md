@@ -18,7 +18,7 @@ do not share the same inputs, outputs or invocations.
 
 **cert_utils** was formerly part of the
 **[peter_sslers](https://github.com/aptise/peter_sslers)** ACME Client and
-Certificate Management System, and has been descoped into it's own library.
+Certificate Management System, and has been separated into its own library.
 
 This library *does not* process Certificates and Certificate Data itself.
 Instead, it offers a simplified API to invoke other libraries and extract data
@@ -26,77 +26,67 @@ from Certificates.  It was designed for developers and system administrators to
 more easily use the various libraries to accomplish specific tasks on the
 commandline or as part of other projects.
 
-This library now includes a utility, `cert_info`:
+## Certificate inspection with `cert_info`
 
-Examples CLI:
--------------
+Inspect a local PEM certificate or the certificate served by an HTTPS URL:
 
-The CLI tool `cert_info` can parse a cert and pull the active ARI info.
+```sh
+cert_info /path/to/cert.pem
+cert_info https://example.com
+```
 
-The tool accepts a filepath to a local file OR a https URL to be inspected live:
+Local inspection performs no network requests by default. HTTPS inspection
+fetches the URL using Requests and prints the peer certificate as PEM to stdout.
+ARI checks are optional for either input and require `--check-ari`:
 
-> cert_info https://letsencrypt.org
+```sh
+cert_info /path/to/cert.pem --check-ari
+cert_info https://example.com --check-ari
+```
 
-This will gnerate the output:
+### Search a local Let's Encrypt installation
 
-    ********************************************************************************
-    ********************************************************************************
-    Process URL:
-    url:  https://letsencrypt.org
-    =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-    Connection Data:
-    {'cert_dict': {'OCSP': ('http://e6.o.lencr.org',),
-                   'caIssuers': ('http://e6.i.lencr.org/',),
-                   'issuer': ((('countryName', 'US'),),
-                              (('organizationName', "Let's Encrypt"),),
-                              (('commonName', 'E6'),)),
-                   'notAfter': 'Mar  7 14:44:04 2025 GMT',
-                   'notBefore': 'Dec  7 14:44:05 2024 GMT',
-                   'serialNumber': '04C7A73A361AC02B67BDBD6AF210285B1CC7',
-                   'subject': ((('commonName', 'letsencrypt.org'),),),
-                   'subjectAltName': (('DNS', 'lencr.org'),
-                                      ('DNS', 'letsencrypt.com'),
-                                      ('DNS', 'letsencrypt.org'),
-                                      ('DNS', 'www.lencr.org'),
-                                      ('DNS', 'www.letsencrypt.com'),
-                                      ('DNS', 'www.letsencrypt.org')),
-                   'version': 3},
-     'cert_pem': '-----BEGIN CERTIFICATE-----\n'
-                 'MIID1DCCA1qgAwIBAgISBMenOjYawCtnvb1q8hAoWxzHMAoGCCqGSM49BAMDMDIx\n'
-                 'CzAJBgNVBAYTAlVTMRYwFAYDVQQKEw1MZXQncyBFbmNyeXB0MQswCQYDVQQDEwJF\n'
-                 'NjAeFw0yNDEyMDcxNDQ0MDVaFw0yNTAzMDcxNDQ0MDRaMBoxGDAWBgNVBAMTD2xl\n'
-                 'dHNlbmNyeXB0Lm9yZzBZMBMGByqGSM49AgEGCCqGSM49AwEHA0IABDgHHaIeMwYz\n'
-                 'APO9ZgfeGansUeFRN0sW4K23nrVppRXfjHvN+83vtH170hshCrIAZRJCL+CPcA2N\n'
-                 'UqmLiSdM/M+jggJmMIICYjAOBgNVHQ8BAf8EBAMCB4AwHQYDVR0lBBYwFAYIKwYB\n'
-                 'BQUHAwEGCCsGAQUFBwMCMAwGA1UdEwEB/wQCMAAwHQYDVR0OBBYEFD2MLtcnwBWM\n'
-                 'FukcX4wMfYCQUCMAMB8GA1UdIwQYMBaAFJMnRpgDqVFojpjWxEJI2yO/WJTSMFUG\n'
-                 'CCsGAQUFBwEBBEkwRzAhBggrBgEFBQcwAYYVaHR0cDovL2U2Lm8ubGVuY3Iub3Jn\n'
-                 'MCIGCCsGAQUFBzAChhZodHRwOi8vZTYuaS5sZW5jci5vcmcvMG8GA1UdEQRoMGaC\n'
-                 'CWxlbmNyLm9yZ4IPbGV0c2VuY3J5cHQuY29tgg9sZXRzZW5jcnlwdC5vcmeCDXd3\n'
-                 'dy5sZW5jci5vcmeCE3d3dy5sZXRzZW5jcnlwdC5jb22CE3d3dy5sZXRzZW5jcnlw\n'
-                 'dC5vcmcwEwYDVR0gBAwwCjAIBgZngQwBAgEwggEEBgorBgEEAdZ5AgQCBIH1BIHy\n'
-                 'APAAdgB9WR4S4XgqexxhZ3xe/fjQh1wUoE6VnrkDL9kOjC55uAAAAZOhyXh9AAAE\n'
-                 'AwBHMEUCIAXoVc0BRK6ELL0Q1lHv+QbrobnBiPthcr2E7g0IulkHAiEAlVkiVkF9\n'
-                 '7KeR/At3XdJNRYbJda0iKaKtqKy0KH7igZgAdgATSt8atZhCCXgMb+9MepGkFrcj\n'
-                 'Sc5YV2rfrtqnwqvgIgAAAZOhyXk0AAAEAwBHMEUCIQD+yhm/6lwMMWyxBaB15Mkh\n'
-                 'g3tsQCtr0DOD4uvAzc63FAIgHgjXduGCbB/3VTtRCGWfmkWSS9z+CjfO1O6hkzGW\n'
-                 'XBowCgYIKoZIzj0EAwMDaAAwZQIxAKVLzxW03Kk8qJMBtWQCw5dgSHNWOGG9Oq03\n'
-                 'XOGr8092sx9Ezz3XsXWeq8JvokFjhAIwCZOX/UjxdHfgV/O6gkiNARQ1FokDyfS0\n'
-                 'ClynPk9psMTPVl5QWgYJzjVrJagAjtJm\n'
-                 '-----END CERTIFICATE-----\n',
-     'peername': ('100.28.201.155', 443)}
-    =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-    =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-    Cert Data:
-    ARI ID: kydGmAOpUWiOmNbEQkjbI79YlNI.BMenOjYawCtnvb1q8hAoWxzH
-    =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-    Requesting ARI
-    ari_url: https://acme-v02.api.letsencrypt.org/draft-ietf-acme-ari-03/renewalInfo/kydGmAOpUWiOmNbEQkjbI79YlNI.BMenOjYawCtnvb1q8hAoWxzH
-    {'Server': 'nginx', 'Date': 'Tue, 10 Dec 2024 18:29:04 GMT', 'Content-Type': 'application/json', 'Content-Length': '101', 'Connection': 'keep-alive', 'Cache-Control': 'public, max-age=0, no-cache', 'Link': '<https://acme-v02.api.letsencrypt.org/directory>;rel="index"', 'Retry-After': '21600', 'X-Frame-Options': 'DENY', 'Strict-Transport-Security': 'max-age=604800'}
-    - - - - - - - - - - 
-    {'suggestedWindow': {'end': '2025-02-06T15:03:34Z',
-                         'start': '2025-02-04T15:03:34Z'}}
+Add `--discover-letsencrypt` to compare the inspected certificate with Certbot
+renewal configurations and associated ACME accounts. This works for a local PEM
+or a live HTTPS certificate, so you can check whether a server is still serving
+an older certificate after renewal or a missed restart:
 
+```sh
+cert_info https://example.com --discover-letsencrypt
+cert_info https://example.com --discover-letsencrypt=all --letsencrypt-directory /srv/letsencrypt
+cert_info /path/to/cert.pem --discover-letsencrypt=overlap
+```
+
+- `exact` (the default when the flag has no value): identical DNS name sets;
+  inspect matching lineage archives for byte-identical certificate copies.
+- `overlap`: include lineages sharing at least one DNS name.
+- `all`: also correlate managed paths and public keys. A shared key does not
+  mean two certificates are identical.
+
+Byte-identical copies at other paths trigger an alert. Account associations are
+potential historical issuance relationships, not proof of current issuance or
+revocation authority. An older archive match can help explain a stale server;
+check the reported paths against the current deployed certificate.
+
+The installation root defaults to `/etc/letsencrypt`. Override it with
+`--letsencrypt-directory PATH`. For a local certificate under `live/` or
+`archive/`, `--letsencrypt-managed` derives the root. Both context options may
+be used together only if their roots agree. Managed-path inference does not
+apply to HTTPS URLs. Context options enable neither discovery nor ARI.
+
+Discovery caches parsed renewal domains and account IDs privately under
+`~/.cert_utils`, with a separate versioned cache per installation root.
+`--cache-ttl SECONDS` defaults to 300; after that interval, renewal-file and
+certificate timestamps/sizes are revalidated. Use `--refresh-cache` to rebuild
+or `--no-cache` to bypass persistent reads and writes (`--no-cache` takes
+precedence). Environment defaults are `CERT_INFO_CACHE_TTL`,
+`CERT_INFO_REFRESH_CACHE`, and `CERT_INFO_NO_CACHE`; explicit CLI options win.
+
+ARI and discovery are independent and can be combined. Discovery reads the
+local installation and makes no additional outbound requests. HTTPS peer
+extraction depends on Requests exposing its connection socket; if unavailable,
+requested discovery fails explicitly. The printed PEM is part of diagnostic
+output, not a standalone PEM-only stream.
 
 Examples API:
 -------------

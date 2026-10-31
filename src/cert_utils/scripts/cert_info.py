@@ -13,6 +13,7 @@ import os
 import pprint
 import socket  # peername hack, see below
 import sys
+import tempfile
 from typing import Any
 from typing import Dict
 from typing import List
@@ -265,8 +266,8 @@ def process_filepath(
 
 def process_url(
     url: str, *, timeout: Optional[Timeout] = None, check_ari: bool = False
-) -> None:
-    """Inspect an explicitly requested URL, optionally checking its ARI endpoint."""
+) -> Optional[str]:
+    """Inspect HTTPS, print its peer certificate PEM, and return it for discovery."""
     print("**" * 40)
     print("**" * 40)
     print("Process URL:")
@@ -286,6 +287,9 @@ def process_url(
         sock_data = getattr(r, "_sock_data", None) or {}
         _cert_dict = sock_data.get("cert_dict")
         _cert_pem = sock_data.get("cert_pem")
+        if _cert_pem:
+            print("Peer certificate PEM:")
+            print(_cert_pem, end="" if _cert_pem.endswith("\n") else "\n")
         if _cert_pem and check_ari:
             print("=-" * 40)
             print("Cert Data:")
@@ -297,6 +301,7 @@ def process_url(
                 ari_query(_acme_server, _ari_id, timeout=timeout)
             else:
                 print("No known ARI endpoint")
+        return _cert_pem
     finally:
         sess.close()
 
@@ -364,38 +369,47 @@ def main(argv: Optional[List[str]] = None) -> None:
     kwargs: Dict[str, Any] = {}
     if options.timeout is not None:
         kwargs["timeout"] = options.timeout
+
+    def report_discovery(target: str) -> None:
+        """Use the same discovery and reporting for local and fetched certificates."""
+        print("Let's Encrypt discovery (potential historical account associations):")
+        results = discover(
+            target,
+            root,
+            options.discover_letsencrypt,
+            ttl,
+            refresh,
+            no_cache,
+        )
+        for result in results:
+            if result["identical_certificate_paths"]:
+                print(
+                    "ALERT: byte-identical certificate at another path; associated account is likely the issuing account."
+                )
+            pprint.pprint(result)
+        if not results:
+            print("No matching renewal configurations.")
+
+    if options.check_ari:
+        kwargs["check_ari"] = True
     if options.target.startswith("http://"):
         raise ValueError("Can not handle `http`!")
     elif options.target.startswith("https://"):
+        pem = process_url(options.target, **kwargs)
         if options.discover_letsencrypt:
-            parser.error("discovery requires a certificate filepath")
-        if options.check_ari:
-            kwargs["check_ari"] = True
-        process_url(options.target, **kwargs)
+            if not pem:
+                raise ValueError(
+                    "HTTPS peer certificate unavailable; cannot perform discovery"
+                )
+            # Requests' DER-to-PEM conversion uses Certbot-compatible 64-column PEM.
+            with tempfile.NamedTemporaryFile(mode="w+", suffix=".pem") as certificate:
+                certificate.write(pem)
+                certificate.flush()
+                report_discovery(certificate.name)
     else:
-        if options.check_ari:
-            kwargs["check_ari"] = True
         process_filepath(options.target, **kwargs)
         if options.discover_letsencrypt:
-            print(
-                "Let's Encrypt discovery (potential historical account associations):"
-            )
-            results = discover(
-                options.target,
-                root,
-                options.discover_letsencrypt,
-                ttl,
-                refresh,
-                no_cache,
-            )
-            for result in results:
-                if result["identical_certificate_paths"]:
-                    print(
-                        "ALERT: byte-identical certificate at another path; associated account is likely the issuing account."
-                    )
-                pprint.pprint(result)
-            if not results:
-                print("No matching renewal configurations.")
+            report_discovery(options.target)
 
 
 if __name__ == "__main__":
