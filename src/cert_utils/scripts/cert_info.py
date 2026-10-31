@@ -326,13 +326,21 @@ def main(argv: Optional[List[str]] = None) -> None:
     parser.add_argument("--timeout", type=parse_timeout, metavar="CONNECT,READ")
     parser.add_argument("--check-ari", action="store_true")
     parser.add_argument(
-        "--discover-letsencrypt",
+        "--discover-certbot",
         nargs="?",
         const="exact",
         choices=("exact", "overlap", "all"),
+        help="Discover matching Certbot renewal configurations and accounts.",
     )
-    parser.add_argument("--letsencrypt-directory")
-    parser.add_argument("--letsencrypt-managed", action="store_true")
+    parser.add_argument(
+        "--certbot-config-directory",
+        help="Certbot configuration root (default: /etc/letsencrypt).",
+    )
+    parser.add_argument(
+        "--certbot-managed",
+        action="store_true",
+        help="Derive the configuration root from a Certbot-managed certificate path.",
+    )
     parser.add_argument("--cache-ttl", type=float)
     parser.add_argument("--refresh-cache", action="store_true", default=None)
     parser.add_argument("--no-cache", action="store_true", default=None)
@@ -362,7 +370,7 @@ def main(argv: Optional[List[str]] = None) -> None:
         refresh = environment_bool("CERT_INFO_REFRESH_CACHE", options.refresh_cache)
         no_cache = environment_bool("CERT_INFO_NO_CACHE", options.no_cache)
         root = installation_root(
-            options.target, options.letsencrypt_managed, options.letsencrypt_directory
+            options.target, options.certbot_managed, options.certbot_config_directory
         )
     except ValueError as error:
         parser.error(str(error))
@@ -372,11 +380,11 @@ def main(argv: Optional[List[str]] = None) -> None:
 
     def report_discovery(target: str) -> None:
         """Use the same discovery and reporting for local and fetched certificates."""
-        print("Let's Encrypt discovery (potential historical account associations):")
+        print("Certbot discovery (potential historical account associations):")
         results = discover(
             target,
             root,
-            options.discover_letsencrypt,
+            options.discover_certbot,
             ttl,
             refresh,
             no_cache,
@@ -396,7 +404,7 @@ def main(argv: Optional[List[str]] = None) -> None:
         raise ValueError("Can not handle `http`!")
     elif options.target.startswith("https://"):
         pem = process_url(options.target, **kwargs)
-        if options.discover_letsencrypt:
+        if options.discover_certbot:
             if not pem:
                 raise ValueError(
                     "HTTPS peer certificate unavailable; cannot perform discovery"
@@ -408,7 +416,7 @@ def main(argv: Optional[List[str]] = None) -> None:
                 report_discovery(certificate.name)
     else:
         process_filepath(options.target, **kwargs)
-        if options.discover_letsencrypt:
+        if options.discover_certbot:
             report_discovery(options.target)
 
 

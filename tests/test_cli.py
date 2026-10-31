@@ -353,3 +353,31 @@ def test_certificate_download_timeout(monkeypatch):
             assert get.call_args[1]["timeout"] == (2.0, 9.0)
             letsencrypt_info.download_letsencrypt_certificates(timeout=(1, 3))
             assert get.call_args[1]["timeout"] == (1.0, 3.0)
+
+
+def test_certbot_help(capsys: Any) -> None:
+    """Expose Certbot terminology and its directory placeholder in CLI help."""
+    with pytest.raises(SystemExit) as error:
+        cert_info.main(["cert_info", "--help"])
+    assert error.value.code == 0
+    output = capsys.readouterr().out
+    for flag in (
+        "--discover-certbot",
+        "--certbot-config-directory CERTBOT_CONFIG_DIRECTORY",
+        "--certbot-managed",
+    ):
+        assert flag in output
+    assert "--discover-letsencrypt" not in output
+
+
+@pytest.mark.parametrize(
+    "flag",
+    ["--discover-letsencrypt", "--letsencrypt-directory", "--letsencrypt-managed"],
+)
+def test_reject_legacy_discovery_flags(flag: str) -> None:
+    """The 1.4 CLI rejects the superseded Let\'s Encrypt application names."""
+    with patch.object(cert_info, "process_filepath") as process:
+        with pytest.raises(SystemExit) as error:
+            cert_info.main(["cert_info", "cert.pem", flag])
+    assert error.value.code == 2
+    process.assert_not_called()

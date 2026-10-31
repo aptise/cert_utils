@@ -129,7 +129,7 @@ def test_cli_cache_precedence(monkeypatch: Any) -> None:
             [
                 "cert_info",
                 "cert.pem",
-                "--discover-letsencrypt=exact",
+                "--discover-certbot=exact",
                 "--cache-ttl=2",
                 "--refresh-cache",
                 "--no-cache",
