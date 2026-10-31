@@ -96,23 +96,42 @@ def test_additive_modes(tmp_path: Path, mode: str) -> None:
 def test_overlap_and_key_correlation(tmp_path: Path) -> None:
     """Broader modes add partial-domain and public-key evidence."""
     root = lineage(tmp_path)
-    target = root / 'archive/example/cert1.pem'
-    entry = {'domains': ['another.example', 'shared.example'], 'account': 'account-1'}
-    with patch.object(discovery, 'lineage_index', return_value={str(root / 'renewal/example.conf'): entry}):
-        with patch.object(discovery, 'domains', return_value=['shared.example']):
-            assert discovery.discover(str(target), root, 'exact', 0, False, True) == []
-            result = discovery.discover(str(target), root, 'overlap', 0, False, True)
-            assert result[0]['matching_domains'] == ['shared.example']
-        with patch.object(discovery, 'domains', return_value=['unrelated.example']):
-            assert discovery.discover(str(target), root, 'overlap', 0, False, True) == []
-            assert discovery.discover(str(target), root, 'all', 0, False, True)[0]['same_public_key']
+    target = root / "archive/example/cert1.pem"
+    entry = {"domains": ["another.example", "shared.example"], "account": "account-1"}
+    with patch.object(
+        discovery,
+        "lineage_index",
+        return_value={str(root / "renewal/example.conf"): entry},
+    ):
+        with patch.object(discovery, "domains", return_value=["shared.example"]):
+            assert discovery.discover(str(target), root, "exact", 0, False, True) == []
+            result = discovery.discover(str(target), root, "overlap", 0, False, True)
+            assert result[0]["matching_domains"] == ["shared.example"]
+        with patch.object(discovery, "domains", return_value=["unrelated.example"]):
+            assert (
+                discovery.discover(str(target), root, "overlap", 0, False, True) == []
+            )
+            assert discovery.discover(str(target), root, "all", 0, False, True)[0][
+                "same_public_key"
+            ]
 
 
 def test_cli_cache_precedence(monkeypatch: Any) -> None:
     """Explicit cache arguments override corresponding environment values."""
-    monkeypatch.setenv('CERT_INFO_CACHE_TTL', 'invalid')
-    monkeypatch.setenv('CERT_INFO_REFRESH_CACHE', 'invalid')
-    monkeypatch.setenv('CERT_INFO_NO_CACHE', 'invalid')
-    with patch.object(cert_info, 'process_filepath'), patch.object(discovery, 'discover', return_value=[]) as discover:
-        cert_info.main(['cert_info', 'cert.pem', '--discover-letsencrypt=exact', '--cache-ttl=2', '--refresh-cache', '--no-cache'])
+    monkeypatch.setenv("CERT_INFO_CACHE_TTL", "invalid")
+    monkeypatch.setenv("CERT_INFO_REFRESH_CACHE", "invalid")
+    monkeypatch.setenv("CERT_INFO_NO_CACHE", "invalid")
+    with patch.object(cert_info, "process_filepath"), patch.object(
+        discovery, "discover", return_value=[]
+    ) as discover:
+        cert_info.main(
+            [
+                "cert_info",
+                "cert.pem",
+                "--discover-letsencrypt=exact",
+                "--cache-ttl=2",
+                "--refresh-cache",
+                "--no-cache",
+            ]
+        )
     assert discover.call_args.args[3:] == (2, True, True)

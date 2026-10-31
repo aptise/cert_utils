@@ -33,6 +33,7 @@ import cert_utils
 from cert_utils.network import get_timeout
 from cert_utils.network import parse_timeout
 from cert_utils.network import Timeout
+import cert_utils.utils_discovery
 
 if TYPE_CHECKING:
     from requests.structures import CaseInsensitiveDict
@@ -313,7 +314,7 @@ def usage(argv: List[str]) -> NoReturn:
 def main(argv: Optional[List[str]] = None) -> None:
     if argv is None:
         argv = sys.argv
-    from cert_utils.scripts.discovery import DEFAULT_TTL, discover, installation_root
+    from cert_utils.utils_discovery import DEFAULT_TTL, discover, installation_root
 
     parser = argparse.ArgumentParser(prog=argv[0] if argv else "cert_info")
     parser.add_argument("target")

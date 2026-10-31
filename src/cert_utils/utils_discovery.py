@@ -12,7 +12,7 @@ import time
 from typing import Any, Dict, List, Optional, Set
 
 import cert_utils
-from cert_utils.identifiers import parse_cert_identifiers
+from .identifiers import parse_cert_identifiers
 
 CACHE_VERSION = str(cert_utils.__VERSION__) + ":1"
 DEFAULT_TTL = 300
