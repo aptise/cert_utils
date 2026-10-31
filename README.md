@@ -28,6 +28,9 @@ commandline or as part of other projects.
 
 ## Certificate inspection with `cert_info`
 
+Run `cert_info --version` to print the library version, Python version, and
+invoked binary path to stderr. No certificate argument is required.
+
 Inspect a local PEM certificate or the certificate served by an HTTPS URL:
 
 ```sh
@@ -44,17 +47,22 @@ cert_info /path/to/cert.pem --check-ari
 cert_info https://example.com --check-ari
 ```
 
-### Search a local Let's Encrypt installation
+Version 1.4 renames the discovery/context flags to Certbot terminology; the
+previous `--discover-letsencrypt`, `--letsencrypt-directory`, and
+`--letsencrypt-managed` spellings are no longer accepted. Certbot manages the
+filesystem layout; Let's Encrypt is the certificate authority.
 
-Add `--discover-letsencrypt` to compare the inspected certificate with Certbot
+### Search a local Certbot installation
+
+Add `--discover-certbot` to compare the inspected certificate with Certbot
 renewal configurations and associated ACME accounts. This works for a local PEM
 or a live HTTPS certificate, so you can check whether a server is still serving
 an older certificate after renewal or a missed restart:
 
 ```sh
-cert_info https://example.com --discover-letsencrypt
-cert_info https://example.com --discover-letsencrypt=all --letsencrypt-directory /srv/letsencrypt
-cert_info /path/to/cert.pem --discover-letsencrypt=overlap
+cert_info https://example.com --discover-certbot
+cert_info https://example.com --discover-certbot=all --certbot-config-directory /srv/letsencrypt
+cert_info /path/to/cert.pem --discover-certbot=overlap
 ```
 
 - `exact` (the default when the flag has no value): identical DNS name sets;
@@ -68,9 +76,9 @@ potential historical issuance relationships, not proof of current issuance or
 revocation authority. An older archive match can help explain a stale server;
 check the reported paths against the current deployed certificate.
 
-The installation root defaults to `/etc/letsencrypt`. Override it with
-`--letsencrypt-directory PATH`. For a local certificate under `live/` or
-`archive/`, `--letsencrypt-managed` derives the root. Both context options may
+The Certbot configuration directory defaults to `/etc/letsencrypt`. Override it with
+`--certbot-config-directory PATH`. For a local certificate under `live/` or
+`archive/`, `--certbot-managed` derives the root. Both context options may
 be used together only if their roots agree. Managed-path inference does not
 apply to HTTPS URLs. Context options enable neither discovery nor ARI.
 

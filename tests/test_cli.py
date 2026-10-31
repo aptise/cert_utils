@@ -353,3 +353,54 @@ def test_certificate_download_timeout(monkeypatch):
             assert get.call_args[1]["timeout"] == (2.0, 9.0)
             letsencrypt_info.download_letsencrypt_certificates(timeout=(1, 3))
             assert get.call_args[1]["timeout"] == (1.0, 3.0)
+
+
+def test_certbot_help(capsys: Any) -> None:
+    """Expose Certbot terminology and its directory placeholder in CLI help."""
+    with pytest.raises(SystemExit) as error:
+        cert_info.main(["cert_info", "--help"])
+    assert error.value.code == 0
+    output = capsys.readouterr().out
+    for flag in (
+        "--discover-certbot",
+        "--certbot-config-directory CERTBOT_CONFIG_DIRECTORY",
+        "--certbot-managed",
+    ):
+        assert flag in output
+    assert "--discover-letsencrypt" not in output
+
+
+@pytest.mark.parametrize(
+    "flag",
+    ["--discover-letsencrypt", "--letsencrypt-directory", "--letsencrypt-managed"],
+)
+def test_reject_legacy_discovery_flags(flag: str) -> None:
+    """The 1.4 CLI rejects the superseded Let\'s Encrypt application names."""
+    with patch.object(cert_info, "process_filepath") as process:
+        with pytest.raises(SystemExit) as error:
+            cert_info.main(["cert_info", "cert.pem", flag])
+    assert error.value.code == 2
+    process.assert_not_called()
+
+
+def test_version_reports_to_stderr_without_target(
+    capsys: Any, tmp_path: Any, monkeypatch: Any
+) -> None:
+    """Version diagnostics exit successfully without inspecting a certificate."""
+    binary = tmp_path / "cert_info"
+    monkeypatch.setenv("CERT_INFO_CACHE_TTL", "invalid")
+    with patch.object(cert_info, "process_filepath") as local, patch.object(
+        cert_info, "process_url"
+    ) as remote:
+        with pytest.raises(SystemExit) as error:
+            cert_info.main([str(binary), "--version"])
+    assert error.value.code == 0
+    output = capsys.readouterr()
+    assert output.out == ""
+    assert (
+        "cert_info library version: " + cert_info.cert_utils.__VERSION__ in output.err
+    )
+    assert "Python version: " + cert_info.sys.version.split()[0] in output.err
+    assert "cert_info binary path: " + str(binary.resolve()) in output.err
+    local.assert_not_called()
+    remote.assert_not_called()

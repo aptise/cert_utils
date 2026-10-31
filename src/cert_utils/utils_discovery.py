@@ -36,7 +36,7 @@ def metadata(path: Path) -> List[int]:
 
 
 def installation_root(certificate: str, managed: bool, explicit: Optional[str]) -> Path:
-    """Resolve managed live/archive paths and reject conflicting context roots."""
+    """Resolve Certbot-managed live/archive paths and reject conflicting context roots."""
     derived: Optional[Path] = None
     if managed:
         for candidate in (
@@ -54,7 +54,7 @@ def installation_root(certificate: str, managed: bool, explicit: Optional[str]) 
         else derived or Path("/etc/letsencrypt")
     )
     if derived is not None and root != derived:
-        raise ValueError("Let's Encrypt installation roots conflict")
+        raise ValueError("Certbot configuration roots conflict")
     return root
 
 

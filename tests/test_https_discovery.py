@@ -36,8 +36,8 @@ def test_https_discovery(tmp_path: Path, capsys: Any, mode: str) -> None:
             [
                 "cert_info",
                 "https://example.com",
-                "--discover-letsencrypt=" + mode,
-                "--letsencrypt-directory",
+                "--discover-certbot=" + mode,
+                "--certbot-config-directory",
                 str(root),
                 "--no-cache",
             ]
@@ -72,7 +72,7 @@ def test_missing_peer_fails_discovery() -> None:
                 [
                     "cert_info",
                     "https://example.com",
-                    "--discover-letsencrypt",
+                    "--discover-certbot",
                     "--no-cache",
                 ]
             )
