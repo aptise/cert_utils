@@ -1,3 +1,6 @@
+Unreleased
+    - Py3.15 added to test matrix
+
 1.4.0
     - Add cert_info --version diagnostics on stderr: library version, Python
       version and invoked binary path, without requiring a certificate target.
